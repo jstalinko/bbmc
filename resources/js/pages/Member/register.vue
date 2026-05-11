@@ -113,8 +113,15 @@
                 </div>
                 <div>
                   <label class="field-label">Tanggal Lahir <span class="text-red-500">*</span></label>
-                  <input v-model="form.tanggal_lahir" type="date"
-                    :class="['field-input', form.errors.tanggal_lahir ? 'border-red-400 bg-red-50' : '']" />
+                  <input
+                    :value="form.tanggal_lahir"
+                    @input="handleTanggalLahirInput"
+                    type="text"
+                    placeholder="DD/MM/YYYY"
+                    maxlength="10"
+                    inputmode="numeric"
+                    :class="['field-input font-mono tracking-widest', form.errors.tanggal_lahir ? 'border-red-400 bg-red-50' : '']"
+                  />
                   <p v-if="form.errors.tanggal_lahir" class="field-error">{{ form.errors.tanggal_lahir }}</p>
                 </div>
               </div>
@@ -133,6 +140,7 @@
                   <label class="field-label">Gol. Darah <span class="text-red-500">*</span></label>
                   <select v-model="form.gol_darah" :class="['field-input', form.errors.gol_darah ? 'border-red-400 bg-red-50' : '']">
                     <option value="" disabled>Pilih gol. darah</option>
+                    <option value="-">Tidak Tau</option>
                     <option value="A">A</option>
                     <option value="B">B</option>
                     <option value="AB">AB</option>
@@ -159,8 +167,15 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="field-label">No. WhatsApp <span class="text-red-500">*</span></label>
-                  <input v-model="form.no_wa" type="tel" placeholder="08xx-xxxx-xxxx"
-                    :class="['field-input', form.errors.no_wa ? 'border-red-400 bg-red-50' : '']" />
+                  <input
+                    :value="form.no_wa"
+                    @input="handleNoWaInput"
+                    type="tel"
+                    placeholder="628xxxxxxxxxx"
+                    inputmode="numeric"
+                    :class="['field-input font-mono', form.errors.no_wa ? 'border-red-400 bg-red-50' : '']"
+                  />
+                  <p class="text-gray-400 text-[10px] mt-1">Format otomatis: <span class="font-mono font-semibold">628</span>xxxxxxxxxx</p>
                   <p v-if="form.errors.no_wa" class="field-error">{{ form.errors.no_wa }}</p>
                 </div>
                 <div>
@@ -211,7 +226,18 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="field-label">No. Kartu</label>
-                  <input v-model="form.no_kartu" type="text" placeholder="Nomor kartu anggota" class="field-input" />
+                  <div class="flex items-center gap-0 border border-gray-200 rounded-lg overflow-hidden focus-within:border-red-400 focus-within:ring-2 focus-within:ring-red-100 transition-all duration-200">
+                    <span class="bg-gray-50 px-3 py-2.5 text-sm font-mono font-bold text-gray-500 border-r border-gray-200 whitespace-nowrap select-none">BBMC 36 2026</span>
+                    <input
+                      v-model="form.no_kartu"
+                      type="text"
+                      maxlength="4"
+                      inputmode="numeric"
+                      placeholder="0000"
+                      @input="form.no_kartu = form.no_kartu.replace(/\D/g, '').slice(0, 4)"
+                      class="flex-1 min-w-0 bg-white px-3 py-2.5 text-sm font-mono font-bold text-gray-700 placeholder-gray-300 outline-none tracking-widest"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label class="field-label">Status Keanggotaan <span class="text-red-500">*</span></label>
@@ -250,32 +276,29 @@
                 </select>
               </div>
 
+              <!-- Region — hanya muncul jika checkpoint = Bandung -->
+              <div v-if="form.checkpoint === 'Bandung'" class="transition-all duration-300">
+                <label class="field-label">Region <span class="text-red-500">*</span></label>
+                <select v-model="form.region" :class="['field-input', form.errors.region ? 'border-red-400 bg-red-50' : '']">
+                  <option value="" disabled>Pilih region</option>
+                  <option value="West Region">West Region</option>
+                  <option value="East Region">East Region</option>
+                  <option value="North Region">North Region</option>
+                  <option value="South Region">South Region</option>
+                </select>
+                <p v-if="form.errors.region" class="field-error">{{ form.errors.region }}</p>
+              </div>
+
               <div>
-                <label class="field-label">Terdaftar Sejak</label>
-                <input v-model="form.terdaftar_sejak" type="date" class="field-input" />
-              </div>
-
-              <!-- Divider Motor -->
-              <div class="flex items-center gap-3 pt-2">
-                <div class="h-px flex-1 bg-red-100"></div>
-                <span class="text-red-500 text-xs font-bold uppercase tracking-widest whitespace-nowrap">🏍️ Data Motor</span>
-                <div class="h-px flex-1 bg-red-100"></div>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label class="field-label">Jenis Motor</label>
-                  <input v-model="form.jenis_motor" type="text" placeholder="Honda CB500" class="field-input" />
-                </div>
-                <div>
-                  <label class="field-label">Tahun Motor</label>
-                  <input v-model="form.tahun_motor" type="number" min="1950" :max="new Date().getFullYear()" placeholder="2024" class="field-input" />
-                  <p v-if="form.errors.tahun_motor" class="field-error">{{ form.errors.tahun_motor }}</p>
-                </div>
-                <div>
-                  <label class="field-label">No. Polisi</label>
-                  <input v-model="form.no_pol" type="text" placeholder="B 1234 ABC" class="field-input" />
-                </div>
+                <label class="field-label">Terdaftar Sejak (Tahun)</label>
+                <input
+                  v-model="form.terdaftar_sejak"
+                  type="number"
+                  min="1970"
+                  :max="new Date().getFullYear()"
+                  placeholder="Contoh: 2020"
+                  class="field-input"
+                />
               </div>
 
             </div>
@@ -317,7 +340,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useForm, usePage } from '@inertiajs/vue3'
 
 const currentStep = ref(1)
@@ -328,7 +351,7 @@ const showErrors = ref(false)
 
 const checkpoints = [
   'Bandung', 'Bogor', 'Garut', 'Sumedang', 'Malang', 'Lamongan',
-  'Cirebon', 'Batam', 'Sukabumi', 'Pekalongan', 'Sleman', 'Solo', 'JOGJAKARTA'
+  'Cirebon', 'Batam', 'Sukabumi', 'Pekalongan', 'Sleman', 'Solo', 'Jogjakarta'
 ]
 
 const form = useForm({
@@ -348,10 +371,58 @@ const form = useForm({
   status_keanggotaan: '',
   chapter: '',
   checkpoint: '',
+  region: '',
   terdaftar_sejak: '',
-  jenis_motor: '',
-  tahun_motor: '',
-  no_pol: '',
+})
+
+// Reset region jika checkpoint bukan Bandung
+watch(() => form.checkpoint, (val) => {
+  if (val !== 'Bandung') {
+    form.region = ''
+  }
+})
+
+// ── Masking tanggal lahir DD/MM/YYYY ──
+function handleTanggalLahirInput(e: Event) {
+  const input = e.target as HTMLInputElement
+  // Strip semua non-digit, simpan posisi caret sebelum masking
+  let raw = input.value.replace(/\D/g, '').slice(0, 8)
+  let masked = ''
+
+  if (raw.length > 0) masked += raw.substring(0, 2)
+  if (raw.length >= 3) masked += '/' + raw.substring(2, 4)
+  if (raw.length >= 5) masked += '/' + raw.substring(4, 8)
+
+  form.tanggal_lahir = masked
+  input.value = masked
+}
+
+// ── Validasi nilai tanggal lahir ──
+const maxYear = new Date().getFullYear() - 18
+
+function validateTanggalLahir(): string | null {
+  const val = form.tanggal_lahir
+  if (!val || val.length < 10) return 'Tanggal lahir wajib diisi dengan format DD/MM/YYYY.'
+
+  const parts = val.split('/')
+  if (parts.length !== 3) return 'Format tanggal lahir harus DD/MM/YYYY.'
+
+  const dd = parseInt(parts[0], 10)
+  const mm = parseInt(parts[1], 10)
+  const yyyy = parseInt(parts[2], 10)
+
+  if (isNaN(dd) || dd < 1 || dd > 31) return 'Tanggal (DD) tidak valid, harus antara 01–31.'
+  if (isNaN(mm) || mm < 1 || mm > 12) return 'Bulan (MM) tidak valid, harus antara 01–12.'
+  if (isNaN(yyyy) || yyyy > maxYear) return `Tahun lahir maksimal ${maxYear} (minimal usia 18 tahun).`
+  if (yyyy < 1900) return 'Tahun lahir tidak valid.'
+
+  return null
+}
+
+// ── Masking nomor kartu: BBMC 36 2026 XXXX ──
+const noKartuMasked = computed(() => {
+  const last4 = form.no_kartu ? form.no_kartu.slice(-4).padStart(4, '0') : '0000'
+  return `BBMC 36 2026 ${last4}`
 })
 
 const hasErrors = computed(() => Object.keys(form.errors).length > 0)
@@ -387,18 +458,42 @@ function clearFoto() {
   if (fotoInput.value) fotoInput.value.value = ''
 }
 
+// ── Format No. WhatsApp → 628xx ──
+function handleNoWaInput(e: Event) {
+  const input = e.target as HTMLInputElement
+  // Buang semua karakter bukan digit
+  let digits = input.value.replace(/\D/g, '')
+  // Ganti awalan 0 → 62 (misal 08xx → 628xx)
+  if (digits.startsWith('0')) {
+    digits = '62' + digits.slice(1)
+  }
+  // Pastikan selalu diawali 62
+  if (digits.length > 0 && !digits.startsWith('62')) {
+    digits = '62' + digits
+  }
+  form.no_wa = digits
+  input.value = digits
+}
+
 function nextStep() {
   // Client-side check for step 1 required fields
   const missing = step1Fields.filter((f) => !form[f as keyof typeof form])
   if (missing.length) {
-    // Trigger inline errors by manually setting them
     showErrors.value = true
-    // Set form error hints for each missing field
     missing.forEach((f) => {
       form.errors[f as keyof typeof form.errors] = 'Field ini wajib diisi.'
     })
     return
   }
+
+  // Validasi nilai tanggal lahir
+  const tglError = validateTanggalLahir()
+  if (tglError) {
+    showErrors.value = true
+    form.errors['tanggal_lahir' as keyof typeof form.errors] = tglError
+    return
+  }
+
   showErrors.value = false
   currentStep.value = 2
   window.scrollTo({ top: 0, behavior: 'smooth' })

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nama_lengkap');
             $table->string('nama_panggilan');
             $table->string('tempat_lahir');
-            $table->date('tanggal_lahir');
+            $table->string('tanggal_lahir');       // format DD/MM/YYYY
             $table->string('jenis_kelamin');
             $table->string('gol_darah');
             $table->string('nik');
@@ -28,11 +28,9 @@ return new class extends Migration
             $table->string('no_kartu')->nullable();
             $table->string('status_keanggotaan');
             $table->string('chapter');
-            $table->string('checkpoint');
-            $table->date('terdaftar_sejak')->nullable();
-            $table->string('jenis_motor')->nullable();
-            $table->string('tahun_motor')->nullable();
-            $table->string('no_pol')->nullable();
+            $table->string('checkpoint')->nullable();
+            $table->string('region')->nullable();  // hanya untuk checkpoint Bandung
+            $table->string('terdaftar_sejak')->nullable(); // tahun saja, misal: 2020
             $table->timestamps();
         });
     }
