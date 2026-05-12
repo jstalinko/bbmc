@@ -226,7 +226,14 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="field-label">No. Kartu</label>
-                  <div class="flex items-center gap-0 border border-gray-200 rounded-lg overflow-hidden focus-within:border-red-400 focus-within:ring-2 focus-within:ring-red-100 transition-all duration-200">
+                  <div
+                    class="flex items-center gap-0 rounded-lg overflow-hidden transition-all duration-200 border-2"
+                    :class="{
+                      'border-gray-200 focus-within:border-red-400 focus-within:ring-2 focus-within:ring-red-100': noKartuStatus === 'idle' || noKartuStatus === 'checking',
+                      'border-green-400 ring-2 ring-green-100': noKartuStatus === 'available',
+                      'border-red-400 ring-2 ring-red-100': noKartuStatus === 'taken',
+                    }"
+                  >
                     <span class="bg-gray-50 px-3 py-2.5 text-sm font-mono font-bold text-gray-500 border-r border-gray-200 whitespace-nowrap select-none">BBMC 36 2026</span>
                     <input
                       v-model="form.no_kartu"
@@ -234,10 +241,29 @@
                       maxlength="4"
                       inputmode="numeric"
                       placeholder="0000"
-                      @input="form.no_kartu = form.no_kartu.replace(/\D/g, '').slice(0, 4)"
+                      @input="handleNoKartuInput"
                       class="flex-1 min-w-0 bg-white px-3 py-2.5 text-sm font-mono font-bold text-gray-700 placeholder-gray-300 outline-none tracking-widest"
                     />
+                    <!-- Status badge -->
+                    <span class="pr-3 flex items-center">
+                      <!-- Checking spinner -->
+                      <svg v-if="noKartuStatus === 'checking'" class="animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      <!-- Available -->
+                      <svg v-else-if="noKartuStatus === 'available'" class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <!-- Taken -->
+                      <svg v-else-if="noKartuStatus === 'taken'" class="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </span>
                   </div>
+                  <!-- Status message -->
+                  <p v-if="noKartuStatus === 'available'" class="text-green-600 text-xs mt-1 flex items-center gap-1">✓ No. kartu tersedia</p>
+                  <p v-else-if="noKartuStatus === 'taken'" class="field-error">No. kartu sudah digunakan, pilih nomor lain</p>
                 </div>
                 <div>
                   <label class="field-label">Status Keanggotaan <span class="text-red-500">*</span></label>
@@ -257,34 +283,30 @@
                 <label class="field-label">Chapter <span class="text-red-500">*</span></label>
                 <select v-model="form.chapter" :class="['field-input', form.errors.chapter ? 'border-red-400 bg-red-50' : '']">
                   <option value="" disabled>Pilih chapter</option>
-                  <option>Mother Chapter</option>
-                  <option>Lombok</option>
-                  <option>Jakarta</option>
-                  <option>Central Java</option>
-                  <option>East Java</option>
-                  <option>Borneo</option>
-                  <option>Sumatra</option>
+                  <option v-for="ch in chapterList" :key="ch.name" :value="ch.name">{{ ch.name }}</option>
                 </select>
                 <p v-if="form.errors.chapter" class="field-error">{{ form.errors.chapter }}</p>
               </div>
 
-              <div>
-                <label class="field-label">Checkpoint</label>
-                <select v-model="form.checkpoint" class="field-input">
-                  <option value="">— Tidak ada / pilih checkpoint —</option>
-                  <option v-for="cp in checkpoints" :key="cp">{{ cp }}</option>
+              <!-- Checkpoint — hanya muncul jika chapter punya checkpoint -->
+              <div v-if="currentChapterCheckpoints.length > 0">
+                <label class="field-label">Checkpoint <span class="text-red-500">*</span></label>
+                <select v-model="form.checkpoint" :class="['field-input', form.errors.checkpoint ? 'border-red-400 bg-red-50' : '']">
+                  <option value="" disabled>Pilih checkpoint</option>
+                  <option v-for="cp in currentChapterCheckpoints" :key="cp" :value="cp">{{ cp }}</option>
                 </select>
+                <p v-if="form.errors.checkpoint" class="field-error">{{ form.errors.checkpoint }}</p>
               </div>
 
-              <!-- Region — hanya muncul jika checkpoint = Bandung -->
-              <div v-if="form.checkpoint === 'Bandung'" class="transition-all duration-300">
+              <!-- Region — hanya muncul jika chapter Mother Chapter dan checkpoint = Bandung -->
+              <div v-if="showRegion" class="transition-all duration-300">
                 <label class="field-label">Region <span class="text-red-500">*</span></label>
                 <select v-model="form.region" :class="['field-input', form.errors.region ? 'border-red-400 bg-red-50' : '']">
                   <option value="" disabled>Pilih region</option>
                   <option value="West Region">West Region</option>
                   <option value="East Region">East Region</option>
-                  <option value="North Region">North Region</option>
                   <option value="South Region">South Region</option>
+                  <option value="North Region">North Region</option>
                 </select>
                 <p v-if="form.errors.region" class="field-error">{{ form.errors.region }}</p>
               </div>
@@ -349,9 +371,44 @@ const fotoSize = ref('')
 const fotoInput = ref<HTMLInputElement | null>(null)
 const showErrors = ref(false)
 
-const checkpoints = [
-  'Bandung', 'Bogor', 'Garut', 'Sumedang', 'Malang', 'Lamongan',
-  'Cirebon', 'Batam', 'Sukabumi', 'Pekalongan', 'Sleman', 'Solo', 'Jogjakarta'
+// ── Daftar chapter beserta checkpoint-nya ──
+const chapterList = [
+  {
+    name: 'Mother Chapter',
+    checkpoints: ['Bandung', 'Subang', 'Bogor', 'Sukabumi', 'Garut', 'Sumedang', 'Cirebon'],
+  },
+  {
+    name: 'Jakarta Chapter',
+    checkpoints: [],
+  },
+  {
+    name: 'Sumatera Chapter',
+    checkpoints: ['Bangka Belitung', 'Palembang', 'Medan', 'Lampung', 'Batam'],
+  },
+  {
+    name: 'Central Java Chapter',
+    checkpoints: ['Pekalongan', 'Kudus', 'Jepara', 'Solo', 'Sleman', 'Jogja'],
+  },
+  {
+    name: 'East Java Chapter',
+    checkpoints: ['Mojokerto', 'Malang'],
+  },
+  {
+    name: 'Bali Chapter',
+    checkpoints: [],
+  },
+  {
+    name: 'Lombok Chapter',
+    checkpoints: [],
+  },
+  {
+    name: 'Borneo Chapter',
+    checkpoints: [],
+  },
+  {
+    name: 'USA Chapter',
+    checkpoints: [],
+  },
 ]
 
 const form = useForm({
@@ -373,6 +430,23 @@ const form = useForm({
   checkpoint: '',
   region: '',
   terdaftar_sejak: '',
+})
+
+// Checkpoint yang tersedia berdasarkan chapter yang dipilih
+const currentChapterCheckpoints = computed(() => {
+  const found = chapterList.find((ch) => ch.name === form.chapter)
+  return found ? found.checkpoints : []
+})
+
+// Tampilkan region hanya jika Mother Chapter dan checkpoint = Bandung
+const showRegion = computed(() => {
+  return form.chapter === 'Mother Chapter' && form.checkpoint === 'Bandung'
+})
+
+// Reset checkpoint & region saat chapter berubah
+watch(() => form.chapter, () => {
+  form.checkpoint = ''
+  form.region = ''
 })
 
 // Reset region jika checkpoint bukan Bandung
@@ -424,6 +498,42 @@ const noKartuMasked = computed(() => {
   const last4 = form.no_kartu ? form.no_kartu.slice(-4).padStart(4, '0') : '0000'
   return `BBMC 36 2026 ${last4}`
 })
+
+// ── Validasi No. Kartu (async duplicate check) ──
+type NoKartuStatus = 'idle' | 'checking' | 'available' | 'taken'
+const noKartuStatus = ref<NoKartuStatus>('idle')
+let noKartuDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+function handleNoKartuInput(e: Event) {
+  const input = e.target as HTMLInputElement
+  // Hanya angka, maks 4 digit
+  form.no_kartu = input.value.replace(/\D/g, '').slice(0, 4)
+  input.value = form.no_kartu
+
+  // Reset status jika belum 4 digit
+  if (form.no_kartu.length < 4) {
+    noKartuStatus.value = 'idle'
+    if (noKartuDebounceTimer) clearTimeout(noKartuDebounceTimer)
+    return
+  }
+
+  // Debounce 500ms sebelum hit API
+  noKartuStatus.value = 'checking'
+  if (noKartuDebounceTimer) clearTimeout(noKartuDebounceTimer)
+  noKartuDebounceTimer = setTimeout(() => checkNoKartu(form.no_kartu), 500)
+}
+
+async function checkNoKartu(nocard: string) {
+  if (nocard.length !== 4) return
+  noKartuStatus.value = 'checking'
+  try {
+    const res = await fetch(`/api/validate-nocard/${nocard}`)
+    const data = await res.json()
+    noKartuStatus.value = data.available ? 'available' : 'taken'
+  } catch {
+    noKartuStatus.value = 'idle'
+  }
+}
 
 const hasErrors = computed(() => Object.keys(form.errors).length > 0)
 
@@ -499,13 +609,31 @@ function nextStep() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function submitForm() {
+async function submitForm() {
   showErrors.value = true
+
+  // Cek no_kartu jika diisi
+  if (form.no_kartu && form.no_kartu.length === 4 && noKartuStatus.value !== 'available') {
+    // Jika masih checking, tunggu dulu; jika taken/idle, blokir
+    if (noKartuStatus.value === 'checking') {
+      // Tunggu sebentar sampai selesai
+      await new Promise<void>((resolve) => {
+        const check = setInterval(() => {
+          if (noKartuStatus.value !== 'checking') { clearInterval(check); resolve() }
+        }, 100)
+      })
+    }
+    if (noKartuStatus.value === 'taken') {
+      return // biarkan pesan error sudah tampil
+    }
+  }
+
   form.post(route('member.register_post'), {
     forceFormData: true,
     onSuccess: () => {
       form.reset()
       fotoPreview.value = null
+      noKartuStatus.value = 'idle'
       currentStep.value = 1
       showErrors.value = false
     },

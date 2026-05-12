@@ -16,6 +16,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 
     Route::get('/member', [MemberController::class, 'list'])->name('member.list');
     Route::get('/member/{member}', [MemberController::class, 'show'])->name('member.show');
+    Route::put('/member/{member}', [MemberController::class, 'update'])->name('member.update');
     Route::delete('/member/{member}', [MemberController::class, 'destroy'])->name('member.destroy');
 });
 

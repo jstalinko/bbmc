@@ -110,6 +110,63 @@ class MemberController extends Controller
         return Inertia::render('Member/edit', ['member' => $member]);
     }
 
+    public function update(Request $request, Member $member)
+    {
+        $validated = $request->validate([
+            'nama_lengkap'       => 'required|string|max:255',
+            'nama_panggilan'     => 'required|string|max:255',
+            'tempat_lahir'       => 'required|string|max:255',
+            'tanggal_lahir'      => ['required', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}$/'],
+            'jenis_kelamin'      => 'required|in:L,P',
+            'gol_darah'          => 'required|in:A,B,AB,O,-',
+            'nik'                => 'required|string|digits:16',
+            'alamat'             => 'required|string',
+            'no_wa'              => 'required|string|max:20',
+            'email'              => 'nullable|email|max:255',
+            'profesi'            => 'nullable|string|max:255',
+            'foto'               => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'no_kartu'           => 'nullable|digits:4',
+            'status_keanggotaan' => 'required|in:SS DIPONEGORO,LIFE MEMBER,HONORARY,VIRGIN,PROSPECT',
+            'chapter'            => 'required|string|max:100',
+            'checkpoint'         => 'nullable|string|max:100',
+            'region'             => 'nullable|string|max:100',
+            'terdaftar_sejak'    => 'nullable|string|digits:4',
+        ], [
+            'nama_lengkap.required'       => 'Nama lengkap wajib diisi.',
+            'nama_panggilan.required'     => 'Nama panggilan wajib diisi.',
+            'tempat_lahir.required'       => 'Tempat lahir wajib diisi.',
+            'tanggal_lahir.required'      => 'Tanggal lahir wajib diisi.',
+            'tanggal_lahir.regex'         => 'Format tanggal lahir harus DD/MM/YYYY.',
+            'jenis_kelamin.required'      => 'Jenis kelamin wajib dipilih.',
+            'gol_darah.required'          => 'Golongan darah wajib dipilih.',
+            'nik.required'                => 'NIK wajib diisi.',
+            'nik.digits'                  => 'NIK harus tepat 16 digit angka.',
+            'alamat.required'             => 'Alamat wajib diisi.',
+            'no_wa.required'              => 'No. WhatsApp wajib diisi.',
+            'email.email'                 => 'Format email tidak valid.',
+            'foto.image'                  => 'File foto harus berupa gambar.',
+            'foto.max'                    => 'Ukuran foto maksimal 5MB.',
+            'status_keanggotaan.required' => 'Status keanggotaan wajib dipilih.',
+            'chapter.required'            => 'Chapter wajib dipilih.',
+            'terdaftar_sejak.digits'      => 'Tahun terdaftar harus 4 digit angka.',
+        ]);
+
+        if ($request->hasFile('foto')) {
+            // Hapus foto lama jika ada
+            if ($member->foto) {
+                \Storage::disk('public')->delete($member->foto);
+            }
+            $validated['foto'] = $request->file('foto')->store('members/foto', 'public');
+        } else {
+            // Jangan timpa foto lama jika tidak ada file baru
+            unset($validated['foto']);
+        }
+
+        $member->update($validated);
+
+        return back()->with('success', 'Data anggota berhasil diperbarui.');
+    }
+
     public function destroy(Member $member)
     {
         if ($member->foto) {
