@@ -411,9 +411,17 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                     </div>
                 </div>
 
-                <DialogFooter class="px-4 pb-4">
+                <div class="px-4 pb-4 flex flex-col gap-2">
+                    <a :href="`/dashboard/member/${viewTarget?.id}/print`" target="_blank" class="w-full">
+                        <Button class="w-full bg-red-600 hover:bg-red-700 text-white gap-2">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                            </svg>
+                            Cetak Kartu
+                        </Button>
+                    </a>
                     <Button variant="outline" class="w-full" @click="closeView">Tutup</Button>
-                </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
 

@@ -110,6 +110,18 @@ class MemberController extends Controller
         return Inertia::render('Member/edit', ['member' => $member]);
     }
 
+    public function printCard(Member $member)
+    {
+        return view('member.print-card', ['member' => $member]);
+    }
+
+    public function printCardPdf(Member $member)
+    {
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('member.print-card-pdf', ['member' => $member]);
+        $pdf->setPaper('A6', 'landscape');
+        return $pdf->stream("kartu-{$member->nama_panggilan}.pdf");
+    }
+
     public function update(Request $request, Member $member)
     {
         $validated = $request->validate([
