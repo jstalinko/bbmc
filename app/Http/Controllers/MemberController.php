@@ -161,7 +161,7 @@ class MemberController extends Controller
             'no_wa'              => 'required|string|max:20',
             'email'              => 'nullable|email|max:255',
             'profesi'            => 'nullable|string|max:255',
-            'foto'               => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'foto'               => 'nullable|image|mimes:jpg,jpeg,png,webp,heic,heif,gif,bmp,HEIC,HEIF,GIF,BMP|max:5120',
             'no_kartu'           => 'nullable|digits:4',
             'status_keanggotaan' => 'required|in:SS DIPONEGORO,LIFE MEMBER,HONORARY,VIRGIN,PROSPECT',
             'chapter'            => 'required|string|max:100',
