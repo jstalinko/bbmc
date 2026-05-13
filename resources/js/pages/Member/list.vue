@@ -231,7 +231,7 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <!-- No Kartu -->
                             <TableCell>
                                 <span class="rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-semibold text-muted-foreground">
-                                    {{ member.no_kartu || '—' }}
+                                   BBMC 38 2026 {{ member.no_kartu || '—' }}
                                 </span>
                             </TableCell>
 

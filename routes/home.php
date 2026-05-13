@@ -7,4 +7,5 @@ Route::group(['prefix' => '/member'] , function(){
     Route::get('/register',[MemberController::class,'register'])->name('member.register');
     Route::post('/register',[MemberController::class,'registerPost'])->name('member.register_post');
     Route::get('/register-success' , [MemberController::class,'registerSuccess'])->name('member.register_success');
+    Route::get('/{no_kartu}', [MemberController::class, 'showPublic'])->name('member.show');
 });

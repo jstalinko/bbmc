@@ -234,7 +234,7 @@
                       'border-red-400 ring-2 ring-red-100': noKartuStatus === 'taken',
                     }"
                   >
-                    <span class="bg-gray-50 px-3 py-2.5 text-sm font-mono font-bold text-gray-500 border-r border-gray-200 whitespace-nowrap select-none">BBMC 36 2026</span>
+                    <span class="bg-gray-50 px-3 py-2.5 text-sm font-mono font-bold text-gray-500 border-r border-gray-200 whitespace-nowrap select-none">BBMC 38 2026</span>
                     <input
                       v-model="form.no_kartu"
                       type="text"
@@ -493,10 +493,10 @@ function validateTanggalLahir(): string | null {
   return null
 }
 
-// ── Masking nomor kartu: BBMC 36 2026 XXXX ──
+// ── Masking nomor kartu: BBMC 38 2026 XXXX ──
 const noKartuMasked = computed(() => {
   const last4 = form.no_kartu ? form.no_kartu.slice(-4).padStart(4, '0') : '0000'
-  return `BBMC 36 2026 ${last4}`
+  return `BBMC 38 2026 ${last4}`
 })
 
 // ── Validasi No. Kartu (async duplicate check) ──

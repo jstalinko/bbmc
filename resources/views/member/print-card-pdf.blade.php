@@ -6,267 +6,213 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
+        html, body {
+            width: 242.64pt;
+            height: 153.07pt;
+            overflow: hidden;
             font-family: Arial, Helvetica, sans-serif;
-            background: #fff;
-            font-size: 10pt;
+            background-color: #830000;
         }
 
-        /* ── HEADER ── */
-        .header-table {
+        .card {
+            width: 242.64pt;
+            height: 153.07pt;
+            background-color: #830000;
+            overflow: hidden;
+        }
+
+        /* ═══ HEADING ═══ */
+        .heading {
             width: 100%;
-            background-color: #b91c1c;
-            border-collapse: collapse;
-        }
-        .header-table td {
-            padding: 12px 16px;
-            vertical-align: middle;
-            color: #fff;
-        }
-        .header-logo-cell {
-            width: 64px;
-        }
-        .header-logo {
-            width: 56px;
-            height: 56px;
-        }
-        .club-name {
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 18pt;
-            font-weight: bold;
-            color: #fff;
-            line-height: 1.1;
-            text-transform: uppercase;
-        }
-        .club-sub {
-            font-size: 6.5pt;
-            color: #fecaca;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-top: 3px;
-        }
-        .nokartu-cell {
-            width: 100px;
-            text-align: right;
-            border-left: 1px solid rgba(255,255,255,0.3);
-            padding-left: 14px;
-        }
-        .nokartu-lbl {
-            font-size: 6pt;
-            color: #fca5a5;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .nokartu-val {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 16pt;
-            font-weight: bold;
-            color: #fff;
-            letter-spacing: 2px;
+            text-align: center;
+            padding: 5pt 4pt 3pt;
+            border-bottom: 0.5pt solid rgba(255,255,255,0.2);
+            line-height: 1;
         }
 
-        /* ── BODY ── */
+        .heading-main {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 14pt;
+            font-weight: bold;
+            color: #ffffff;
+            letter-spacing: 2.5pt;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .heading-sub {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 8pt;
+            font-weight: bold;
+            color: rgba(255,255,255,0.8);
+            letter-spacing: 2.5pt;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-top: 1pt;
+        }
+
+        /* ═══ BODY TABLE ═══ */
         .body-table {
             width: 100%;
             border-collapse: collapse;
-            padding: 14px 16px;
-        }
-        .body-table td {
-            padding: 14px 16px;
-            vertical-align: top;
-        }
-        .photo-cell {
-            width: 76px;
-        }
-        .photo-box {
-            width: 74px;
-            height: 92px;
-            border: 1.5px solid #d1d5db;
-            text-align: center;
-            vertical-align: middle;
-            overflow: hidden;
-            background: #f3f4f6;
-        }
-        .photo-box img {
-            width: 74px;
-            height: 92px;
-        }
-        .photo-initial {
-            font-family: Georgia, serif;
-            font-size: 28pt;
-            font-weight: bold;
-            color: #b91c1c;
-            line-height: 92px;
         }
 
-        .member-name {
-            font-size: 13pt;
+        .col-logo {
+            width: 64pt;
+            text-align: center;
+            padding: 4pt 2pt 3pt 5pt;
+            vertical-align: middle;
+        }
+
+        .logo-img {
+            width: 54pt;
+            height: 54pt;
+        }
+
+        .col-center {
+            text-align: center;
+            padding: 4pt 3pt 3pt;
+            vertical-align: middle;
+        }
+
+        .reg-label {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 10pt;
             font-weight: bold;
-            color: #111827;
+            color: #ffffff;
+            letter-spacing: 1.5pt;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            line-height: 1;
+        }
+
+        .status-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 3pt;
+        }
+
+        .status-table td {
+            vertical-align: middle;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .wing-td { width: 28%; }
+
+        .wing-line {
+            height: 0.5pt;
+            background-color: rgba(255,255,255,0.4);
+            font-size: 0;
+            line-height: 0;
+        }
+
+        .status-box {
+            border: 0.7pt solid rgba(255,255,255,0.65);
+            padding: 1pt 4pt;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 6pt;
+            font-weight: bold;
+            color: rgba(255,255,255,0.9);
+            letter-spacing: 0.6pt;
+            text-transform: uppercase;
+            white-space: nowrap;
+            text-align: center;
             line-height: 1.2;
         }
-        .member-nick {
-            font-family: Georgia, serif;
-            font-size: 9pt;
-            color: #6b7280;
-            font-style: italic;
-            margin-top: 2px;
-            margin-bottom: 6px;
-        }
-        .sep {
-            height: 1px;
-            background: #e5e7eb;
-            margin: 4px 0 6px;
-            border: none;
-        }
 
-        /* Info rows */
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .info-table td {
-            padding: 2px 0;
-            vertical-align: top;
-        }
-        .info-lbl {
-            font-size: 6.5pt;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            width: 58px;
-            white-space: nowrap;
-        }
-        .info-val {
-            font-size: 8.5pt;
-            font-weight: bold;
-            color: #1f2937;
-        }
-
-        /* Badge — pakai background-color solid untuk DomPDF */
-        .badge {
-            font-size: 6.5pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            padding: 1px 5px;
-            border: 0.5px solid;
-        }
-        .badge-ss       { background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
-        .badge-life     { background-color: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
-        .badge-hon      { background-color: #fef3c7; color: #b45309; border-color: #fcd34d; }
-        .badge-virgin   { background-color: #dcfce7; color: #15803d; border-color: #86efac; }
-        .badge-prospect { background-color: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
-
-        /* ── FOOTER ── */
-        .footer-table {
-            width: 100%;
-            background-color: #991b1b;
-            border-collapse: collapse;
-        }
-        .footer-table td {
-            padding: 6px 16px;
-            font-size: 6.5pt;
-            color: #fecaca;
+        .col-qr {
+            width: 64pt;
+            text-align: center;
+            padding: 4pt 5pt 3pt 2pt;
             vertical-align: middle;
         }
-        .footer-right {
-            text-align: right;
-            font-family: 'Courier New', Courier, monospace;
-            color: #fca5a5;
-            letter-spacing: 0.5px;
+
+        .qr-frame {
+            display: inline-block;
+            background-color: #ffffff;
+            padding: 3pt;
+            width: 54pt;
+            height: 54pt;
+            font-size: 0;
+            line-height: 0;
+        }
+
+        .qr-img {
+            width: 48pt;
+            height: 48pt;
+            display: block;
+        }
+
+        /* ═══ FOOTER ═══ */
+        .footer {
+            width: 100%;
+            border-top: 0.5pt solid rgba(255,255,255,0.15);
+            text-align: center;
+            padding: 3pt 6pt 3pt;
+            line-height: 1;
+        }
+
+        .no-kartu-box {
+            display: inline-block;
+            border: 0.7pt solid rgba(255,255,255,0.5);
+            background-color: rgba(255,255,255,0.08);
+            padding: 2pt 10pt;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 8pt;
+            font-weight: bold;
+            color: #ffffff;
+            letter-spacing: 1.5pt;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .card-url {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 5pt;
+            color: rgba(255,255,255,0.35);
+            line-height: 1;
+            margin-top: 2pt;
         }
     </style>
 </head>
 <body>
+<div class="card">
 
-<!-- HEADER -->
-<table class="header-table">
-    <tr>
-        <td class="header-logo-cell">
-            <img src="{{ public_path('bbmc-logo.png') }}" class="header-logo" alt="BBMC">
-        </td>
-        <td>
-            <div class="club-name">Bikers Brotherhood<br>Motor Club</div>
-            <div class="club-sub">Indonesia &mdash; Since 1994</div>
-        </td>
-        <td class="nokartu-cell">
-            <div class="nokartu-lbl">No. Kartu</div>
-            <div class="nokartu-val">{{ $member->no_kartu ? str_pad($member->no_kartu, 4, '0', STR_PAD_LEFT) : '——' }}</div>
-        </td>
-    </tr>
-</table>
+    <div class="heading">
+        <div class="heading-main">BIKERS BROTHERHOOD</div>
+        <div class="heading-sub">MOTORCYCLE INDONESIA</div>
+    </div>
 
-<!-- BODY -->
-<table class="body-table">
-    <tr>
-        <!-- Foto -->
-        <td class="photo-cell">
-            <table class="photo-box">
-                <tr><td style="text-align:center;vertical-align:middle;height:92px;width:74px;">
-                    @if($member->foto && file_exists(storage_path('app/public/' . $member->foto)))
-                        <img src="{{ storage_path('app/public/' . $member->foto) }}" alt="Foto">
-                    @else
-                        <span class="photo-initial">{{ strtoupper(substr($member->nama_lengkap, 0, 1)) }}</span>
-                    @endif
-                </td></tr>
-            </table>
-        </td>
+    <table class="body-table">
+        <tr>
+            <td class="col-logo">
+                <img src="{{ public_path('bbmc-logo.png') }}" class="logo-img" alt="BBMC">
+            </td>
 
-        <!-- Info -->
-        <td>
-            <div class="member-name">{{ $member->nama_lengkap }}</div>
-            <div class="member-nick">"{{ $member->nama_panggilan }}"</div>
-            <hr class="sep">
+            <td class="col-center">
+                <div class="reg-label">REGISTRATION CARD</div>
+                <table class="status-table">
+                    <tr>
+                        <td class="wing-td"><div class="wing-line"></div></td>
+                        <td><div class="status-box">{{ $member->status_keanggotaan }}</div></td>
+                        <td class="wing-td"><div class="wing-line"></div></td>
+                    </tr>
+                </table>
+            </td>
 
-            <table class="info-table">
-                <tr>
-                    <td class="info-lbl">Status</td>
-                    <td class="info-val">
-                        @php
-                            $bc = ['SS DIPONEGORO'=>'badge-ss','LIFE MEMBER'=>'badge-life','HONORARY'=>'badge-hon','VIRGIN'=>'badge-virgin','PROSPECT'=>'badge-prospect'][$member->status_keanggotaan] ?? 'badge-prospect';
-                        @endphp
-                        <span class="badge {{ $bc }}">{{ $member->status_keanggotaan }}</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="info-lbl">Chapter</td>
-                    <td class="info-val">{{ $member->chapter }}</td>
-                </tr>
-                @if($member->checkpoint)
-                <tr>
-                    <td class="info-lbl">Checkpoint</td>
-                    <td class="info-val">{{ $member->checkpoint }}@if($member->region) &mdash; {{ $member->region }}@endif</td>
-                </tr>
-                @endif
-                <tr>
-                    <td class="info-lbl">TTL</td>
-                    <td class="info-val">{{ $member->tempat_lahir }}, {{ $member->tanggal_lahir }}</td>
-                </tr>
-                <tr>
-                    <td class="info-lbl">No. WA</td>
-                    <td class="info-val" style="font-family:'Courier New',monospace;font-size:8pt;">{{ $member->no_wa }}</td>
-                </tr>
-                @if($member->terdaftar_sejak)
-                <tr>
-                    <td class="info-lbl">Terdaftar</td>
-                    <td class="info-val">Sejak {{ $member->terdaftar_sejak }}</td>
-                </tr>
-                @endif
-            </table>
-        </td>
-    </tr>
-</table>
+            <td class="col-qr">
+                <div class="qr-frame">
+                    <img class="qr-img" src="{{ $qrDataUri }}" alt="QR">
+                </div>
+            </td>
+        </tr>
+    </table>
 
-<!-- FOOTER -->
-<table class="footer-table">
-    <tr>
-        <td>bikersbrotherhoodmc.id</td>
-        <td class="footer-right">BBMC-36-2026-{{ str_pad($member->no_kartu ?? '0000', 4, '0', STR_PAD_LEFT) }}</td>
-    </tr>
-</table>
+    <div class="footer">
+        <div class="no-kartu-box">BBMC 38 2026 {{ $member->no_kartu }}</div>
+        <div class="card-url">{{ url('member/register') }}</div>
+    </div>
 
+</div>
 </body>
 </html>

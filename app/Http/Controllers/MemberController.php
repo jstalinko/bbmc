@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Member;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Color\Color;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
 
 class MemberController extends Controller
 {
@@ -110,16 +115,36 @@ class MemberController extends Controller
         return Inertia::render('Member/edit', ['member' => $member]);
     }
 
+    private function generateQrDataUri(Member $member): string
+    {
+        $url = url('/member/' . $member->no_kartu);
+        $qr  = new QrCode(
+            data: $url,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 200,
+            margin: 4,
+            foregroundColor: new Color(0, 0, 0),
+            backgroundColor: new Color(255, 255, 255),
+        );
+        $writer = new PngWriter();
+        $result = $writer->write($qr);
+        return 'data:image/png;base64,' . base64_encode($result->getString());
+    }
+
     public function printCard(Member $member)
     {
-        return view('member.print-card', ['member' => $member]);
+        $qrDataUri = $this->generateQrDataUri($member);
+        return view('member.print-card', ['member' => $member, 'qrDataUri' => $qrDataUri]);
     }
 
     public function printCardPdf(Member $member)
     {
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('member.print-card-pdf', ['member' => $member]);
-        $pdf->setPaper('A6', 'landscape');
-        return $pdf->stream("kartu-{$member->nama_panggilan}.pdf");
+        $qrDataUri = $this->generateQrDataUri($member);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('member.print-card-pdf', ['member' => $member, 'qrDataUri' => $qrDataUri]);
+        // CR80: 85.6mm × 54mm in points. Pass width>height directly as landscape (no orientation flag needed).
+        $pdf->setPaper([0, 0, 242.64, 153.07]);
+        return $pdf->download("kartu-bbmc-registration-{$member->no_kartu}.pdf");
     }
 
     public function update(Request $request, Member $member)
@@ -186,5 +211,15 @@ class MemberController extends Controller
         }
         $member->delete();
         return redirect()->route('member.list')->with('success', 'Data anggota berhasil dihapus.');
+    }
+
+
+    public function showPublic($no_kartu)
+    {
+        $member = Member::where('no_kartu', $no_kartu)->first();
+        if (!$member) {
+            return redirect('/member/register')->with('error', 'Member tidak ditemukan.');
+        }
+        return Inertia::render('Member/show-public', ['member' => $member]);
     }
 }
