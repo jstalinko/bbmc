@@ -516,7 +516,7 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                     <div>
                         <label class="el">No. Kartu</label>
                         <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-100 transition-all">
-                            <span class="bg-muted px-3 py-2 text-xs font-mono font-bold text-muted-foreground border-r whitespace-nowrap">BBMC 36 2026</span>
+                            <span class="bg-muted px-3 py-2 text-xs font-mono font-bold text-muted-foreground border-r whitespace-nowrap">BBMC 38 2026</span>
                             <input v-model="editForm.no_kartu" maxlength="4" inputmode="numeric"
                                 @input="editForm.no_kartu = editForm.no_kartu.replace(/\D/g,'').slice(0,4)"
                                 placeholder="0000" class="flex-1 min-w-0 bg-background px-3 py-2 text-sm font-mono font-bold outline-none tracking-widest"/>
