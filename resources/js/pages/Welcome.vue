@@ -230,13 +230,15 @@ import { Globe, UserPlus, Award, Lock, ExternalLink, ArrowRight, ShieldCheck, Ch
                 
                 <!-- Moto Segment -->
                 <div class="flex flex-col items-center text-center">
-                    <div class="flex items-center gap-4 w-full max-w-lg mb-6">
+                    <div class="flex items-center gap-4 w-full max-w-2xl mb-3">
                         <div class="h-[1px] flex-grow bg-red-100"></div>
-                        <span class="font-bebas text-lg tracking-[0.25em] text-zinc-500 select-none">HONOR RESPECT BROTHERHOOD</span>
+                        <span class="font-bebas text-xs sm:text-sm tracking-[0.25em] text-zinc-400 select-none">Bikers Brotherhood MC Indonesia</span>
                         <div class="h-[1px] flex-grow bg-red-100"></div>
                     </div>
                     
-                    <span class="font-bebas text-2xl tracking-[0.4em] text-red-600 animate-pulse">NO SURRENDER</span>
+                    <span class="font-bebas text-xl sm:text-3xl tracking-[0.15em] text-red-600 font-bold">
+                        BROTHERHOOD, LOYAL, RESPECT, HONOR, PRIDE
+                    </span>
                 </div>
 
                 <!-- Horizontal separator -->
