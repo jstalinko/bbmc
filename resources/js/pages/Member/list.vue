@@ -370,7 +370,7 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                         <!-- No Kartu pojok kanan -->
                         <div class="ml-auto text-right">
                             <p class="text-[10px] text-red-200 uppercase tracking-widest">No. Kartu</p>
-                            <p class="font-mono text-xl font-black">{{ viewTarget?.no_kartu ? `BBMC 36 2026 ${viewTarget.no_kartu}` : '—' }}</p>
+                            <p class="font-mono text-xl font-black">{{ viewTarget?.no_kartu ? `BBMC 38 2026 ${viewTarget.no_kartu}` : '—' }}</p>
                         </div>
                     </div>
                 </div>

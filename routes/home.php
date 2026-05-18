@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\ElectionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MemberController;
 
@@ -8,4 +9,11 @@ Route::group(['prefix' => '/member'] , function(){
     Route::post('/register',[MemberController::class,'registerPost'])->name('member.register_post');
     Route::get('/register-success' , [MemberController::class,'registerSuccess'])->name('member.register_success');
     Route::get('/{no_kartu}', [MemberController::class, 'showPublic'])->name('member.show');
+});
+
+Route::group(['prefix' => '/election'] , function(){
+    Route::get('/', fn() => redirect('/election/portal'));
+    Route::get('/portal' , [ElectionController::class,'portal']); 
+    Route::get('/login' , [ElectionController::class, 'login']);
+
 });
