@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\Member;
+use App\Http\Controllers\ElectionController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -15,3 +16,5 @@ Route::get('/validate-nocard/{nocard}' , function (Request $request){
     if (!$member) return response()->json(['available' => true]);
     return response()->json(['available' => false]);
 });
+
+Route::post('/send-otp', [ElectionController::class, 'sendOtp'])->name('election.send_otp');

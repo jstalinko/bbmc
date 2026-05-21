@@ -17,7 +17,9 @@ import {
     BookOpen,
     HelpCircle,
     UserX,
-    Loader2
+    Loader2,
+    KeyRound,
+    X
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -54,17 +56,27 @@ const nominatorMemberDetails = ref<any>(null);
 const nominatorSearchError = ref('');
 const isNominatorSearching = ref(false);
 
+// ── OTP Modal State ────────────────────────────────────────────────────────────
+const showOtpModal = ref(false);
+const otpCode = ref('');
+const isSendingOtp = ref(false);
+const isSubmittingWithOtp = ref(false);
+const otpError = ref('');
+const otpTarget = ref<'self' | 'member' | null>(null);
+const otpSentMessage = ref('');
+// ──────────────────────────────────────────────────────────────────────────────
+
 // Inertia Forms
 const selfForm = useForm({
     no_kartu: '',
-    visi: '',
-    misi: '',
+    otp: '',
 });
 
 const memberForm = useForm({
     candidate_name: '',
     nominator_no_kartu: '',
     alasan: '',
+    otp: '',
 });
 
 // Watch self KTA input to trigger autocomplete search
@@ -131,7 +143,6 @@ watch(nominatorCardQuery, async (newVal) => {
     if (newVal.length >= 2) {
         isNominatorSearching.value = true;
         try {
-            // Pass role=nominator so that self-nominated members can nominate others!
             const response = await fetch(`/election/member-info/${newVal}?role=nominator`);
             const data = await response.json();
             if (data.success) {
@@ -148,53 +159,80 @@ watch(nominatorCardQuery, async (newVal) => {
     }
 });
 
-// Form Submission Actions via Inertia
-const handleSelfSubmit = () => {
-    if (!selfMemberDetails.value) {
-        alert('Harap pastikan KTA valid dan terdaftar.');
+const requestOtp = async (formType: 'self' | 'member') => {
+    isSendingOtp.value = true;
+    try {
+        const response = await fetch('/api/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: formType,
+                no_kartu: formType === 'self' ? selfForm.no_kartu : memberForm.nominator_no_kartu
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            otpTarget.value = formType;
+            otpSentMessage.value = data.message;
+            showOtpModal.value = true;
+        } else {
+            otpError.value = data.message;
+        }
+    } catch (e) {
+        alert('Gagal mengirim OTP' + e);
+    } finally {
+        isSendingOtp.value = false;
+    }
+};
+
+const confirmOtpAndSubmit = () => {
+    if (!otpCode.value) {
+        otpError.value = 'Masukkan kode OTP.';
         return;
     }
-    
-    selfForm.post('/election/nominate-self', {
+    isSubmittingWithOtp.value = true;
+    otpError.value = '';
+
+    const form = otpTarget.value === 'self' ? selfForm : memberForm;
+    form.otp = otpCode.value;
+    const url = otpTarget.value === 'self' ? '/election/nominate-self' : '/election/nominate-member';
+
+    form.post(url, {
         onSuccess: (page: any) => {
-            submittedName.value = selfMemberDetails.value.nama_lengkap;
-            flashMessage.value = page.props.flash?.message || 'Pencalonan diri Anda berhasil dikirim!';
+            submittedName.value = otpTarget.value === 'self' ? selfMemberDetails.value?.nama_lengkap : memberForm.candidate_name;
+            flashMessage.value = page.props.flash?.message || 'Pengajuan berhasil!';
             submissionSuccess.value = true;
-            selfCardQuery.value = '';
-            selfForm.reset();
-        },
-        onError: (err) => {
-            if (err.no_kartu) {
-                selfSearchError.value = err.no_kartu;
+            closeOtpModal();
+            if (otpTarget.value === 'self') {
+                selfCardQuery.value = '';
+                selfForm.reset();
+                activeForm.value = null;
+            } else {
+                candidateSearchQuery.value = '';
+                nominatorCardQuery.value = '';
+                memberForm.reset();
+                activeForm.value = null;
             }
+        },
+        onError: (err: any) => {
+            otpError.value = err.otp || 'Kode OTP tidak valid atau kadaluwarsa.';
+        },
+        onFinish: () => {
+            isSubmittingWithOtp.value = false;
         }
     });
 };
 
 const handleMemberSubmit = () => {
-    if (!candidateMemberDetails.value || !nominatorMemberDetails.value || !memberForm.alasan) {
-        alert('Harap lengkapi KTA pengusul, nama calon dari hasil pencarian, dan alasan pencalonan.');
-        return;
-    }
-    
-    memberForm.post('/election/nominate-member', {
-        onSuccess: (page: any) => {
-            submittedName.value = memberForm.candidate_name;
-            flashMessage.value = page.props.flash?.message || 'Rekomendasi pencalonan anggota berhasil dikirim!';
-            submissionSuccess.value = true;
-            candidateSearchQuery.value = '';
-            nominatorCardQuery.value = '';
-            memberForm.reset();
-        },
-        onError: (err) => {
-            if (err.nominator_no_kartu) {
-                nominatorSearchError.value = err.nominator_no_kartu;
-            }
-            if (err.candidate_name) {
-                alert(err.candidate_name);
-            }
-        }
-    });
+    requestOtp('member');
+};
+
+const closeOtpModal = () => {
+    showOtpModal.value = false;
+    otpCode.value = '';
+    otpError.value = '';
+    otpTarget.value = null;
+    isSubmittingWithOtp.value = false;
 };
 
 const closeAlert = () => {
@@ -392,17 +430,31 @@ const closeAlert = () => {
             <!-- Dynamic Input Forms based on selection -->
             <div v-if="showNominationOptions && activeForm" class="bg-white rounded-2xl border border-red-200 p-6 shadow-xl shadow-red-100/50 mb-8 animate-in fade-in zoom-in-95 duration-200">
                 
+                <!-- OTP Modal -->
+                <div v-if="showOtpModal" class="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50">
+                    <div class="bg-white rounded-xl shadow-lg p-6 w-80">
+                        <h3 class="text-lg font-semibold mb-2">Masukkan Kode OTP</h3>
+                        <p class="text-sm text-gray-600 mb-4">{{ otpSentMessage }}</p>
+                        <input v-model="otpCode" type="text" maxlength="6" placeholder="6 digit OTP" class="w-full border border-gray-300 rounded px-3 py-2 mb-2 focus:outline-none focus:border-red-500" />
+                        <p v-if="otpError" class="text-red-500 text-sm mb-2">{{ otpError }}</p>
+                        <div class="flex justify-end space-x-2 mt-4">
+                            <button @click="closeOtpModal" type="button" class="px-4 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300">Batal</button>
+                            <button @click="confirmOtpAndSubmit" :disabled="isSubmittingWithOtp" class="px-4 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">{{ isSubmittingWithOtp ? 'Mengirim...' : 'Konfirmasi' }}</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Form Header -->
                 <div class="border-b border-red-100 pb-4 mb-5 flex items-center justify-between">
                     <h3 class="font-oswald text-lg font-bold text-zinc-950 uppercase tracking-wide flex items-center gap-2">
                         <BookOpen class="h-5 w-5 text-red-600" />
-                        <span>{{ activeForm === 'self' ? 'Formulir Pengajuan Diri Calon Presiden (Auto-Complete)' : 'Formulir Rekomendasi Calon Presiden' }}</span>
+                        <span>{{ activeForm === 'self' ? 'Formulir Pengajuan Diri Calon Presiden' : 'Formulir Rekomendasi Calon Presiden' }}</span>
                     </h3>
                     <button @click="activeForm = null" class="text-xs font-bold uppercase text-zinc-400 hover:text-red-600 px-2 py-1 transition-colors">Batal</button>
                 </div>
 
                 <!-- FORM A: Self Nomination Form -->
-                <form v-if="activeForm === 'self'" @submit.prevent="handleSelfSubmit" class="space-y-5">
+                <form v-if="activeForm === 'self'" @submit.prevent="requestOtp('self')" class="space-y-5">
                     <div>
                         <label class="block text-xs font-bold uppercase text-zinc-500 tracking-wider mb-1">
                             Masukkan No. Kartu BBMC Anda <span class="text-red-500">*</span>
@@ -456,30 +508,7 @@ const closeAlert = () => {
                         </div>
                     </div>
 
-                    <!-- Enable Visi & Misi ONLY when KTA has successfully autocompleted -->
-                    <div class="space-y-4" :class="{ 'opacity-40 pointer-events-none': !selfMemberDetails }">
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-500 tracking-wider mb-1">Visi Utama <span class="text-red-500">*</span></label>
-                            <textarea 
-                                v-model="selfForm.visi" 
-                                rows="3" 
-                                placeholder="Masukkan visi utama Anda untuk memajukan club..." 
-                                class="f-input resize-none" 
-                                :required="!!selfMemberDetails"
-                            ></textarea>
-                        </div>
 
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-500 tracking-wider mb-1">Misi Utama & Rencana Strategis <span class="text-red-500">*</span></label>
-                            <textarea 
-                                v-model="selfForm.misi" 
-                                rows="4" 
-                                placeholder="Tuliskan misi utama Anda secara ringkas..." 
-                                class="f-input resize-none" 
-                                :required="!!selfMemberDetails"
-                            ></textarea>
-                        </div>
-                    </div>
 
                     <div class="flex justify-end pt-3">
                         <button 

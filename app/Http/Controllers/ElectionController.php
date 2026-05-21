@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Member;
 use App\Models\Calon;
+use App\Models\Otp;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -84,14 +85,60 @@ class ElectionController extends Controller
     }
 
     /**
+     * Send OTP for nomination verification.
+     */
+    public function sendOtp(Request $request)
+    {
+        $request->validate([
+            'no_kartu' => 'required|string',
+        ]);
+
+        $nocard = str_pad($request->no_kartu, 4, '0', STR_PAD_LEFT);
+        $member = Member::where('no_kartu', $nocard)->first();
+
+        if (!$member) {
+            return response()->json([
+                'success' => false,
+                'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
+            ], 404);
+        }
+
+        if (!$member->no_wa) {
+            return response()->json([
+                'success' => false,
+                'message' => "Nomor WhatsApp anggota tidak ditemukan di database."
+            ], 400);
+        }
+
+        $otpCode = (string) rand(100000, 999999);
+        
+        Otp::create([
+            'member_id' => $member->id,
+            'otp' => $otpCode,
+            'phone' => $member->no_wa,
+            'expires_at' => now()->addMinutes(5),
+            'is_verified' => false,
+        ]);
+
+        $message = "*BBMC ELECTION 2026*\n\nKode OTP Anda untuk proses pengajuan pencalonan adalah: *$otpCode*\n\nBerlaku selama 5 menit. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN.";
+        
+        // Helper::sendWhatsapp
+        \App\Helper::sendWhatsapp($member->no_wa, $message);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP telah dikirim ke nomor WhatsApp Anda.'
+        ]);
+    }
+
+    /**
      * Handle Self-Nomination ("Ajukan Diri Sebagai El Presidente")
      */
     public function nominateSelf(Request $request)
     {
         $request->validate([
             'no_kartu' => 'required|string',
-            'visi' => 'required|string',
-            'misi' => 'required|string',
+            'otp' => 'required|string',
         ]);
         
         $nocard = str_pad($request->no_kartu, 4, '0', STR_PAD_LEFT);
@@ -100,6 +147,20 @@ class ElectionController extends Controller
         if (!$member) {
             return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
         }
+
+        // Verify OTP
+        $otpRecord = Otp::where('member_id', $member->id)
+            ->where('otp', $request->otp)
+            ->where('is_verified', false)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if (!$otpRecord) {
+            return back()->withErrors(['otp' => 'Kode OTP tidak valid atau sudah kedaluwarsa.']);
+        }
+        
+        $otpRecord->update(['is_verified' => true]);
         
         $alreadyNominated = Calon::where('no_kartu', $nocard)->exists();
         if ($alreadyNominated) {
@@ -110,8 +171,8 @@ class ElectionController extends Controller
             'member_id' => $member->id,
             'no_kartu' => $member->no_kartu,
             'chapter' => $member->chapter,
-            'visi' => $request->visi,
-            'misi' => $request->misi,
+            'visi' => 'Pencalonan Mandiri',
+            'misi' => 'Pencalonan Mandiri',
             'status' => 'mengajukan', // Self-nomination status
             'diajukan_oleh' => 'self',
             'no_kartu_diajukan_oleh' => null,
@@ -133,8 +194,31 @@ class ElectionController extends Controller
             'candidate_name' => 'required|string',
             'nominator_no_kartu' => 'required|string',
             'alasan' => 'required|string',
+            'otp' => 'required|string',
         ]);
         
+        // Find nominator by card number
+        $nominatorNocard = str_pad($request->nominator_no_kartu, 4, '0', STR_PAD_LEFT);
+        $nominator = Member::where('no_kartu', $nominatorNocard)->first();
+        
+        if (!$nominator) {
+            return back()->withErrors(['nominator_no_kartu' => "Nomor kartu pengusul ($nominatorNocard) tidak valid atau tidak terdaftar."]);
+        }
+
+        // Verify OTP
+        $otpRecord = Otp::where('member_id', $nominator->id)
+            ->where('otp', $request->otp)
+            ->where('is_verified', false)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if (!$otpRecord) {
+            return back()->withErrors(['otp' => 'Kode OTP tidak valid atau sudah kedaluwarsa.']);
+        }
+        
+        $otpRecord->update(['is_verified' => true]);
+
         // Find candidate by name
         $candidateName = $request->candidate_name;
         $candidate = Member::where('nama_lengkap', $candidateName)
@@ -156,14 +240,6 @@ class ElectionController extends Controller
         $alreadyNominated = Calon::where('no_kartu', $candidate->no_kartu)->exists();
         if ($alreadyNominated) {
             return back()->withErrors(['candidate_name' => "Anggota '{$candidate->nama_lengkap}' sudah terdaftar sebagai Calon El Presidente."]);
-        }
-        
-        // Find nominator by card number
-        $nominatorNocard = str_pad($request->nominator_no_kartu, 4, '0', STR_PAD_LEFT);
-        $nominator = Member::where('no_kartu', $nominatorNocard)->first();
-        
-        if (!$nominator) {
-            return back()->withErrors(['nominator_no_kartu' => "Nomor kartu pengusul ($nominatorNocard) tidak valid atau tidak terdaftar."]);
         }
         
         Calon::create([
