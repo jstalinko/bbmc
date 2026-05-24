@@ -18,3 +18,4 @@ Route::get('/validate-nocard/{nocard}' , function (Request $request){
 });
 
 Route::post('/send-otp', [ElectionController::class, 'sendOtp'])->name('election.send_otp');
+Route::post('/send-login-otp', [ElectionController::class, 'sendLoginOtp'])->name('election.login_send_otp');

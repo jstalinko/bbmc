@@ -17,4 +17,9 @@ class Calon extends Model
         'no_kartu_diajukan_oleh',
         'foto_calon',
     ];
+
+    public function member()
+    {
+        return $this->belongsTo(Member::class, 'member_id');
+    }
 }

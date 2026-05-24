@@ -13,9 +13,121 @@ class ElectionController extends Controller
     /**
      * Render the secure election login page.
      */
-    public function login()
+    public function login(Request $request)
     {
+        if ($request->session()->has('election_member_id')) {
+            return redirect()->route('election.dashboard');
+        }
         return Inertia::render('Election/login');
+    }
+
+    /**
+     * Send OTP for member login verification.
+     */
+    public function sendLoginOtp(Request $request)
+    {
+        $request->validate([
+            'no_kartu' => 'required|string',
+        ]);
+
+        $nocard = str_pad($request->no_kartu, 4, '0', STR_PAD_LEFT);
+        $member = Member::where('no_kartu', $nocard)->first();
+
+        if (!$member) {
+            return response()->json([
+                'success' => false,
+                'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
+            ], 404);
+        }
+
+        if (!$member->no_wa) {
+            return response()->json([
+                'success' => false,
+                'message' => "Nomor WhatsApp anggota tidak ditemukan di database."
+            ], 400);
+        }
+
+        $otpCode = (string) rand(100000, 999999);
+        
+        Otp::create([
+            'member_id' => $member->id,
+            'otp' => $otpCode,
+            'phone' => $member->no_wa,
+            'expires_at' => now()->addMinutes(5),
+            'is_verified' => false,
+        ]);
+
+        $message = "*BBMC ELECTION 2026*\n\nKode OTP Anda untuk proses login portal adalah: *$otpCode*\n\nBerlaku selama 5 menit. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN.";
+        
+        \App\Helper::sendWhatsapp($member->no_wa, $message);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP telah dikirim ke nomor WhatsApp Anda.'
+        ]);
+    }
+
+    /**
+     * Handle member login with OTP.
+     */
+    public function loginPost(Request $request)
+    {
+        $request->validate([
+            'no_kartu' => 'required|string',
+            'otp' => 'required|string',
+        ]);
+        
+        $nocard = str_pad($request->no_kartu, 4, '0', STR_PAD_LEFT);
+        $member = Member::where('no_kartu', $nocard)->first();
+        
+        if (!$member) {
+            return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
+        }
+
+        // Verify OTP
+        $otpRecord = Otp::where('member_id', $member->id)
+            ->where('otp', $request->otp)
+            ->where('is_verified', false)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if (!$otpRecord) {
+            return back()->withErrors(['otp' => 'Kode OTP tidak valid atau sudah kedaluwarsa.']);
+        }
+        
+        $otpRecord->update(['is_verified' => true]);
+        
+        // Save election member ID to session
+        $request->session()->put('election_member_id', $member->id);
+        
+        return redirect()->route('election.dashboard')->with([
+            'success' => true,
+            'message' => "Selamat datang kembali, {$member->nama_lengkap}!"
+        ]);
+    }
+
+    /**
+     * Handle logout.
+     */
+    public function logout(Request $request)
+    {
+        $request->session()->forget('election_member_id');
+        return redirect()->route('election.login')->with([
+            'success' => true,
+            'message' => "Anda telah keluar dari portal."
+        ]);
+    }
+
+    /**
+     * Render the election dashboard for voting.
+     */
+    public function dashboard(Request $request)
+    {
+        $candidates = Calon::with('member')->where('status', 'ditetapkan')->get();
+        return Inertia::render('Election/dashboard', [
+            'candidates' => $candidates
+        ]);
     }
 
     /**
@@ -39,8 +151,9 @@ class ElectionController extends Controller
         $members = Member::where(function($query) use ($q) {
             $query->where('nama_lengkap', 'like', "%{$q}%")
                   ->orWhere('nama_panggilan', 'like', "%{$q}%")
-                  ->orWhere('no_kartu', 'like', "%{$q}%");
-        })->take(5)->get();
+                  ->orWhere('no_kartu', 'like', "%{$q}%")
+                  ->orWhere('chapter', 'like', "%{$q}%");
+        })->take(15)->get();
         
         return response()->json($members);
     }

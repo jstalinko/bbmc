@@ -14,9 +14,16 @@ Route::group(['prefix' => '/member'] , function(){
 Route::group(['prefix' => '/election'] , function(){
     Route::get('/', fn() => redirect('/election/portal'));
     Route::get('/portal' , [ElectionController::class,'portal'])->name('election.portal'); 
-    Route::get('/login' , [ElectionController::class, 'login'])->name('election.login');
     Route::get('/search-members', [ElectionController::class, 'searchMembers'])->name('election.search_members');
     Route::get('/member-info/{nocard}', [ElectionController::class, 'getMemberInfo'])->name('election.member_info');
     Route::post('/nominate-self', [ElectionController::class, 'nominateSelf'])->name('election.nominate_self');
     Route::post('/nominate-member', [ElectionController::class, 'nominateMember'])->name('election.nominate_member');
+
+    Route::get('/login' , [ElectionController::class, 'login'])->name('election.login');
+    Route::post('/login', [ElectionController::class, 'loginPost'])->name('election.login_post');
+
+    Route::group(['middleware' => [\App\Http\Middleware\ElectionAuth::class]], function() {
+        Route::get('/dashboard', [ElectionController::class, 'dashboard'])->name('election.dashboard');
+        Route::post('/logout', [ElectionController::class, 'logout'])->name('election.logout');
+    });
 });

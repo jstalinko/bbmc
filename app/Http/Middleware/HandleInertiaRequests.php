@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),
+                'election_member' => $request->session()->has('election_member_id') ? \App\Models\Member::find($request->session()->get('election_member_id')) : null,
             ],
         ]);
     }

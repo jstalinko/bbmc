@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { 
     ShieldCheck, 
     UserCheck, 
@@ -19,8 +19,17 @@ import {
     UserX,
     Loader2,
     KeyRound,
-    X
+    X,
+    LogOut
 } from 'lucide-vue-next';
+
+const page = usePage();
+const electionMember = ref<any>(page.props.auth.election_member);
+
+const handleLogout = () => {
+    const logoutForm = useForm({});
+    logoutForm.post(route('election.logout'));
+};
 
 const props = defineProps<{
     errors?: Record<string, string>;
@@ -263,12 +272,45 @@ const closeAlert = () => {
             <div class="mx-auto flex max-w-7xl items-center justify-between">
                 <Link :href="route('home')" class="flex items-center gap-2 group text-zinc-600 hover:text-red-600 transition-colors">
                     <ArrowLeft class="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-                    <span class="text-xs font-bold uppercase tracking-wider">Kembali ke Portal</span>
+                    <span class="text-xs font-bold uppercase tracking-wider hidden sm:inline">Kembali</span>
                 </Link>
                 
                 <div class="flex items-center gap-3">
                     <img src="/bbmc-logo.png" class="h-8 w-auto filter drop-shadow" alt="Logo" />
                     <span class="font-bebas text-lg tracking-wider text-red-600">BBMC ELECTION 2026</span>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div v-if="electionMember" class="flex items-center gap-3">
+                        <div class="hidden md:flex flex-col items-end text-right">
+                            <span class="text-xs font-bold text-zinc-800 uppercase leading-none">{{ electionMember.nama_lengkap }}</span>
+                            <span class="text-[10px] text-zinc-500 font-semibold mt-1">KTA: {{ electionMember.no_kartu }} | {{ electionMember.chapter }}</span>
+                        </div>
+                        <div class="h-8 w-8 rounded-full border border-red-200 overflow-hidden bg-zinc-100 flex items-center justify-center shrink-0">
+                            <img v-if="electionMember.foto" :src="'/storage/' + electionMember.foto" class="h-full w-full object-cover" />
+                            <UserCheck v-else class="h-4 w-4 text-red-500" />
+                        </div>
+                        <Link 
+                            :href="route('election.dashboard')"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider transition-all border border-red-200"
+                        >
+                            <span>Dashboard Suara</span>
+                        </Link>
+                        <button 
+                            @click="handleLogout" 
+                            title="Log Keluar"
+                            class="p-2 rounded-xl hover:bg-red-50 text-zinc-500 hover:text-red-600 transition-all"
+                        >
+                            <LogOut class="h-4.5 w-4.5" />
+                        </button>
+                    </div>
+                    <Link 
+                        v-else 
+                        :href="route('election.login')" 
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-all"
+                    >
+                        <span>Login</span>
+                    </Link>
                 </div>
             </div>
         </header>
@@ -536,7 +578,7 @@ const closeAlert = () => {
                                 <input 
                                     v-model="candidateSearchQuery" 
                                     type="text" 
-                                    placeholder="Ketik nama lengkap / panggilan..." 
+                                    placeholder="Cari nama, panggilan, KTA, atau chapter..." 
                                     class="f-input pr-10" 
                                     required 
                                     @focus="showCandidateDropdown = candidateSearchResults.length > 0"
@@ -564,7 +606,10 @@ const closeAlert = () => {
                                         <Users v-else class="h-4 w-4 text-red-500" />
                                     </div>
                                     <div>
-                                        <span class="block text-sm font-semibold text-zinc-800 uppercase leading-none">{{ m.nama_lengkap }}</span>
+                                        <span class="block text-sm font-semibold text-zinc-800 uppercase leading-none">
+                                            {{ m.nama_lengkap }}
+                                            <span v-if="m.nama_panggilan" class="text-xs text-zinc-500 font-normal">({{ m.nama_panggilan }})</span>
+                                        </span>
                                         <span class="block text-[10px] text-zinc-500 mt-0.5">KTA: {{ m.no_kartu }} | Chapter: {{ m.chapter }}</span>
                                     </div>
                                 </button>
