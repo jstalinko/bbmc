@@ -371,7 +371,6 @@ class ElectionController extends Controller
         $request->validate([
             'candidate_name' => 'required|string',
             'nominator_no_kartu' => 'required|string',
-            'alasan' => 'required|string',
             'otp' => 'required|string',
         ]);
         
@@ -425,7 +424,7 @@ class ElectionController extends Controller
             'no_kartu' => $candidate->no_kartu,
             'chapter' => $candidate->chapter,
             'visi' => "Rekomendasi pencalonan oleh: {$nominator->nama_lengkap}",
-            'misi' => $request->alasan,
+            'misi' => null,
             'status' => 'diajukan', // Peer-nomination status
             'diajukan_oleh' => $nominator->nama_lengkap,
             'no_kartu_diajukan_oleh' => $nominator->no_kartu,

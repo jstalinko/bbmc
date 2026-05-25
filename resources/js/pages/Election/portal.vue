@@ -84,7 +84,6 @@ const selfForm = useForm({
 const memberForm = useForm({
     candidate_name: '',
     nominator_no_kartu: '',
-    alasan: '',
     otp: '',
 });
 
@@ -669,10 +668,7 @@ const closeAlert = () => {
                         </span>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-zinc-500 tracking-wider mb-1">Alasan Pengusulan Calon <span class="text-red-500">*</span></label>
-                        <textarea v-model="memberForm.alasan" rows="4" placeholder="Tuliskan alasan dan testimoni kepemimpinan mengapa saudara ini layak memimpin..." class="f-input resize-none" required></textarea>
-                    </div>
+
 
                     <div class="flex justify-end pt-3">
                         <button 
