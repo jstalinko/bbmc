@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import { 
     ShieldCheck, 
     UserCheck, 
@@ -16,6 +16,8 @@ import {
 
 const props = defineProps<{
     candidates: any[];
+    hasVoted: boolean;
+    votedCalonId: number | null;
     errors?: Record<string, string>;
     flash?: {
         success?: boolean;
@@ -31,24 +33,34 @@ const handleLogout = () => {
     logoutForm.post(route('election.logout'));
 };
 
-// Simple voting simulation/logic (placeholder or ready for integration)
-const votingSuccess = ref(false);
-const votedForName = ref('');
 const isVoting = ref(false);
 
 const handleVote = (candidate: any) => {
     if (confirm(`Apakah Anda yakin ingin memberikan suara Anda kepada ${candidate.member?.nama_lengkap || 'Calon'}? Tindakan ini tidak dapat dibatalkan.`)) {
         isVoting.value = true;
-        // In the future, this can submit to a real POST route: route('election.vote')
-        setTimeout(() => {
-            votedForName.value = candidate.member?.nama_lengkap;
-            votingSuccess.value = true;
-            isVoting.value = false;
-        }, 1200);
+        router.post(route('election.vote'), {
+            calon_id: candidate.id
+        }, {
+            onFinish: () => {
+                isVoting.value = false;
+            }
+        });
     }
 };
 
+const votedCandidate = computed(() => {
+    if (!props.hasVoted || !props.votedCalonId) return null;
+    return props.candidates.find(c => c.id === props.votedCalonId);
+});
+
+const getCandidatePhoto = (c: any) => {
+    if (!c) return null;
+    if (c.foto_calon) return `/storage/${c.foto_calon}`;
+    if (c.member?.foto) return `/storage/${c.member.foto}`;
+    return null;
+};
 </script>
+
 
 <template>
     <Head title="Election Dashboard - El Presidente BBMC" />
@@ -119,14 +131,14 @@ const handleVote = (candidate: any) => {
             </div>
 
             <!-- SUCCESS DIALOG ALERT MODAL -->
-            <div v-if="votingSuccess" class="mb-8 rounded-2xl border border-green-200 bg-green-50 p-6 shadow-lg shadow-green-100/50 flex gap-4 items-start transition-all duration-300">
+            <div v-if="hasVoted" class="mb-8 rounded-2xl border border-green-200 bg-green-50 p-6 shadow-lg shadow-green-100/50 flex gap-4 items-start transition-all duration-300">
                 <div class="rounded-xl bg-green-500/10 border border-green-500/20 p-2.5 text-green-600">
                     <CheckCircle2 class="h-6 w-6" />
                 </div>
                 <div class="flex-1">
                     <h3 class="text-base font-bold text-green-800 uppercase tracking-wide">Pemberian Suara Berhasil!</h3>
                     <p class="text-sm text-green-700 mt-1">
-                        Terima kasih atas partisipasi Anda. Anda telah memberikan suara kepada <strong>{{ votedForName }}</strong>. Pilihan Anda sangat menentukan masa depan Bikers Brotherhood MC Indonesia.
+                        Terima kasih atas partisipasi Anda. Anda telah memberikan suara kepada <strong>{{ votedCandidate?.member?.nama_lengkap || 'Calon Pilihan Anda' }}</strong>. Pilihan Anda sangat menentukan masa depan Bikers Brotherhood MC Indonesia.
                     </p>
                 </div>
             </div>
@@ -155,69 +167,71 @@ const handleVote = (candidate: any) => {
                 </div>
 
                 <!-- Grid of Candidates -->
-                <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div v-else class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 justify-center">
                     <div 
                         v-for="candidate in candidates" 
                         :key="candidate.id" 
-                        class="group flex flex-col justify-between rounded-2xl border border-red-100/60 bg-white p-6 shadow-xl shadow-red-100/20 hover:border-red-400 transition-all duration-300 relative overflow-hidden"
+                        class="group flex flex-col items-center justify-between rounded-2xl border border-red-100/60 bg-white p-6 shadow-xl shadow-red-100/20 hover:border-red-500 hover:shadow-red-200/30 transition-all duration-300 relative overflow-hidden"
+                        :class="{ 'border-green-500 bg-green-50/20 shadow-green-100/30': hasVoted && votedCalonId === candidate.id }"
                     >
-                        <!-- Candidate Header Detail -->
-                        <div>
-                            <div class="flex items-start gap-4">
-                                <div class="h-20 w-20 shrink-0 rounded-full border-2 border-red-200 overflow-hidden bg-zinc-100 shadow-inner flex items-center justify-center">
-                                    <img 
-                                        v-if="candidate.foto_calon" 
-                                        :src="'/storage/' + candidate.foto_calon" 
-                                        class="h-full w-full object-cover" 
-                                        alt="Foto Calon" 
-                                    />
-                                    <img 
-                                        v-else-if="candidate.member?.foto" 
-                                        :src="'/storage/' + candidate.member.foto" 
-                                        class="h-full w-full object-cover" 
-                                        alt="Foto Calon" 
-                                    />
-                                    <UserCheck v-else class="h-10 w-10 text-red-400" />
+                        <!-- Candidate Card Info -->
+                        <div class="flex flex-col items-center text-center w-full py-4">
+                            <!-- Large Circle Photo -->
+                            <div class="h-32 w-32 shrink-0 rounded-full border-4 border-white shadow-xl overflow-hidden bg-zinc-100 flex items-center justify-center relative transition-transform duration-300 group-hover:scale-105"
+                                :class="hasVoted && votedCalonId === candidate.id ? 'ring-4 ring-green-500/30' : 'ring-4 ring-red-500/10 group-hover:ring-red-500/30'">
+                                <img 
+                                    v-if="getCandidatePhoto(candidate)" 
+                                    :src="getCandidatePhoto(candidate)" 
+                                    class="h-full w-full object-cover" 
+                                    alt="Foto Calon" 
+                                />
+                                <div v-else class="h-full w-full flex items-center justify-center text-4xl font-black text-red-600 bg-red-50">
+                                    {{ candidate.member?.nama_lengkap?.charAt(0) || 'C' }}
                                 </div>
-                                <div>
-                                    <span class="text-[9px] font-bold uppercase tracking-widest text-red-600 bg-red-50 border border-red-200/50 px-2 py-0.5 rounded">
-                                        Calon Resmi
-                                    </span>
-                                    <h4 class="font-oswald text-lg font-bold text-zinc-950 uppercase mt-1 leading-tight">
-                                        {{ candidate.member?.nama_lengkap }}
-                                    </h4>
-                                    <p class="text-xs text-zinc-500 font-semibold mt-0.5">
-                                        KTA: {{ candidate.no_kartu }} | Chapter: {{ candidate.chapter }}
-                                    </p>
+                                <!-- Active Selection Overlay -->
+                                <div v-if="hasVoted && votedCalonId === candidate.id" class="absolute inset-0 bg-green-950/40 flex items-center justify-center text-white backdrop-blur-[2px]">
+                                    <CheckCircle2 class="h-10 w-10 text-green-400 stroke-[2.5]" />
                                 </div>
                             </div>
 
-                            <!-- Visi Misi Section -->
-                            <div class="mt-6 space-y-4">
-                                <div class="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
-                                    <span class="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">Visi</span>
-                                    <p class="text-xs text-zinc-700 font-medium leading-relaxed mt-1">
-                                        {{ candidate.visi || '-' }}
-                                    </p>
-                                </div>
-                                <div class="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
-                                    <span class="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">Misi</span>
-                                    <p class="text-xs text-zinc-700 font-medium leading-relaxed mt-1 whitespace-pre-line">
-                                        {{ candidate.misi || '-' }}
-                                    </p>
+                            <!-- Names & Info -->
+                            <div class="mt-5">
+                                <h4 class="font-oswald text-xl font-bold text-zinc-950 uppercase leading-tight tracking-wide">
+                                    {{ candidate.member?.nama_lengkap }}
+                                </h4>
+                                <p class="text-xs text-red-600 font-semibold mt-1 uppercase tracking-wider">
+                                    "{{ candidate.member?.nama_panggilan || '—' }}"
+                                </p>
+                                <div class="mt-3 flex items-center justify-center gap-2 text-[10px] font-mono text-zinc-500">
+                                    <span class="bg-zinc-100 px-2 py-0.5 rounded border">KTA: {{ candidate.no_kartu }}</span>
+                                    <span class="bg-zinc-100 px-2 py-0.5 rounded border">{{ candidate.chapter }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Vote Action Button -->
-                        <div class="mt-6 border-t border-zinc-50 pt-4">
+                        <div class="w-full mt-4 border-t border-zinc-100/80 pt-4">
                             <button 
                                 @click="handleVote(candidate)" 
-                                :disabled="votingSuccess || isVoting"
-                                class="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 text-xs font-bold uppercase tracking-wider shadow-md shadow-red-200 transition-all disabled:opacity-40"
+                                :disabled="hasVoted || isVoting"
+                                class="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold uppercase tracking-wider shadow-md transition-all duration-200"
+                                :class="[
+                                    hasVoted 
+                                        ? (votedCalonId === candidate.id 
+                                            ? 'bg-green-600 text-white shadow-green-100 hover:bg-green-600 cursor-default' 
+                                            : 'bg-zinc-100 text-zinc-400 border shadow-none cursor-not-allowed')
+                                        : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-red-200'
+                                ]"
                             >
-                                <Heart class="h-4 w-4" :class="{ 'animate-pulse text-red-300': isVoting }" />
-                                <span>{{ isVoting ? 'Memproses...' : (votingSuccess ? 'Pilihan Disimpan' : 'PILIH EL PRESIDENTE') }}</span>
+                                <Heart class="h-4 w-4" :class="{ 'animate-pulse text-red-300': isVoting && !hasVoted, 'fill-white': hasVoted && votedCalonId === candidate.id }" />
+                                <span>
+                                    {{ isVoting 
+                                        ? 'Memproses...' 
+                                        : (hasVoted 
+                                            ? (votedCalonId === candidate.id ? 'PILIHAN ANDA' : 'PILIHAN LAIN') 
+                                            : 'PILIH EL PRESIDENTE') 
+                                    }}
+                                </span>
                             </button>
                         </div>
                     </div>

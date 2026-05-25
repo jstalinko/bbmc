@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\CandidateController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -20,6 +21,10 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::get('/member/{member}', [MemberController::class, 'show'])->name('member.show');
     Route::put('/member/{member}', [MemberController::class, 'update'])->name('member.update');
     Route::delete('/member/{member}', [MemberController::class, 'destroy'])->name('member.destroy');
+
+    Route::get('/candidate' , [CandidateController::class,'index'])->name('candidate.list');
+    Route::put('/candidate/{calon}', [CandidateController::class, 'updateStatus'])->name('candidate.update');
+    Route::delete('/candidate/{calon}', [CandidateController::class, 'destroy'])->name('candidate.destroy');
 });
 
 require __DIR__ . '/settings.php';

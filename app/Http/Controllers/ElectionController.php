@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Member;
 use App\Models\Calon;
 use App\Models\Otp;
+use App\Models\Polling;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -38,6 +39,14 @@ class ElectionController extends Controller
                 'success' => false,
                 'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
             ], 404);
+        }
+
+        // Check if already voted
+        if (Polling::where('member_id', $member->id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah menyalurkan hak suara Anda dan tidak dapat masuk kembali.'
+            ], 403);
         }
 
         if (!$member->no_wa) {
@@ -84,6 +93,11 @@ class ElectionController extends Controller
             return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
         }
 
+        // Check if already voted
+        if (Polling::where('member_id', $member->id)->exists()) {
+            return back()->withErrors(['no_kartu' => 'Anda sudah menyalurkan hak suara Anda dan tidak dapat masuk kembali.']);
+        }
+
         // Verify OTP
         $otpRecord = Otp::where('member_id', $member->id)
             ->where('otp', $request->otp)
@@ -124,9 +138,60 @@ class ElectionController extends Controller
      */
     public function dashboard(Request $request)
     {
+        $memberId = $request->session()->get('election_member_id');
+        $existingVote = Polling::where('member_id', $memberId)->first();
+
         $candidates = Calon::with('member')->where('status', 'ditetapkan')->get();
         return Inertia::render('Election/dashboard', [
-            'candidates' => $candidates
+            'candidates' => $candidates,
+            'hasVoted' => !is_null($existingVote),
+            'votedCalonId' => $existingVote ? $existingVote->calon_id : null,
+        ]);
+    }
+
+    public function vote(Request $request)
+    {
+        $request->validate([
+            'calon_id' => 'required|exists:calons,id',
+        ]);
+
+        $memberId = $request->session()->get('election_member_id');
+
+        $alreadyVoted = Polling::where('member_id', $memberId)->exists();
+        if ($alreadyVoted) {
+            return back()->withErrors(['vote' => 'Anda sudah menyalurkan suara Anda.']);
+        }
+
+        Polling::create([
+            'member_id' => $memberId,
+            'calon_id' => $request->calon_id,
+        ]);
+
+        // Auto logout: Clear the session!
+        $request->session()->forget('election_member_id');
+
+        // Redirect to live polling with a flash message!
+        return redirect()->route('election.polling')->with([
+            'success' => true,
+            'message' => 'Pemberian suara Anda berhasil disimpan! Terima kasih atas partisipasi Anda.'
+        ]);
+    }
+
+    public function livePolling()
+    {
+        $pollingModel = new Polling();
+        $results = $pollingModel->resultVotes();
+
+        // Calculate percentages
+        $totalVotes = array_sum(array_column($results, 'total_vote'));
+
+        foreach ($results as &$res) {
+            $res['percentage'] = $totalVotes > 0 ? round(($res['total_vote'] / $totalVotes) * 100, 1) : 0;
+        }
+
+        return Inertia::render('Election/polling', [
+            'results' => $results,
+            'totalVotes' => $totalVotes
         ]);
     }
 
@@ -370,6 +435,14 @@ class ElectionController extends Controller
         return back()->with([
             'success' => true,
             'message' => "Rekomendasi pencalonan untuk {$candidate->nama_lengkap} berhasil dikirim!"
+        ]);
+    }
+
+    public function polling()
+    {
+        $data = (new Polling())->resultVotes();
+        return Inertia::render('Election/polling',[
+            'results' => $data
         ]);
     }
 }
