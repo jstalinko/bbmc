@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\CandidateController;
+use App\Http\Controllers\ElectionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -25,6 +26,9 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::get('/candidate' , [CandidateController::class,'index'])->name('candidate.list');
     Route::put('/candidate/{calon}', [CandidateController::class, 'updateStatus'])->name('candidate.update');
     Route::delete('/candidate/{calon}', [CandidateController::class, 'destroy'])->name('candidate.destroy');
+
+    Route::get('/setting-pemilihan', [ElectionController::class, 'setting'])->name('election.setting');
+    Route::post('/setting-pemilihan', [ElectionController::class, 'settingPost'])->name('election.setting_post');
 });
 
 require __DIR__ . '/settings.php';

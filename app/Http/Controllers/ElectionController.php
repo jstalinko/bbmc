@@ -12,10 +12,77 @@ use Inertia\Inertia;
 class ElectionController extends Controller
 {
     /**
+     * Helper to read election settings from JSON.
+     */
+    private function getSettings()
+    {
+        $path = storage_path('app/private/pemilihan-setting.json');
+
+        if (!file_exists($path)) {
+            return [
+                'ajukan_diri' => true,
+                'ajukan_anggota' => true,
+                'tanggal_mulai' => null,
+                'tanggal_selesai' => null,
+            ];
+        }
+        $settings = json_decode(file_get_contents($path), true);
+        return [
+            'ajukan_diri' => $settings['ajukan_diri'] ?? true,
+            'ajukan_anggota' => $settings['ajukan_anggota'] ?? true,
+            'tanggal_mulai' => $settings['tanggal_mulai'] ?? null,
+            'tanggal_selesai' => $settings['tanggal_selesai'] ?? null,
+        ];
+    }
+
+    /**
+     * Helper to check if current time is within election window.
+     */
+    private function checkElectionTimeline()
+    {
+        $settings = $this->getSettings();
+        $now = now();
+        if ($settings['tanggal_mulai'] && $now->lt(\Carbon\Carbon::parse($settings['tanggal_mulai']))) {
+            return [
+                'allowed' => false,
+                'message' => 'Halaman login pemilihan belum dapat diakses sebelum tanggal mulai pemilihan (' . \Carbon\Carbon::parse($settings['tanggal_mulai'])->translatedFormat('d F Y H:i') . ').'
+            ];
+        }
+        if ($settings['tanggal_selesai'] && $now->gt(\Carbon\Carbon::parse($settings['tanggal_selesai']))) {
+            return [
+                'allowed' => false,
+                'message' => 'Pemilihan telah selesai pada (' . \Carbon\Carbon::parse($settings['tanggal_selesai'])->translatedFormat('d F Y H:i') . ').'
+            ];
+        }
+        return ['allowed' => true];
+    }
+
+    /**
+     * Helper to check if current time is after start date for polling page access.
+     */
+    private function checkPollingTimeline()
+    {
+        $settings = $this->getSettings();
+        $now = now();
+        if ($settings['tanggal_mulai'] && $now->lt(\Carbon\Carbon::parse($settings['tanggal_mulai']))) {
+            return [
+                'allowed' => false,
+                'message' => 'Halaman hasil pemilihan belum dapat diakses sebelum tanggal mulai pemilihan (' . \Carbon\Carbon::parse($settings['tanggal_mulai'])->translatedFormat('d F Y H:i') . ').'
+            ];
+        }
+        return ['allowed' => true];
+    }
+
+    /**
      * Render the secure election login page.
      */
     public function login(Request $request)
     {
+        $timeline = $this->checkElectionTimeline();
+        if (!$timeline['allowed']) {
+            return redirect()->route('election.portal')->with('error', $timeline['message']);
+        }
+
         if ($request->session()->has('election_member_id')) {
             return redirect()->route('election.dashboard');
         }
@@ -27,6 +94,14 @@ class ElectionController extends Controller
      */
     public function sendLoginOtp(Request $request)
     {
+        $timeline = $this->checkElectionTimeline();
+        if (!$timeline['allowed']) {
+            return response()->json([
+                'success' => false,
+                'message' => $timeline['message']
+            ], 403);
+        }
+
         $request->validate([
             'no_kartu' => 'required|string',
         ]);
@@ -81,6 +156,11 @@ class ElectionController extends Controller
      */
     public function loginPost(Request $request)
     {
+        $timeline = $this->checkElectionTimeline();
+        if (!$timeline['allowed']) {
+            return redirect()->route('election.portal')->with('error', $timeline['message']);
+        }
+
         $request->validate([
             'no_kartu' => 'required|string',
             'otp' => 'required|string',
@@ -179,6 +259,11 @@ class ElectionController extends Controller
 
     public function livePolling()
     {
+        $timeline = $this->checkPollingTimeline();
+        if (!$timeline['allowed']) {
+            return redirect()->route('election.portal')->with('error', $timeline['message']);
+        }
+
         $pollingModel = new Polling();
         $results = $pollingModel->resultVotes();
 
@@ -200,7 +285,10 @@ class ElectionController extends Controller
      */
     public function portal()
     {
-        return Inertia::render('Election/portal');    
+        $settings = $this->getSettings();
+        return Inertia::render('Election/portal', [
+            'settings' => $settings
+        ]);    
     }
 
     /**
@@ -300,7 +388,6 @@ class ElectionController extends Controller
 
         $message = "*BBMC ELECTION 2026*\n\nKode OTP Anda untuk proses pengajuan pencalonan adalah: *$otpCode*\n\nBerlaku selama 5 menit. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN.";
         
-        // Helper::sendWhatsapp
         \App\Helper::sendWhatsapp($member->no_wa, $message);
 
         return response()->json([
@@ -314,6 +401,11 @@ class ElectionController extends Controller
      */
     public function nominateSelf(Request $request)
     {
+        $settings = $this->getSettings();
+        if (!$settings['ajukan_diri']) {
+            return back()->withErrors(['otp' => 'Fitur pendaftaran mandiri (Ajukan Diri) saat ini dinonaktifkan oleh Administrator.']);
+        }
+
         $request->validate([
             'no_kartu' => 'required|string',
             'otp' => 'required|string',
@@ -368,6 +460,11 @@ class ElectionController extends Controller
      */
     public function nominateMember(Request $request)
     {
+        $settings = $this->getSettings();
+        if (!$settings['ajukan_anggota']) {
+            return back()->withErrors(['otp' => 'Fitur rekomendasi anggota (Ajukan Anggota) saat ini dinonaktifkan oleh Administrator.']);
+        }
+
         $request->validate([
             'candidate_name' => 'required|string',
             'nominator_no_kartu' => 'required|string',
@@ -439,9 +536,51 @@ class ElectionController extends Controller
 
     public function polling()
     {
+        $timeline = $this->checkPollingTimeline();
+        if (!$timeline['allowed']) {
+            return redirect()->route('election.portal')->with('error', $timeline['message']);
+        }
+
         $data = (new Polling())->resultVotes();
         return Inertia::render('Election/polling',[
             'results' => $data
         ]);
+    }
+
+    /**
+     * Render the election settings page (Dashboard).
+     */
+    public function setting()
+    {
+        $settings = $this->getSettings();
+        return Inertia::render('Election/Setting', [
+            'settings' => $settings
+        ]);
+    }
+
+    /**
+     * Handle saving election settings from dashboard.
+     */
+    public function settingPost(Request $request)
+    {
+        $validated = $request->validate([
+            'ajukan_diri' => 'required|boolean',
+            'ajukan_anggota' => 'required|boolean',
+            'tanggal_mulai' => 'nullable|string',
+            'tanggal_selesai' => 'nullable|string',
+        ]);
+
+        $validated['ajukan_diri'] = (bool)$validated['ajukan_diri'];
+        $validated['ajukan_anggota'] = (bool)$validated['ajukan_anggota'];
+
+        $path = storage_path('app/private/pemilihan-setting.json');
+        $directory = dirname($path);
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        file_put_contents($path, json_encode($validated, JSON_PRETTY_PRINT));
+
+        return back()->with('success', 'Pengaturan pemilihan berhasil diperbarui.');
     }
 }

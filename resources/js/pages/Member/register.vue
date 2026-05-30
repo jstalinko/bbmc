@@ -264,6 +264,7 @@
                   <!-- Status message -->
                   <p v-if="noKartuStatus === 'available'" class="text-green-600 text-xs mt-1 flex items-center gap-1">✓ No. kartu tersedia</p>
                   <p v-else-if="noKartuStatus === 'taken'" class="field-error">No. kartu sudah digunakan, pilih nomor lain</p>
+                  <p v-if="form.errors.no_kartu" class="field-error">{{ form.errors.no_kartu }}</p>
                 </div>
                 <div>
                   <label class="field-label">Status Keanggotaan <span class="text-red-500">*</span></label>

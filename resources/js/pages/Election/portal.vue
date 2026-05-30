@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { 
     ShieldCheck, 
@@ -36,8 +36,22 @@ const props = defineProps<{
     flash?: {
         success?: boolean;
         message?: string;
+        error?: string;
+    };
+    settings?: {
+        ajukan_diri: boolean;
+        ajukan_anggota: boolean;
+        tanggal_mulai: string | null;
+        tanggal_selesai: string | null;
     };
 }>();
+
+const settings = computed(() => props.settings ?? {
+    ajukan_diri: true,
+    ajukan_anggota: true,
+    tanggal_mulai: null,
+    tanggal_selesai: null
+});
 
 // State management for interactive forms
 const showNominationOptions = ref(false);
@@ -351,6 +365,19 @@ const closeAlert = () => {
                 </div>
             </div>
 
+            <!-- ERROR FLASH BANNER -->
+            <div v-if="$page.props.flash?.error" class="mb-8 rounded-2xl border border-red-200 bg-red-50 p-6 shadow-lg shadow-red-100/50 flex gap-4 items-start transition-all duration-300">
+                <div class="rounded-xl bg-red-500/10 border border-red-500/20 p-2.5 text-red-600">
+                    <Info class="h-6 w-6" />
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-base font-bold text-red-800 uppercase tracking-wide">Pemberitahuan</h3>
+                    <p class="text-sm text-red-700 mt-1">
+                        {{ $page.props.flash.error }}
+                    </p>
+                </div>
+            </div>
+
             <!-- Timeline Tracker Section -->
             <div class="bg-white rounded-2xl border border-red-100 p-6 shadow-xl shadow-red-100/40 mb-8">
                 <h2 class="font-oswald text-lg font-bold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -409,7 +436,7 @@ const closeAlert = () => {
                 <!-- Action 1: Ajukan Diri Sebagai El Presidente -->
                 <div 
                     class="group flex flex-col justify-between rounded-2xl border p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
-                    :class="activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400'"
+                    :class="!settings.ajukan_diri ? 'opacity-65 border-zinc-200' : (activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
                 >
                     <div>
                         <div class="flex items-center justify-between">
@@ -427,7 +454,11 @@ const closeAlert = () => {
                         </p>
                     </div>
 
+                    <div v-if="!settings.ajukan_diri" class="mt-6 w-full text-center py-2.5 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
+                        Pendaftaran Mandiri Ditutup
+                    </div>
                     <button 
+                        v-else
                         @click="activeForm = 'self'; window.scrollTo({ top: 500, behavior: 'smooth' })"
                         class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white"
                     >
@@ -439,7 +470,7 @@ const closeAlert = () => {
                 <!-- Action 2: Ajukan Anggota Sebagai El Presidente -->
                 <div 
                     class="group flex flex-col justify-between rounded-2xl border p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
-                    :class="activeForm === 'member' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400'"
+                    :class="!settings.ajukan_anggota ? 'opacity-65 border-zinc-200' : (activeForm === 'member' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
                 >
                     <div>
                         <div class="flex items-center justify-between">
@@ -457,7 +488,11 @@ const closeAlert = () => {
                         </p>
                     </div>
 
+                    <div v-if="!settings.ajukan_anggota" class="mt-6 w-full text-center py-2.5 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
+                        Rekomendasi Saudara Ditutup
+                    </div>
                     <button 
+                        v-else
                         @click="activeForm = 'member'; window.scrollTo({ top: 500, behavior: 'smooth' })"
                         class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white"
                     >

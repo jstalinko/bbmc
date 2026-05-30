@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Crown, Folder, LayoutGrid, Users2 } from 'lucide-vue-next';
+import { BookOpen, Cog, Crown, Folder, LayoutGrid, Users2 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -23,6 +23,11 @@ const mainNavItems: NavItem[] = [
         title: 'Calon Presidente',
         href: '/dashboard/candidate',
         icon: Crown
+    },
+    {
+        title: 'Setting Pemilihan',
+        href: '/dashboard/setting-pemilihan',
+        icon: Cog
     }
 ];
 

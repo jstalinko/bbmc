@@ -46,6 +46,10 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'election_member' => $request->session()->has('election_member_id') ? \App\Models\Member::find($request->session()->get('election_member_id')) : null,
             ],
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
         ]);
     }
 }
