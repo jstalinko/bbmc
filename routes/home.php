@@ -19,7 +19,6 @@ Route::group(['prefix' => '/election'] , function(){
     Route::get('/member-info/{nocard}', [ElectionController::class, 'getMemberInfo'])->name('election.member_info');
     Route::post('/nominate-self', [ElectionController::class, 'nominateSelf'])->name('election.nominate_self');
     Route::post('/nominate-member', [ElectionController::class, 'nominateMember'])->name('election.nominate_member');
-    Route::get('/polling', [ElectionController::class, 'polling'])->name('election.polling');
 
     Route::get('/login' , [ElectionController::class, 'login'])->name('election.login');
     Route::post('/login', [ElectionController::class, 'loginPost'])->name('election.login_post');
