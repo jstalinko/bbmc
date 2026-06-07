@@ -127,7 +127,7 @@ const goBackToNocard = () => {
                         Login Pra-Election
                     </h2>
                     <p class="text-xs text-zinc-500 mt-1">
-                        Akses khusus untuk Anggota Terverifikasi BBMC Indonesia
+                        Akses khusus untuk Life Member & SS Diponegoro BBMC Indonesia
                     </p>
                     <div class="mt-4 h-[2px] w-16 mx-auto bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
                 </div>

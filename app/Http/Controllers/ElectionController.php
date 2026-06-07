@@ -116,6 +116,14 @@ class ElectionController extends Controller
             ], 404);
         }
 
+        $status = strtoupper($member->status_keanggotaan);
+        if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat masuk.'
+            ], 403);
+        }
+
         // Check if already voted
         if (Polling::where('member_id', $member->id)->exists()) {
             return response()->json([
@@ -171,6 +179,11 @@ class ElectionController extends Controller
         
         if (!$member) {
             return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
+        }
+
+        $status = strtoupper($member->status_keanggotaan);
+        if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
+            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat masuk.']);
         }
 
         // Check if already voted
@@ -301,12 +314,19 @@ class ElectionController extends Controller
             return response()->json([]);
         }
         
+        $currentYear = intval(date('Y'));
+        $cutoffYear = $currentYear - 10;
+
         $members = Member::where(function($query) use ($q) {
             $query->where('nama_lengkap', 'like', "%{$q}%")
                   ->orWhere('nama_panggilan', 'like', "%{$q}%")
                   ->orWhere('no_kartu', 'like', "%{$q}%")
                   ->orWhere('chapter', 'like', "%{$q}%");
-        })->take(15)->get();
+        })
+        ->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
+        ->whereNotNull('terdaftar_sejak')
+        ->where('terdaftar_sejak', '<=', $cutoffYear)
+        ->take(15)->get();
         
         return response()->json($members);
     }
@@ -326,6 +346,23 @@ class ElectionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
+            ]);
+        }
+
+        $status = strtoupper($member->status_keanggotaan);
+        if ($status !== 'LIFE MEMBER') {
+            return response()->json([
+                'success' => false,
+                'message' => "Hanya anggota dengan status LIFE MEMBER yang dapat berpartisipasi dalam pencalonan/pengajuan."
+            ]);
+        }
+
+        $currentYear = intval(date('Y'));
+        $memberYear = intval($member->terdaftar_sejak);
+        if (empty($member->terdaftar_sejak) || ($currentYear - $memberYear) < 10) {
+            return response()->json([
+                'success' => false,
+                'message' => "Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat berpartisipasi dalam pencalonan/pengajuan."
             ]);
         }
         
@@ -418,6 +455,16 @@ class ElectionController extends Controller
             return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
         }
 
+        $status = strtoupper($member->status_keanggotaan);
+        if ($status !== 'LIFE MEMBER') {
+            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan status LIFE MEMBER yang dapat diajukan/mengajukan.']);
+        }
+        $currentYear = intval(date('Y'));
+        $memberYear = intval($member->terdaftar_sejak);
+        if (empty($member->terdaftar_sejak) || ($currentYear - $memberYear) < 10) {
+            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat diajukan/mengajukan.']);
+        }
+
         // Verify OTP
         $otpRecord = Otp::where('member_id', $member->id)
             ->where('otp', $request->otp)
@@ -479,6 +526,16 @@ class ElectionController extends Controller
             return back()->withErrors(['nominator_no_kartu' => "Nomor kartu pengusul ($nominatorNocard) tidak valid atau tidak terdaftar."]);
         }
 
+        $nominatorStatus = strtoupper($nominator->status_keanggotaan);
+        if ($nominatorStatus !== 'LIFE MEMBER') {
+            return back()->withErrors(['nominator_no_kartu' => 'Hanya anggota dengan status LIFE MEMBER yang dapat mengajukan/merekomendasikan.']);
+        }
+        $currentYear = intval(date('Y'));
+        $nominatorYear = intval($nominator->terdaftar_sejak);
+        if (empty($nominator->terdaftar_sejak) || ($currentYear - $nominatorYear) < 10) {
+            return back()->withErrors(['nominator_no_kartu' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat mengajukan/merekomendasikan.']);
+        }
+
         // Verify OTP
         $otpRecord = Otp::where('member_id', $nominator->id)
             ->where('otp', $request->otp)
@@ -508,6 +565,15 @@ class ElectionController extends Controller
             
         if (!$candidate) {
             return back()->withErrors(['candidate_name' => "Nama anggota yang dicalonkan ('$candidateName') tidak ditemukan dalam database."]);
+        }
+
+        $candidateStatus = strtoupper($candidate->status_keanggotaan);
+        if ($candidateStatus !== 'LIFE MEMBER') {
+            return back()->withErrors(['candidate_name' => 'Hanya anggota dengan status LIFE MEMBER yang dapat diajukan sebagai calon.']);
+        }
+        $candidateYear = intval($candidate->terdaftar_sejak);
+        if (empty($candidate->terdaftar_sejak) || ($currentYear - $candidateYear) < 10) {
+            return back()->withErrors(['candidate_name' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat diajukan sebagai calon.']);
         }
         
         // Check if candidate is already registered

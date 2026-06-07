@@ -450,7 +450,7 @@ const closeAlert = () => {
                             Ajukan Diri Sebagai El Presidente
                         </h3>
                         <p class="text-xs leading-relaxed text-zinc-500 mt-2">
-                            Daftarkan diri Anda secara resmi sebagai bakal calon presiden hanya dengan memasukkan Nomor Kartu Anda. Profil anggota Anda akan otomatis dimuat dan disinkronkan dari database keanggotaan BBMC.
+                            Daftarkan diri Anda secara resmi sebagai bakal calon presiden (Khusus Life Member dengan masa keanggotaan minimal 10 tahun). Profil anggota Anda akan otomatis dimuat dan diverifikasi.
                         </p>
                     </div>
 
@@ -484,7 +484,7 @@ const closeAlert = () => {
                             Ajukan Anggota Sebagai El Presidente
                         </h3>
                         <p class="text-xs leading-relaxed text-zinc-500 mt-2">
-                            Calonkan saudara satu aspal yang Anda nilai layak. Anda cukup mengetik nama anggota yang dicalonkan untuk dicari dari database keanggotaan, lalu verifikasi identitas pengusul (termasuk Anda yang sudah mengajukan diri mandiri).
+                            Calonkan saudara Life Member dengan masa keanggotaan minimal 10 tahun yang Anda nilai layak. Baik calon maupun pengusul harus memenuhi kriteria tersebut.
                         </p>
                     </div>
 
