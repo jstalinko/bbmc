@@ -251,8 +251,7 @@ import { Globe, UserPlus, Award, Lock, ExternalLink, ArrowRight, ShieldCheck, Ch
                     </p>
                     
                     <div class="flex items-center gap-2 text-[10px] sm:text-xs text-zinc-500">
-                        <span>Managed and Developed by</span>
-                        <span class="rounded bg-red-50 px-2 py-0.5 font-mono text-red-600 border border-red-200 shadow-sm">BBMC IT Division</span>
+                       
                     </div>
                 </div>
             </div>
