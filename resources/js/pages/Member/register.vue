@@ -603,6 +603,7 @@ function handleNoWaInput(e: Event) {
 }
 
 function nextStep() {
+  form.clearErrors()
   // Client-side check for step 1 required fields
   const missing = step1Fields.filter((f) => !form[f as keyof typeof form])
   if (missing.length) {
