@@ -240,3 +240,43 @@ test('a member can be updated successfully via dashboard', function () {
 
     $response->assertSessionHasNoErrors();
 });
+
+test('it renders the member validation page', function () {
+    $response = $this->get('/member/validate');
+    $response->assertStatus(200);
+});
+
+test('member validation fails if no_kartu is not exactly 4 digits or empty', function () {
+    // Empty no_kartu
+    $response = $this->get('/member/validate?no_kartu=');
+    $response->assertSessionHasErrors(['no_kartu']);
+
+    // Non-4-digits no_kartu
+    $response = $this->get('/member/validate?no_kartu=12');
+    $response->assertSessionHasErrors(['no_kartu']);
+});
+
+test('member validation fails if member does not exist', function () {
+    $response = $this->get('/member/validate?no_kartu=9999');
+    $response->assertSessionHasErrors(['no_kartu']);
+});
+
+test('member validation redirects to public member show page when card number exists', function () {
+    $member = Member::create([
+        'nama_lengkap'      => 'Asep Sunandar',
+        'nama_panggilan'    => 'Asep',
+        'tempat_lahir'      => 'Bandung',
+        'tanggal_lahir'     => '12/03/1990',
+        'jenis_kelamin'     => 'L',
+        'gol_darah'         => 'O',
+        'alamat'            => 'Jl. Sudirman No. 1',
+        'no_wa'             => '081234567890',
+        'no_kartu'          => '1234',
+        'status_keanggotaan'=> 'PROSPECT',
+        'chapter'           => 'Bandung',
+    ]);
+
+    $response = $this->get('/member/validate?no_kartu=1234');
+    $response->assertRedirect('/member/1234');
+});
+

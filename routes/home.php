@@ -10,7 +10,8 @@ Route::group(['prefix' => '/member'] , function(){
     Route::get('/register-success' , [MemberController::class,'registerSuccess'])->name('member.register_success');
     Route::get('/syarat-ketentuan', [MemberController::class, 'termsIntegrity'])->name('member.terms_integrity');
     Route::get('/kebijakan-privasi', [MemberController::class, 'termsIntegrity'])->name('member.privacy');
-    Route::get('/{no_kartu}', [MemberController::class, 'showPublic'])->name('member.show');
+    Route::get('/validate', [MemberController::class, 'validateCard'])->name('member.validate');
+    Route::get('/{no_kartu}', [MemberController::class, 'showPublic'])->name('member.show_public');
 });
 
 Route::group(['prefix' => '/election'] , function(){

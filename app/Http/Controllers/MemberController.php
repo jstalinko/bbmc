@@ -237,4 +237,28 @@ class MemberController extends Controller
         }
         return Inertia::render('Member/show-public', ['member' => $member]);
     }
+
+    public function validateCard(Request $request)
+    {
+        if (!$request->has('no_kartu')) {
+            return Inertia::render('Member/validate');
+        }
+
+        $validated = $request->validate([
+            'no_kartu' => 'required|digits:4',
+        ], [
+            'no_kartu.required' => 'Nomor kartu wajib diisi.',
+            'no_kartu.digits' => 'Nomor kartu harus tepat 4 digit angka.',
+        ]);
+
+        $member = Member::where('no_kartu', $validated['no_kartu'])->first();
+
+        if (!$member) {
+            return back()->withErrors([
+                'no_kartu' => 'Nomor kartu tidak terdaftar sebagai anggota.'
+            ]);
+        }
+
+        return redirect()->route('member.show_public', ['no_kartu' => $member->no_kartu]);
+    }
 }
