@@ -13,7 +13,21 @@ Route::get('/', function () {
 
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], function () {
     Route::get('/', function () {
-        return Inertia::render('Dashboard');
+        $totalMembers = \App\Models\Member::count();
+        $totalCandidates = \App\Models\Calon::count();
+        $totalCandidatesDitetapkan = \App\Models\Calon::where('status', 'ditetapkan')->count();
+        $totalLifeMembers = \App\Models\Member::where('status_keanggotaan', 'LIFE MEMBER')->count();
+        $latestMembers = \App\Models\Member::orderBy('created_at', 'desc')->take(5)->get();
+
+        return Inertia::render('Dashboard', [
+            'stats' => [
+                'total_members' => $totalMembers,
+                'total_candidates' => $totalCandidates,
+                'total_candidates_ditetapkan' => $totalCandidatesDitetapkan,
+                'total_life_members' => $totalLifeMembers,
+            ],
+            'latest_members' => $latestMembers,
+        ]);
     })->name('dashboard');
 
     Route::get('/member', [MemberController::class, 'list'])->name('member.list');
