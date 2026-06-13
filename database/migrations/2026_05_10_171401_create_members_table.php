@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('tanggal_lahir');       // format DD/MM/YYYY
             $table->string('jenis_kelamin');
             $table->string('gol_darah');
-            $table->string('nik');
+            $table->string('nik')->nullable();
             $table->string('alamat');
             $table->string('no_wa');
             $table->string('email')->nullable();

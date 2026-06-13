@@ -1,5 +1,4 @@
 <?php
-
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -22,6 +21,7 @@ test('a member can be registered with valid data', function () {
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Bandung',
         'terdaftar_sejak'   => '2024',
+        'agreed'            => true,
     ]);
 
     $response->assertRedirect('/member/register-success');
@@ -30,6 +30,49 @@ test('a member can be registered with valid data', function () {
         'no_wa' => '081234567890',
         'no_kartu' => '1234',
     ]);
+});
+
+test('a member can be registered without NIK', function () {
+    $response = $this->post('/member/register', [
+        'nama_lengkap'      => 'Budi Prasetyo',
+        'nama_panggilan'    => 'Budi',
+        'tempat_lahir'      => 'Jakarta',
+        'tanggal_lahir'     => '05/08/1992',
+        'jenis_kelamin'     => 'L',
+        'gol_darah'         => 'A',
+        'alamat'            => 'Jl. Merdeka No. 10',
+        'no_wa'             => '089876543210',
+        'email'             => 'budi@example.com',
+        'status_keanggotaan'=> 'PROSPECT',
+        'chapter'           => 'Jakarta',
+        'agreed'            => true,
+    ]);
+
+    $response->assertRedirect('/member/register-success');
+    $this->assertDatabaseHas('members', [
+        'nama_lengkap' => 'Budi Prasetyo',
+        'nik' => null,
+        'no_wa' => '089876543210',
+    ]);
+});
+
+test('member registration fails if terms checkbox is not agreed', function () {
+    $response = $this->post('/member/register', [
+        'nama_lengkap'      => 'Budi Prasetyo',
+        'nama_panggilan'    => 'Budi',
+        'tempat_lahir'      => 'Jakarta',
+        'tanggal_lahir'     => '05/08/1992',
+        'jenis_kelamin'     => 'L',
+        'gol_darah'         => 'A',
+        'alamat'            => 'Jl. Merdeka No. 10',
+        'no_wa'             => '089876543210',
+        'email'             => 'budi@example.com',
+        'status_keanggotaan'=> 'PROSPECT',
+        'chapter'           => 'Jakarta',
+        'agreed'            => false, // not checked
+    ]);
+
+    $response->assertSessionHasErrors(['agreed']);
 });
 
 test('member registration fails if NIK, WhatsApp number, or Card number is already registered', function () {
@@ -64,6 +107,7 @@ test('member registration fails if NIK, WhatsApp number, or Card number is alrea
         'no_kartu'          => '5678',
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Bandung',
+        'agreed'            => true,
     ]);
 
     $response->assertSessionHasErrors(['nik']);
@@ -82,6 +126,7 @@ test('member registration fails if NIK, WhatsApp number, or Card number is alrea
         'no_kartu'          => '5678',
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Bandung',
+        'agreed'            => true,
     ]);
 
     $response->assertSessionHasErrors(['no_wa']);
@@ -100,6 +145,7 @@ test('member registration fails if NIK, WhatsApp number, or Card number is alrea
         'no_kartu'          => '1234', // duplicate
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Bandung',
+        'agreed'            => true,
     ]);
 
     $response->assertSessionHasErrors(['no_kartu']);

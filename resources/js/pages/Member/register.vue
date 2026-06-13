@@ -151,13 +151,6 @@
               </div>
 
               <div>
-                <label class="field-label">NIK (No. KTP) <span class="text-red-500">*</span></label>
-                <input v-model="form.nik" type="text" maxlength="16" placeholder="16 digit nomor NIK"
-                  :class="['field-input', form.errors.nik ? 'border-red-400 bg-red-50' : '']" />
-                <p v-if="form.errors.nik" class="field-error">{{ form.errors.nik }}</p>
-              </div>
-
-              <div>
                 <label class="field-label">Alamat Lengkap <span class="text-red-500">*</span></label>
                 <textarea v-model="form.alamat" rows="3" placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota, Provinsi"
                   :class="['field-input resize-none', form.errors.alamat ? 'border-red-400 bg-red-50' : '']"></textarea>
@@ -324,6 +317,25 @@
                 />
               </div>
 
+              <!-- Checkbox Syarat & Ketentuan dan Fakta Integritas -->
+              <div class="pt-4 border-t border-gray-100">
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    v-model="form.agreed"
+                    type="checkbox"
+                    class="mt-1 w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500 focus:ring-2 focus:ring-offset-0 cursor-pointer accent-red-600"
+                  />
+                  <span class="text-xs text-gray-600 leading-normal">
+                    Saya menyetujui 
+                    <a href="/member/syarat-ketentuan" target="_blank" class="text-red-600 hover:text-red-700 font-semibold underline">Syarat Ketentuan</a> 
+                    dan 
+                    <a href="/member/kebijakan-privasi" target="_blank" class="text-red-600 hover:text-red-700 font-semibold underline">Kebijakan Privasi</a> 
+                    yang berlaku di BBMC Indonesia.
+                  </span>
+                </label>
+                <p v-if="form.errors.agreed" class="field-error">{{ form.errors.agreed }}</p>
+              </div>
+
             </div>
           </div>
 
@@ -431,6 +443,7 @@ const form = useForm({
   checkpoint: '',
   region: '',
   terdaftar_sejak: '',
+  agreed: false,
 })
 
 // Checkpoint yang tersedia berdasarkan chapter yang dipilih
@@ -539,7 +552,7 @@ async function checkNoKartu(nocard: string) {
 const hasErrors = computed(() => Object.keys(form.errors).length > 0)
 
 // Step 1 required fields validation
-const step1Fields = ['nama_lengkap', 'nama_panggilan', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'gol_darah', 'nik', 'alamat', 'no_wa']
+const step1Fields = ['nama_lengkap', 'nama_panggilan', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'gol_darah', 'alamat', 'no_wa']
 
 function handleFotoChange(e: Event) {
   const input = e.target as HTMLInputElement
@@ -612,6 +625,14 @@ function nextStep() {
 
 async function submitForm() {
   showErrors.value = true
+
+  // Cek persetujuan syarat ketentuan
+  if (!form.agreed) {
+    form.errors.agreed = 'Anda harus menyetujui Syarat Ketentuan dan Kebijakan Privasi.'
+    return
+  } else {
+    delete form.errors.agreed
+  }
 
   // Cek no_kartu jika diisi
   if (form.no_kartu && form.no_kartu.length === 4 && noKartuStatus.value !== 'available') {

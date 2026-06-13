@@ -32,7 +32,7 @@ class MemberController extends Controller
             'tanggal_lahir'     => ['required', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}$/'],
             'jenis_kelamin'     => 'required|in:L,P',
             'gol_darah'         => 'required|in:A,B,AB,O',
-            'nik'               => 'required|string|digits:16|unique:members,nik',
+            'nik'               => 'nullable|string|digits:16|unique:members,nik',
             'alamat'            => 'required|string',
             'no_wa'             => 'required|string|max:20|unique:members,no_wa',
             'email'             => 'nullable|email|max:255',
@@ -44,6 +44,7 @@ class MemberController extends Controller
             'checkpoint'        => 'nullable|string|max:100',
             'region'            => 'nullable|string|max:100',
             'terdaftar_sejak'   => 'nullable|string|digits:4',
+            'agreed'            => 'accepted',
         ], [
             'nama_lengkap.required'       => 'Nama lengkap wajib diisi.',
             'nama_panggilan.required'     => 'Nama panggilan wajib diisi.',
@@ -52,7 +53,6 @@ class MemberController extends Controller
             'tanggal_lahir.regex'         => 'Format tanggal lahir harus DD/MM/YYYY.',
             'jenis_kelamin.required'      => 'Jenis kelamin wajib dipilih.',
             'gol_darah.required'          => 'Golongan darah wajib dipilih.',
-            'nik.required'                => 'NIK wajib diisi.',
             'nik.digits'                  => 'NIK harus tepat 16 digit angka.',
             'nik.unique'                  => 'NIK sudah terdaftar.',
             'alamat.required'             => 'Alamat wajib diisi.',
@@ -65,11 +65,14 @@ class MemberController extends Controller
             'status_keanggotaan.required' => 'Status keanggotaan wajib dipilih.',
             'chapter.required'            => 'Chapter wajib dipilih.',
             'terdaftar_sejak.digits'      => 'Tahun terdaftar harus 4 digit angka.',
+            'agreed.accepted'             => 'Anda harus menyetujui Syarat Ketentuan dan Kebijakan Privasi.',
         ]);
 
         if ($request->hasFile('foto')) {
             $validated['foto'] = $request->file('foto')->store('members/foto', 'public');
         }
+
+        unset($validated['agreed']);
 
         Member::create($validated);
 
@@ -82,6 +85,11 @@ class MemberController extends Controller
         }
         
         return Inertia::render('Member/register-success');
+    }
+
+    public function termsIntegrity()
+    {
+        return Inertia::render('Member/TermsIntegrity');
     }
 
 
@@ -159,7 +167,7 @@ class MemberController extends Controller
             'tanggal_lahir'      => ['required', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}$/'],
             'jenis_kelamin'      => 'required|in:L,P',
             'gol_darah'          => 'required|in:A,B,AB,O,-',
-            'nik'                => 'required|string|digits:16|unique:members,nik,' . $member->id,
+            'nik'                => 'nullable|string|digits:16|unique:members,nik,' . $member->id,
             'alamat'             => 'required|string',
             'no_wa'              => 'required|string|max:20|unique:members,no_wa,' . $member->id,
             'email'              => 'nullable|email|max:255',
@@ -179,7 +187,6 @@ class MemberController extends Controller
             'tanggal_lahir.regex'         => 'Format tanggal lahir harus DD/MM/YYYY.',
             'jenis_kelamin.required'      => 'Jenis kelamin wajib dipilih.',
             'gol_darah.required'          => 'Golongan darah wajib dipilih.',
-            'nik.required'                => 'NIK wajib diisi.',
             'nik.digits'                  => 'NIK harus tepat 16 digit angka.',
             'nik.unique'                  => 'NIK sudah terdaftar.',
             'alamat.required'             => 'Alamat wajib diisi.',
