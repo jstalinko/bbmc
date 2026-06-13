@@ -486,12 +486,6 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <option value="O">O</option>
                         </select>
                     </div>
-                    <!-- NIK -->
-                    <div class="sm:col-span-2">
-                        <label class="el">NIK *</label>
-                        <input v-model="editForm.nik" maxlength="16" inputmode="numeric" class="ei font-mono" :class="editErrors.nik?'border-red-400':''"/>
-                        <p v-if="editErrors.nik" class="ee">{{ editErrors.nik }}</p>
-                    </div>
                     <!-- Alamat -->
                     <div class="sm:col-span-2">
                         <label class="el">Alamat *</label>
@@ -528,11 +522,11 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                     <div>
                         <label class="el">Status Keanggotaan *</label>
                         <select v-model="editForm.status_keanggotaan" class="ei">
-                            <option value="SS DIPONEGORO">SS DIPONEGORO</option>
+                            <!-- <option value="SS DIPONEGORO">SS DIPONEGORO</option> -->
                             <option value="LIFE MEMBER">LIFE MEMBER</option>
-                            <option value="HONORARY">HONORARY</option>
+                            <!-- <option value="HONORARY">HONORARY</option>
                             <option value="VIRGIN">VIRGIN</option>
-                            <option value="PROSPECT">PROSPECT</option>
+                            <option value="PROSPECT">PROSPECT</option> -->
                         </select>
                     </div>
                     <!-- Chapter -->

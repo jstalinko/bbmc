@@ -218,7 +218,7 @@
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="field-label">No. Kartu</label>
+                  <label class="field-label">No. Kartu <span class="text-red-500">*</span></label>
                   <div
                     class="flex items-center gap-0 rounded-lg overflow-hidden transition-all duration-200 border-2"
                     :class="{
@@ -524,6 +524,9 @@ function handleNoKartuInput(e: Event) {
   form.no_kartu = input.value.replace(/\D/g, '').slice(0, 4)
   input.value = form.no_kartu
 
+  // Clear errors when typing
+  delete form.errors.no_kartu
+
   // Reset status jika belum 4 digit
   if (form.no_kartu.length < 4) {
     noKartuStatus.value = 'idle'
@@ -626,6 +629,20 @@ function nextStep() {
 async function submitForm() {
   showErrors.value = true
 
+  // Cek no_kartu
+  if (!form.no_kartu) {
+    form.errors.no_kartu = 'No. Kartu wajib diisi.'
+    return
+  } else if (!/^\d+$/.test(form.no_kartu)) {
+    form.errors.no_kartu = 'No. Kartu harus berupa angka.'
+    return
+  } else if (form.no_kartu.length !== 4) {
+    form.errors.no_kartu = 'No. Kartu harus tepat 4 digit angka.'
+    return
+  } else {
+    delete form.errors.no_kartu
+  }
+
   // Cek persetujuan syarat ketentuan
   if (!form.agreed) {
     form.errors.agreed = 'Anda harus menyetujui Syarat Ketentuan dan Kebijakan Privasi.'
@@ -634,8 +651,8 @@ async function submitForm() {
     delete form.errors.agreed
   }
 
-  // Cek no_kartu jika diisi
-  if (form.no_kartu && form.no_kartu.length === 4 && noKartuStatus.value !== 'available') {
+  // Cek no_kartu duplicate
+  if (noKartuStatus.value !== 'available') {
     // Jika masih checking, tunggu dulu; jika taken/idle, blokir
     if (noKartuStatus.value === 'checking') {
       // Tunggu sebentar sampai selesai
@@ -646,7 +663,15 @@ async function submitForm() {
       })
     }
     if (noKartuStatus.value === 'taken') {
-      return // biarkan pesan error sudah tampil
+      form.errors.no_kartu = 'No. kartu sudah digunakan, pilih nomor lain.'
+      return
+    }
+    if (noKartuStatus.value === 'idle') {
+      await checkNoKartu(form.no_kartu)
+      if (noKartuStatus.value === 'taken') {
+        form.errors.no_kartu = 'No. kartu sudah digunakan, pilih nomor lain.'
+        return
+      }
     }
   }
 
