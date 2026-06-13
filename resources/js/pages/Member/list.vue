@@ -522,11 +522,11 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                     <div>
                         <label class="el">Status Keanggotaan *</label>
                         <select v-model="editForm.status_keanggotaan" class="ei">
-                            <!-- <option value="SS DIPONEGORO">SS DIPONEGORO</option> -->
+                            <option value="SS DIPONEGORO">SS DIPONEGORO</option>
                             <option value="LIFE MEMBER">LIFE MEMBER</option>
-                            <!-- <option value="HONORARY">HONORARY</option>
+                            <option value="HONORARY">HONORARY</option>
                             <option value="VIRGIN">VIRGIN</option>
-                            <option value="PROSPECT">PROSPECT</option> -->
+                            <option value="PROSPECT">PROSPECT</option>
                         </select>
                     </div>
                     <!-- Chapter -->
