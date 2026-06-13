@@ -263,7 +263,7 @@
                   <label class="field-label">Status Keanggotaan <span class="text-red-500">*</span></label>
                   <select v-model="form.status_keanggotaan" :class="['field-input', form.errors.status_keanggotaan ? 'border-red-400 bg-red-50' : '']">
                     <option value="" disabled>Pilih status</option>
-                    <!-- <option value="SS DIPONEGORO">SS DIPONEGORO</option> -->
+                    <option value="SS DIPONEGORO">SS DIPONEGORO</option>
                     <option value="LIFE MEMBER">LIFE MEMBER</option>
                     <!-- <option value="HONORARY">HONORARY</option>
                     <option value="VIRGIN">VIRGIN</option>
