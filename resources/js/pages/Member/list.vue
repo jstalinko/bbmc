@@ -102,7 +102,10 @@ function submitEdit() {
     isEditing.value = true; editErrors.value = {};
     const data = new FormData();
     data.append('_method', 'PUT');
-    Object.entries(editForm.value).forEach(([k, v]) => { if (v !== null && v !== undefined) data.append(k, String(v)); });
+    Object.entries(editForm.value).forEach(([k, v]) => {
+        if (k === 'foto') return;
+        if (v !== null && v !== undefined) data.append(k, String(v));
+    });
     if (editFotoFile.value) data.append('foto', editFotoFile.value);
     router.post(`/dashboard/member/${editTarget.value.id}`, data, {
         forceFormData: true,
@@ -110,6 +113,39 @@ function submitEdit() {
         onError: (errs) => { isEditing.value = false; editErrors.value = errs; },
     });
 }
+
+// ── Edit No Kartu Modal ──────────────────────────────────────────────────────
+const editNoKartuTarget = ref(null);
+const editNoKartuForm = ref({ no_kartu: '' });
+const editNoKartuErrors = ref({});
+const isEditingNoKartu = ref(false);
+
+function openEditNoKartu(member) {
+    editNoKartuTarget.value = member;
+    editNoKartuForm.value = {
+        no_kartu: member.no_kartu || '',
+    };
+    editNoKartuErrors.value = {};
+}
+function closeEditNoKartu() { editNoKartuTarget.value = null; }
+function submitEditNoKartu() {
+    if (!editNoKartuTarget.value) return;
+    isEditingNoKartu.value = true;
+    editNoKartuErrors.value = {};
+    const data = new FormData();
+    data.append('_method', 'PUT');
+    Object.entries(editNoKartuTarget.value).forEach(([k, v]) => {
+        if (k === 'foto') return;
+        if (v !== null && v !== undefined) data.append(k, String(v));
+    });
+    data.set('no_kartu', editNoKartuForm.value.no_kartu);
+    router.post(`/dashboard/member/${editNoKartuTarget.value.id}`, data, {
+        forceFormData: true,
+        onSuccess: () => { isEditingNoKartu.value = false; closeEditNoKartu(); },
+        onError: (errs) => { isEditingNoKartu.value = false; editNoKartuErrors.value = errs; },
+    });
+}
+
 
 // ── Delete Dialog ────────────────────────────────────────────────────────────
 const deleteTarget = ref(null);
@@ -230,9 +266,18 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
 
                             <!-- No Kartu -->
                             <TableCell>
-                                <span class="rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-semibold text-muted-foreground">
-                                   BBMC 38 2026 {{ member.no_kartu || '—' }}
-                                </span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-semibold text-muted-foreground">
+                                       BBMC 38 2026 {{ member.no_kartu || '—' }}
+                                    </span>
+                                    <button 
+                                        @click="openEditNoKartu(member)" 
+                                        class="text-muted-foreground hover:text-amber-500 transition-colors p-0.5"
+                                        title="Edit No. Kartu"
+                                    >
+                                        <Pencil class="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
                             </TableCell>
 
                             <!-- Nama -->
@@ -586,6 +631,47 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
                         {{ isEditing ? 'Menyimpan...' : 'Simpan Perubahan' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ═══ EDIT NO KARTU DIALOG ═══ -->
+        <Dialog :open="!!editNoKartuTarget" @update:open="(v) => { if (!v) closeEditNoKartu() }">
+            <DialogContent class="max-w-sm rounded-2xl">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-amber-600">
+                        <Pencil class="h-4 w-4" /> Edit Nomor Kartu
+                    </DialogTitle>
+                    <DialogDescription class="text-xs">
+                        Ubah nomor kartu untuk <span class="font-semibold text-foreground">{{ editNoKartuTarget?.nama_lengkap }}</span>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <!-- Error banner -->
+                <div v-if="Object.keys(editNoKartuErrors).length" class="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 space-y-1">
+                    <p class="font-semibold">Terdapat kesalahan:</p>
+                    <p v-for="(err, k) in editNoKartuErrors" :key="k">• {{ err }}</p>
+                </div>
+
+                <div class="py-3">
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">No. Kartu</label>
+                    <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-100 transition-all" :class="editNoKartuErrors.no_kartu?'border-red-400':''">
+                        <span class="bg-muted px-3 py-2 text-xs font-mono font-bold text-muted-foreground border-r whitespace-nowrap">BBMC 38 2026</span>
+                        <input v-model="editNoKartuForm.no_kartu" maxlength="4" inputmode="numeric"
+                            @input="editNoKartuForm.no_kartu = editNoKartuForm.no_kartu.replace(/\D/g,'').slice(0,4)"
+                            placeholder="0000" class="flex-1 min-w-0 bg-background px-3 py-2 text-sm font-mono font-bold outline-none tracking-widest"/>
+                    </div>
+                </div>
+
+                <DialogFooter class="flex gap-2">
+                    <Button variant="outline" class="flex-1" @click="closeEditNoKartu" :disabled="isEditingNoKartu">Batal</Button>
+                    <Button class="flex-1 bg-amber-500 hover:bg-amber-600 text-white" :disabled="isEditingNoKartu" @click="submitEditNoKartu">
+                        <svg v-if="isEditingNoKartu" class="mr-1.5 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        {{ isEditingNoKartu ? 'Menyimpan...' : 'Simpan' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

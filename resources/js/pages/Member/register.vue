@@ -404,7 +404,7 @@ const chapterList = [
   },
   {
     name: 'East Java Chapter',
-    checkpoints: ['Mojokerto', 'Malang'],
+    checkpoints: ['Mojokerto', 'Malang','Sidoarjo','Surabaya','Lamongan','Kediri'],
   },
   {
     name: 'Bali Chapter',
