@@ -80,24 +80,36 @@ function handleClose() {
                 <span>🔒</span> Kebijakan Privasi Data Member
               </h2>
               <p class="text-gray-600 text-sm">
-                Bikers Brotherhood MC Indonesia menghargai privasi data pribadi Anda. Kebijakan ini menjelaskan bagaimana kami mengelola dan melindungi data keanggotaan Anda:
+                Bikers Brotherhood MC Indonesia (" BBMC ") menghargai privasi data pribadi Anda. Kebijakan ini menjelaskan dasar hukum, tujuan, serta cara kami mengelola dan melindungi data keanggotaan Anda sesuai dengan Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (" UU PDP ").
               </p>
               <ul class="space-y-3.5 text-gray-600 text-sm">
                 <li class="flex gap-2.5 items-start">
                   <span class="text-red-600 font-bold min-w-[1.25rem]">1.</span>
-                  <span><strong>Pengumpulan Data:</strong> Kami mengumpulkan informasi pribadi seperti nama lengkap, nama panggilan, tempat & tanggal lahir, jenis kelamin, golongan darah, alamat, nomor WhatsApp, email, profesi, dan foto diri yang diunggah melalui formulir registrasi.</span>
+                  <span><strong>Pengumpulan Data:</strong> Kami mengumpulkan informasi pribadi yang relevan untuk keanggotaan, yaitu nama lengkap, nama panggilan, tempat & tanggal lahir, jenis kelamin, golongan darah, alamat, nomor WhatsApp, email, profesi, dan foto diri yang Anda unggah melalui formulir registrasi. Golongan darah merupakan data pribadi spesifik yang kami proses berdasarkan persetujuan Anda, untuk kepentingan identifikasi dan keadaan darurat.</span>
                 </li>
                 <li class="flex gap-2.5 items-start">
                   <span class="text-red-600 font-bold min-w-[1.25rem]">2.</span>
-                  <span><strong>Penggunaan Informasi:</strong> Informasi ini digunakan secara eksklusif untuk kepentingan administratif organisasi, pencatatan data keanggotaan di masing-masing Chapter/Checkpoint, verifikasi identitas, pencetakan Kartu Tanda Anggota (KTA), serta pemilu internal.</span>
+                  <span><strong>Dasar Hukum & Tujuan Pemrosesan:</strong> Pemrosesan data Anda didasarkan pada persetujuan yang Anda berikan saat registrasi dan/atau pelaksanaan hubungan keanggotaan. Data digunakan secara eksklusif untuk kepentingan administrasi organisasi, pencatatan data keanggotaan di masing-masing Chapter/Checkpoint, verifikasi identitas, pencetakan Kartu Tanda Anggota (KTA), serta penyelenggaraan pemilu internal.</span>
                 </li>
                 <li class="flex gap-2.5 items-start">
                   <span class="text-red-600 font-bold min-w-[1.25rem]">3.</span>
-                  <span><strong>Perlindungan Data:</strong> Kami menerapkan standar keamanan terbaik untuk mencegah kehilangan data, penyalahgunaan, atau akses tidak sah. Kami menjamin data Anda tidak akan dibagikan, dipindahtangankan, atau dijual kepada pihak ketiga di luar organisasi tanpa persetujuan Anda.</span>
+                  <span><strong>Jangka Waktu Penyimpanan & Pemrosesan:</strong> Kami memproses dan menyimpan data Anda selama Anda berstatus anggota dan untuk jangka waktu [• tahun] setelah keanggotaan berakhir guna memenuhi keperluan administratif dan ketentuan hukum yang berlaku. Setelah jangka waktu tersebut, data akan dihapus atau dimusnahkan.</span>
                 </li>
                 <li class="flex gap-2.5 items-start">
                   <span class="text-red-600 font-bold min-w-[1.25rem]">4.</span>
-                  <span><strong>Pembaruan Data:</strong> Setiap anggota berhak memverifikasi, mengubah, atau memperbarui informasi pribadi mereka dengan mengajukan permohonan melalui administrator atau pengurus sekretariat BBMC terkait.</span>
+                  <span><strong>Pelindungan Data:</strong> Kami menerapkan standar keamanan terbaik untuk mencegah kehilangan, penyalahgunaan, atau akses tidak sah. Data hanya dapat diakses oleh pengurus yang berwenang dan penyedia layanan (prosesor) yang membantu pengelolaan sistem keanggotaan/pemilu di bawah kewajiban kerahasiaan. Kami menjamin data Anda tidak dibagikan, dipindahtangankan, atau dijual kepada pihak ketiga eksternal tanpa persetujuan Anda, kecuali diwajibkan oleh peraturan perundang-undangan.</span>
+                </li>
+                <li class="flex gap-2.5 items-start">
+                  <span class="text-red-600 font-bold min-w-[1.25rem]">5.</span>
+                  <span><strong>Hak Anda:</strong> Sesuai UU PDP, Anda berhak memperoleh informasi, mengakses dan memperoleh salinan data, memperbaiki atau memperbarui data, menarik persetujuan, menghapus/memusnahkan data, mengajukan keberatan atas pengambilan keputusan yang dilakukan secara otomatis, menunda atau membatasi pemrosesan, serta menuntut dan menerima ganti rugi atas pelanggaran. Permohonan diajukan melalui kontak pada angka 6.</span>
+                </li>
+                <li class="flex gap-2.5 items-start">
+                  <span class="text-red-600 font-bold min-w-[1.25rem]">6.</span>
+                  <span><strong>Pengelola & Kontak:</strong> Pengendali data Anda adalah Sekretariat BBMC. Untuk verifikasi, perubahan, pembaruan, atau pelaksanaan hak lainnya, hubungi kami di <strong>OFFIZIELE (Humas) | PR-BBMC (+62 822-7272-2662 : MSG ONLY!)</strong>.</span>
+                </li>
+                <li class="flex gap-2.5 items-start">
+                  <span class="text-red-600 font-bold min-w-[1.25rem]">7.</span>
+                  <span><strong>Perubahan Kebijakan:</strong> Apabila terdapat perubahan atas informasi dalam kebijakan ini, kami akan memberitahukannya kepada Anda sebelum perubahan tersebut berlaku.</span>
                 </li>
               </ul>
             </section>
