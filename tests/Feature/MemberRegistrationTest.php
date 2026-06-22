@@ -43,7 +43,7 @@ test('a member can be registered without NIK', function () {
         'alamat'            => 'Jl. Merdeka No. 10',
         'no_wa'             => '089876543210',
         'email'             => 'budi@example.com',
-        'no_kartu'          => '5678',
+        'no_kartu'          => '0567',
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Jakarta',
         'agreed'            => true,
@@ -54,7 +54,7 @@ test('a member can be registered without NIK', function () {
         'nama_lengkap' => 'Budi Prasetyo',
         'nik' => null,
         'no_wa' => '089876543210',
-        'no_kartu' => '5678',
+        'no_kartu' => '0567',
     ]);
 });
 
@@ -106,7 +106,7 @@ test('member registration fails if NIK, WhatsApp number, or Card number is alrea
         'nik'               => '1234567890123456', // duplicate
         'alamat'            => 'Jl. Sudirman No. 1',
         'no_wa'             => '089999999999',
-        'no_kartu'          => '5678',
+        'no_kartu'          => '0568',
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Bandung',
         'agreed'            => true,
@@ -125,7 +125,7 @@ test('member registration fails if NIK, WhatsApp number, or Card number is alrea
         'nik'               => '9876543210987654',
         'alamat'            => 'Jl. Sudirman No. 1',
         'no_wa'             => '081234567890', // duplicate
-        'no_kartu'          => '5678',
+        'no_kartu'          => '0568',
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Bandung',
         'agreed'            => true,
@@ -153,7 +153,7 @@ test('member registration fails if NIK, WhatsApp number, or Card number is alrea
     $response->assertSessionHasErrors(['no_kartu']);
 });
 
-test('member registration fails if no_kartu is missing, not numeric, or not exactly 4 digits', function () {
+test('member registration fails if no_kartu is missing, not numeric, not exactly 4 digits, or greater than 1500', function () {
     // 1. Missing no_kartu
     $response = $this->post('/member/register', [
         'nama_lengkap'      => 'Test Card',
@@ -199,6 +199,23 @@ test('member registration fails if no_kartu is missing, not numeric, or not exac
         'alamat'            => 'Jl. Sudirman No. 1',
         'no_wa'             => '089999999998',
         'no_kartu'          => '123', // 3 digits
+        'status_keanggotaan'=> 'PROSPECT',
+        'chapter'           => 'Bandung',
+        'agreed'            => true,
+    ]);
+    $response->assertSessionHasErrors(['no_kartu']);
+
+    // 4. no_kartu greater than 1500
+    $response = $this->post('/member/register', [
+        'nama_lengkap'      => 'Test Card',
+        'nama_panggilan'    => 'Test',
+        'tempat_lahir'      => 'Bandung',
+        'tanggal_lahir'     => '12/03/1990',
+        'jenis_kelamin'     => 'L',
+        'gol_darah'         => 'O',
+        'alamat'            => 'Jl. Sudirman No. 1',
+        'no_wa'             => '089999999998',
+        'no_kartu'          => '1501', // greater than 1500
         'status_keanggotaan'=> 'PROSPECT',
         'chapter'           => 'Bandung',
         'agreed'            => true,

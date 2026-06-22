@@ -43,6 +43,10 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 
     Route::get('/setting-pemilihan', [ElectionController::class, 'setting'])->name('election.setting');
     Route::post('/setting-pemilihan', [ElectionController::class, 'settingPost'])->name('election.setting_post');
+
+    Route::get('/whatsapp', [\App\Http\Controllers\WhatsappController::class, 'index'])->name('whatsapp.index');
+    Route::post('/whatsapp/send', [\App\Http\Controllers\WhatsappController::class, 'send'])->name('whatsapp.send');
+    Route::get('/whatsapp/status/{batchId}', [\App\Http\Controllers\WhatsappController::class, 'status'])->name('whatsapp.status');
 });
 
 require __DIR__ . '/settings.php';
