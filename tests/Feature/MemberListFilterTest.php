@@ -115,11 +115,11 @@ test('member list can be filtered by Life Member duration', function () {
     $response->assertDontSee('LM Young');
     $response->assertDontSee('Prospect Old');
 
-    // Test filter_lm = 5
-    $response = $this->actingAs($user)->get('/dashboard/member?filter_lm=5');
+    // Test filter_lm = 10_under
+    $response = $this->actingAs($user)->get('/dashboard/member?filter_lm=10_under');
     $response->assertStatus(200);
-    $response->assertSee('LM Ten Plus');
+    $response->assertDontSee('LM Ten Plus');
     $response->assertSee('LM Five Plus');
-    $response->assertDontSee('LM Young');
+    $response->assertSee('LM Young');
     $response->assertDontSee('Prospect Old');
 });

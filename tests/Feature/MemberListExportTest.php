@@ -85,10 +85,16 @@ test('member list export CSV respects filters', function () {
     // Test CSV export with filter_lm = 10
     $response = $this->actingAs($user)->get('/dashboard/member/export/csv?filter_lm=10');
     $response->assertStatus(200);
-    
     $content = $response->streamedContent();
     expect($content)->toContain('LM Ten Plus Export');
     expect($content)->not->toContain('LM Five Plus Export');
+
+    // Test CSV export with filter_lm = 10_under
+    $response = $this->actingAs($user)->get('/dashboard/member/export/csv?filter_lm=10_under');
+    $response->assertStatus(200);
+    $content = $response->streamedContent();
+    expect($content)->not->toContain('LM Ten Plus Export');
+    expect($content)->toContain('LM Five Plus Export');
 });
 
 test('authenticated user can export member list to PDF', function () {

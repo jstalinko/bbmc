@@ -245,8 +245,8 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                                 class="w-full border border-input bg-background rounded-md px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all cursor-pointer"
                             >
                                 <option value="">Semua Anggota</option>
-                                <option value="10">LM > 10th</option>
-                                <option value="5">LM > 5th</option>
+                                <option value="10">LM >= 10th</option>
+                                <option value="10_under">LM <= 10th</option>
                             </select>
                         </div>
                     </div>

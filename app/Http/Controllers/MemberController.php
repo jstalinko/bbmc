@@ -117,11 +117,11 @@ class MemberController extends Controller
             $query->where('status_keanggotaan', 'LIFE MEMBER')
                   ->whereNotNull('terdaftar_sejak')
                   ->where('terdaftar_sejak', '<=', $cutoffYear);
-        } elseif ($filterLm === '5') {
-            $cutoffYear = intval(date('Y')) - 5;
+        } elseif ($filterLm === '10_under') {
+            $cutoffYear = intval(date('Y')) - 10;
             $query->where('status_keanggotaan', 'LIFE MEMBER')
                   ->whereNotNull('terdaftar_sejak')
-                  ->where('terdaftar_sejak', '<=', $cutoffYear);
+                  ->where('terdaftar_sejak', '>=', $cutoffYear);
         }
 
         return $query;
@@ -212,9 +212,9 @@ class MemberController extends Controller
         $filterLm = $request->input('filter_lm', '');
         $filterDesc = '';
         if ($filterLm === '10') {
-            $filterDesc = 'Life Member > 10 Tahun';
-        } elseif ($filterLm === '5') {
-            $filterDesc = 'Life Member > 5 Tahun';
+            $filterDesc = 'Life Member >= 10 Tahun';
+        } elseif ($filterLm === '10_under') {
+            $filterDesc = 'Life Member <= 10 Tahun';
         }
 
         if ($search = $request->input('search')) {
