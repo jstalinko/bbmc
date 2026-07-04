@@ -24,6 +24,8 @@ class ElectionController extends Controller
                 'ajukan_anggota' => true,
                 'tanggal_mulai' => null,
                 'tanggal_selesai' => null,
+                'piwapi_api_secret_key' => null,
+                'piwapi_account_id' => null,
             ];
         }
         $settings = json_decode(file_get_contents($path), true);
@@ -32,6 +34,8 @@ class ElectionController extends Controller
             'ajukan_anggota' => $settings['ajukan_anggota'] ?? true,
             'tanggal_mulai' => $settings['tanggal_mulai'] ?? null,
             'tanggal_selesai' => $settings['tanggal_selesai'] ?? null,
+            'piwapi_api_secret_key' => $settings['piwapi_api_secret_key'] ?? null,
+            'piwapi_account_id' => $settings['piwapi_account_id'] ?? null,
         ];
     }
 
@@ -634,6 +638,8 @@ class ElectionController extends Controller
             'ajukan_anggota' => 'required|boolean',
             'tanggal_mulai' => 'nullable|string',
             'tanggal_selesai' => 'nullable|string',
+            'piwapi_api_secret_key' => 'nullable|string',
+            'piwapi_account_id' => 'nullable|string',
         ]);
 
         $validated['ajukan_diri'] = (bool)$validated['ajukan_diri'];

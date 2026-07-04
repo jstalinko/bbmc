@@ -19,6 +19,16 @@ Class Helper{
     {
         $secret = env('PIWAPI_API_SECRET_KEY');
         $account = env('PIWAPI_ACCOUNT_ID');
+        $path = storage_path('app/private/pemilihan-setting.json');
+        if (file_exists($path)) {
+            $settings = json_decode(file_get_contents($path), true);
+            if (!empty($settings['piwapi_api_secret_key'])) {
+                $secret = $settings['piwapi_api_secret_key'];
+            }
+            if (!empty($settings['piwapi_account_id'])) {
+                $account = $settings['piwapi_account_id'];
+            }
+        }
         $recipient = self::cleanPhone($recipient);
         if (empty($recipient) || empty($message)) {
             return [

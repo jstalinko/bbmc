@@ -96,7 +96,7 @@ class MemberController extends Controller
     }
 
 
-    public function list(Request $request)
+    private function buildExportQuery(Request $request)
     {
         $query = Member::query()->orderBy('created_at', 'desc');
 
@@ -111,12 +111,122 @@ class MemberController extends Controller
             });
         }
 
+        $filterLm = $request->input('filter_lm', '');
+        if ($filterLm === '10') {
+            $cutoffYear = intval(date('Y')) - 10;
+            $query->where('status_keanggotaan', 'LIFE MEMBER')
+                  ->whereNotNull('terdaftar_sejak')
+                  ->where('terdaftar_sejak', '<=', $cutoffYear);
+        } elseif ($filterLm === '5') {
+            $cutoffYear = intval(date('Y')) - 5;
+            $query->where('status_keanggotaan', 'LIFE MEMBER')
+                  ->whereNotNull('terdaftar_sejak')
+                  ->where('terdaftar_sejak', '<=', $cutoffYear);
+        }
+
+        return $query;
+    }
+
+    public function list(Request $request)
+    {
+        $query = $this->buildExportQuery($request);
         $members = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Member/list', [
             'members' => $members,
-            'filters' => ['search' => $request->input('search', '')],
+            'filters' => [
+                'search' => $request->input('search', ''),
+                'filter_lm' => $request->input('filter_lm', ''),
+            ],
         ]);
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $members = $this->buildExportQuery($request)->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="data_anggota_' . date('Ymd_His') . '.csv"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($members) {
+            $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF"); // UTF-8 BOM for proper Excel compatibility
+
+            fputcsv($file, [
+                'No. Kartu',
+                'Nama Lengkap',
+                'Nama Panggilan',
+                'NIK',
+                'Tempat Lahir',
+                'Tanggal Lahir',
+                'Jenis Kelamin',
+                'Gol. Darah',
+                'Alamat',
+                'No. WA',
+                'Email',
+                'Profesi',
+                'Status Keanggotaan',
+                'Chapter',
+                'Checkpoint',
+                'Region',
+                'Terdaftar Sejak',
+            ]);
+
+            foreach ($members as $m) {
+                fputcsv($file, [
+                    $m->no_kartu ? "BBMC 38 2026 {$m->no_kartu}" : '—',
+                    $m->nama_lengkap,
+                    $m->nama_panggilan,
+                    $m->nik ?? '—',
+                    $m->tempat_lahir,
+                    $m->tanggal_lahir,
+                    $m->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan',
+                    $m->gol_darah,
+                    $m->alamat,
+                    $m->no_wa,
+                    $m->email ?? '—',
+                    $m->profesi ?? '—',
+                    $m->status_keanggotaan,
+                    $m->chapter,
+                    $m->checkpoint ?? '—',
+                    $m->region ?? '—',
+                    $m->terdaftar_sejak ?? '—',
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $members = $this->buildExportQuery($request)->get();
+
+        $filterLm = $request->input('filter_lm', '');
+        $filterDesc = '';
+        if ($filterLm === '10') {
+            $filterDesc = 'Life Member > 10 Tahun';
+        } elseif ($filterLm === '5') {
+            $filterDesc = 'Life Member > 5 Tahun';
+        }
+
+        if ($search = $request->input('search')) {
+            $filterDesc .= ($filterDesc ? ' & ' : '') . 'Pencarian: "' . $search . '"';
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('member.export-pdf', [
+            'members' => $members,
+            'filter_desc' => $filterDesc,
+        ]);
+
+        return $pdf->download('daftar_anggota_' . date('Ymd_His') . '.pdf');
     }
 
     public function show(Member $member)

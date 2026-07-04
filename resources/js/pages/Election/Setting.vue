@@ -15,6 +15,8 @@ const props = defineProps<{
         ajukan_anggota: boolean;
         tanggal_mulai: string | null;
         tanggal_selesai: string | null;
+        piwapi_api_secret_key: string | null;
+        piwapi_account_id: string | null;
     };
 }>();
 
@@ -35,6 +37,8 @@ const form = useForm({
     ajukan_anggota: !!props.settings.ajukan_anggota,
     tanggal_mulai: props.settings.tanggal_mulai ? props.settings.tanggal_mulai.substring(0, 16) : '',
     tanggal_selesai: props.settings.tanggal_selesai ? props.settings.tanggal_selesai.substring(0, 16) : '',
+    piwapi_api_secret_key: props.settings.piwapi_api_secret_key || '',
+    piwapi_account_id: props.settings.piwapi_account_id || '',
 });
 
 const submitSettings = () => {
@@ -133,6 +137,41 @@ const submitSettings = () => {
                                     class="w-full"
                                 />
                                 <p class="text-[11px] text-muted-foreground">Portal login akan otomatis ditutup setelah waktu ini berlalu.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section C: Kredensial WhatsApp (PIWAPI) -->
+                    <div class="space-y-4">
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b pb-2">
+                            Kredensial WhatsApp (PIWAPI)
+                        </h2>
+
+                        <div class="grid gap-6 sm:grid-cols-2 mt-4">
+                            <!-- API Secret Key -->
+                            <div class="grid gap-2">
+                                <Label for="piwapi_api_secret_key" class="font-medium text-sm">PIWAPI API Secret Key</Label>
+                                <Input
+                                    id="piwapi_api_secret_key"
+                                    type="text"
+                                    v-model="form.piwapi_api_secret_key"
+                                    placeholder="Masukkan API Secret Key"
+                                    class="w-full"
+                                />
+                                <p class="text-[11px] text-muted-foreground">Kunci rahasia API untuk mengirimkan pesan WhatsApp via PIWAPI.</p>
+                            </div>
+
+                            <!-- Account ID -->
+                            <div class="grid gap-2">
+                                <Label for="piwapi_account_id" class="font-medium text-sm">PIWAPI Account ID</Label>
+                                <Input
+                                    id="piwapi_account_id"
+                                    type="text"
+                                    v-model="form.piwapi_account_id"
+                                    placeholder="Masukkan Account ID"
+                                    class="w-full"
+                                />
+                                <p class="text-[11px] text-muted-foreground">ID akun WhatsApp instance di PIWAPI.</p>
                             </div>
                         </div>
                     </div>

@@ -26,21 +26,39 @@ const breadcrumbs = [
     { title: 'Data Anggota', href: '/dashboard/member' },
 ];
 
-// ── Search ──────────────────────────────────────────────────────────────────
+// ── Search & Filter ──────────────────────────────────────────────────────────
 const search = ref(props.filters?.search ?? '');
+const filterLm = ref(props.filters?.filter_lm ?? '');
 let searchTimer;
 watch(search, (val) => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
-        router.get('/dashboard/member', { search: val }, { preserveState: true, replace: true });
+        router.get('/dashboard/member', { search: val, filter_lm: filterLm.value }, { preserveState: true, replace: true });
     }, 400);
 });
+watch(filterLm, (val) => {
+    router.get('/dashboard/member', { search: search.value, filter_lm: val }, { preserveState: true, replace: true });
+});
 function clearSearch() { search.value = ''; }
+
+function exportUrl(type) {
+    const params = new URLSearchParams();
+    if (search.value) params.append('search', search.value);
+    if (filterLm.value) params.append('filter_lm', filterLm.value);
+    return `/dashboard/member/export/${type}?${params.toString()}`;
+}
 
 // ── View Modal ───────────────────────────────────────────────────────────────
 const viewTarget = ref(null);
 function openView(member) { viewTarget.value = member; }
 function closeView() { viewTarget.value = null; }
+
+const memberDuration = computed(() => {
+    if (!viewTarget.value?.terdaftar_sejak) return null;
+    const year = parseInt(viewTarget.value.terdaftar_sejak);
+    if (isNaN(year)) return null;
+    return new Date().getFullYear() - year;
+});
 
 // ── Edit Modal ───────────────────────────────────────────────────────────────
 const editTarget = ref(null);
@@ -208,21 +226,53 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
 
                 <!-- Toolbar -->
                 <div class="flex flex-col gap-3 border-b bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="relative w-full sm:w-72">
-                        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        <Input
-                            v-model="search"
-                            placeholder="Cari nama, no.kartu, chapter..."
-                            class="pl-9 pr-8 text-sm"
-                        />
-                        <button v-if="search" @click="clearSearch"
-                            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                            <X class="h-3.5 w-3.5" />
-                        </button>
+                    <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-72">
+                            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                            <Input
+                                v-model="search"
+                                placeholder="Cari nama, no.kartu, chapter..."
+                                class="pl-9 pr-8 text-sm"
+                            />
+                            <button v-if="search" @click="clearSearch"
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                <X class="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                        <div class="relative w-full sm:w-48">
+                            <select
+                                v-model="filterLm"
+                                class="w-full border border-input bg-background rounded-md px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all cursor-pointer"
+                            >
+                                <option value="">Semua Anggota</option>
+                                <option value="10">LM > 10th</option>
+                                <option value="5">LM > 5th</option>
+                            </select>
+                        </div>
                     </div>
-                    <p class="text-xs text-muted-foreground whitespace-nowrap">
-                        Menampilkan {{ members.from ?? 0 }}–{{ members.to ?? 0 }} dari {{ members.total }} data
-                    </p>
+                    <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <a :href="exportUrl('csv')" class="w-full sm:w-auto">
+                                <Button variant="outline" size="sm" class="gap-1.5 w-full hover:bg-green-50 hover:text-green-600 hover:border-green-300">
+                                    <svg class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    Export CSV
+                                </Button>
+                            </a>
+                            <a :href="exportUrl('pdf')" class="w-full sm:w-auto">
+                                <Button variant="outline" size="sm" class="gap-1.5 w-full hover:bg-red-50 hover:text-red-600 hover:border-red-300">
+                                    <svg class="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    Export PDF
+                                </Button>
+                            </a>
+                        </div>
+                        <p class="text-xs text-muted-foreground whitespace-nowrap text-right">
+                            Menampilkan {{ members.from ?? 0 }}–{{ members.to ?? 0 }} dari {{ members.total }} data
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Shadcn Table — wrapper handles overflow-x-auto -->
@@ -427,7 +477,12 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                         <Badge variant="outline" :class="['text-xs font-bold px-3 py-1', statusBadgeClass(viewTarget?.status_keanggotaan)]">
                             {{ viewTarget?.status_keanggotaan }}
                         </Badge>
-                        <span class="text-xs text-muted-foreground">Sejak {{ viewTarget?.terdaftar_sejak || '—' }}</span>
+                        <div class="text-right">
+                            <span class="text-xs text-muted-foreground block">Sejak {{ viewTarget?.terdaftar_sejak || '—' }}</span>
+                            <span v-if="viewTarget?.status_keanggotaan === 'LIFE MEMBER' && memberDuration !== null" class="text-[10px] text-blue-600 font-bold block">
+                                {{ memberDuration }} Tahun Life Member
+                            </span>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 text-sm">

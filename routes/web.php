@@ -31,6 +31,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     })->name('dashboard');
 
     Route::get('/member', [MemberController::class, 'list'])->name('member.list');
+    Route::get('/member/export/pdf', [MemberController::class, 'exportPdf'])->name('member.export.pdf');
+    Route::get('/member/export/csv', [MemberController::class, 'exportCsv'])->name('member.export.csv');
     Route::get('/member/{member}/print', [MemberController::class, 'printCard'])->name('member.print');
     Route::get('/member/{member}/print-pdf', [MemberController::class, 'printCardPdf'])->name('member.print.pdf');
     Route::get('/member/{member}', [MemberController::class, 'show'])->name('member.show');
