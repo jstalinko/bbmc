@@ -103,6 +103,7 @@ class MemberController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
+                  ->orWhere('nama_panggilan', 'like', "%{$search}%")
                   ->orWhere('no_kartu', 'like', "%{$search}%")
                   ->orWhere('no_wa', 'like', "%{$search}%")
                   ->orWhere('chapter', 'like', "%{$search}%")

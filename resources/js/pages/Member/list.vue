@@ -231,7 +231,7 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                             <Input
                                 v-model="search"
-                                placeholder="Cari nama, no.kartu, chapter..."
+                                placeholder="Cari nama, panggilan, no.kartu, chapter..."
                                 class="pl-9 pr-8 text-sm"
                             />
                             <button v-if="search" @click="clearSearch"
@@ -331,8 +331,9 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             </TableCell>
 
                             <!-- Nama -->
-                            <TableCell class="font-semibold whitespace-nowrap">
-                                {{ member.nama_lengkap }}
+                            <TableCell class="whitespace-nowrap">
+                                <div class="font-semibold">{{ member.nama_lengkap }}</div>
+                                <div v-if="member.nama_panggilan" class="text-xs text-muted-foreground">({{ member.nama_panggilan }})</div>
                             </TableCell>
 
                             <!-- WA -->

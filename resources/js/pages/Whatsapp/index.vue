@@ -73,6 +73,7 @@ const filteredMembers = computed(() => {
   if (!q) return props.members;
   return props.members.filter(m => 
     m.nama_lengkap.toLowerCase().includes(q) || 
+    (m.nama_panggilan && m.nama_panggilan.toLowerCase().includes(q)) ||
     (m.no_wa && m.no_wa.includes(q)) ||
     (m.no_kartu && m.no_kartu.includes(q))
   );

@@ -17,7 +17,7 @@ class WhatsappController extends Controller
      */
     public function index()
     {
-        $members = Member::select('id', 'nama_lengkap', 'no_wa', 'email', 'no_kartu')->get();
+        $members = Member::select('id', 'nama_lengkap', 'nama_panggilan', 'no_wa', 'email', 'no_kartu')->get();
         return Inertia::render('Whatsapp/index', [
             'members' => $members,
         ]);

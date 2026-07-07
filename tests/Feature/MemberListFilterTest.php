@@ -123,3 +123,28 @@ test('member list can be filtered by Life Member duration', function () {
     $response->assertSee('LM Young');
     $response->assertDontSee('Prospect Old');
 });
+
+test('member list can be searched by nama panggilan', function () {
+    $user = User::factory()->create();
+
+    Member::create([
+        'nama_lengkap' => 'Budi Santoso',
+        'nama_panggilan' => 'Gonggong',
+        'tempat_lahir' => 'Bandung',
+        'tanggal_lahir' => '01/01/1980',
+        'jenis_kelamin' => 'L',
+        'gol_darah' => 'O',
+        'nik' => '1234567890123999',
+        'alamat' => 'Jl. Test',
+        'no_wa' => '628123456799',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'chapter' => 'Mother Chapter',
+        'no_kartu' => '0999',
+        'terdaftar_sejak' => '2015',
+    ]);
+
+    $response = $this->actingAs($user)->get('/dashboard/member?search=Gonggong');
+    $response->assertStatus(200);
+    $response->assertSee('Budi Santoso');
+});
+
