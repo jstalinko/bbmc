@@ -148,3 +148,51 @@ test('member list can be searched by nama panggilan', function () {
     $response->assertSee('Budi Santoso');
 });
 
+test('member list can be sorted by no_kartu ascending and descending', function () {
+    $user = User::factory()->create();
+
+    Member::create([
+        'nama_lengkap' => 'Anggota Satu',
+        'nama_panggilan' => 'Satu',
+        'tempat_lahir' => 'Bandung',
+        'tanggal_lahir' => '01/01/1980',
+        'jenis_kelamin' => 'L',
+        'gol_darah' => 'O',
+        'nik' => '1234567890111111',
+        'alamat' => 'Jl. Satu',
+        'no_wa' => '628111111111',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'chapter' => 'Mother Chapter',
+        'no_kartu' => '0010',
+        'terdaftar_sejak' => '2015',
+    ]);
+
+    Member::create([
+        'nama_lengkap' => 'Anggota Dua',
+        'nama_panggilan' => 'Dua',
+        'tempat_lahir' => 'Bandung',
+        'tanggal_lahir' => '01/01/1980',
+        'jenis_kelamin' => 'L',
+        'gol_darah' => 'O',
+        'nik' => '1234567890222222',
+        'alamat' => 'Jl. Dua',
+        'no_wa' => '628222222222',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'chapter' => 'Mother Chapter',
+        'no_kartu' => '0090',
+        'terdaftar_sejak' => '2016',
+    ]);
+
+    $responseAsc = $this->actingAs($user)->get('/dashboard/member?sort_by=no_kartu&sort_dir=asc');
+    $responseAsc->assertStatus(200);
+    $membersAsc = $responseAsc->original->getData()['page']['props']['members']['data'];
+    expect($membersAsc[0]['no_kartu'])->toBe('0010');
+    expect($membersAsc[1]['no_kartu'])->toBe('0090');
+
+    $responseDesc = $this->actingAs($user)->get('/dashboard/member?sort_by=no_kartu&sort_dir=desc');
+    $responseDesc->assertStatus(200);
+    $membersDesc = $responseDesc->original->getData()['page']['props']['members']['data'];
+    expect($membersDesc[0]['no_kartu'])->toBe('0090');
+    expect($membersDesc[1]['no_kartu'])->toBe('0010');
+});
+

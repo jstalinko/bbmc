@@ -98,7 +98,7 @@ class MemberController extends Controller
 
     private function buildExportQuery(Request $request)
     {
-        $query = Member::query()->orderBy('created_at', 'desc');
+        $query = Member::query();
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -125,6 +125,16 @@ class MemberController extends Controller
                   ->where('terdaftar_sejak', '>=', $cutoffYear);
         }
 
+        $allowedSorts = ['no_kartu', 'chapter', 'checkpoint', 'terdaftar_sejak'];
+        $sortBy = $request->input('sort_by');
+        $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        if ($sortBy && in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortDir)->orderBy('id', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
         return $query;
     }
 
@@ -138,6 +148,8 @@ class MemberController extends Controller
             'filters' => [
                 'search' => $request->input('search', ''),
                 'filter_lm' => $request->input('filter_lm', ''),
+                'sort_by' => $request->input('sort_by', ''),
+                'sort_dir' => $request->input('sort_dir', ''),
             ],
         ]);
     }

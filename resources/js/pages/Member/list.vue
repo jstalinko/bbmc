@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
+    ArrowDown, ArrowUp, ArrowUpDown,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Eye, Pencil, Search, Trash2, Users, X,
 } from 'lucide-vue-next';
@@ -26,25 +27,59 @@ const breadcrumbs = [
     { title: 'Data Anggota', href: '/dashboard/member' },
 ];
 
-// ── Search & Filter ──────────────────────────────────────────────────────────
+// ── Search & Filter & Sort ───────────────────────────────────────────────────
 const search = ref(props.filters?.search ?? '');
 const filterLm = ref(props.filters?.filter_lm ?? '');
+const sortBy = ref(props.filters?.sort_by ?? '');
+const sortDir = ref(props.filters?.sort_dir ?? '');
+
+watch(() => props.filters?.sort_by, (val) => { sortBy.value = val ?? ''; });
+watch(() => props.filters?.sort_dir, (val) => { sortDir.value = val ?? ''; });
+
 let searchTimer;
 watch(search, (val) => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
-        router.get('/dashboard/member', { search: val, filter_lm: filterLm.value }, { preserveState: true, replace: true });
+        applyFilters({ search: val });
     }, 400);
 });
 watch(filterLm, (val) => {
-    router.get('/dashboard/member', { search: search.value, filter_lm: val }, { preserveState: true, replace: true });
+    applyFilters({ filter_lm: val });
 });
 function clearSearch() { search.value = ''; }
+
+function toggleSort(col) {
+    if (sortBy.value === col) {
+        if (sortDir.value === 'asc') {
+            sortDir.value = 'desc';
+        } else if (sortDir.value === 'desc') {
+            sortBy.value = '';
+            sortDir.value = '';
+        } else {
+            sortDir.value = 'asc';
+        }
+    } else {
+        sortBy.value = col;
+        sortDir.value = 'asc';
+    }
+    applyFilters({ sort_by: sortBy.value, sort_dir: sortDir.value });
+}
+
+function applyFilters(overrides = {}) {
+    router.get('/dashboard/member', {
+        search: overrides.search !== undefined ? (overrides.search || undefined) : (search.value || undefined),
+        filter_lm: overrides.filter_lm !== undefined ? (overrides.filter_lm || undefined) : (filterLm.value || undefined),
+        sort_by: overrides.sort_by !== undefined ? (overrides.sort_by || undefined) : (sortBy.value || undefined),
+        sort_dir: overrides.sort_dir !== undefined ? (overrides.sort_dir || undefined) : (sortDir.value || undefined),
+    }, { preserveState: true, replace: true });
+}
 
 function exportUrl(type) {
     const params = new URLSearchParams();
     if (search.value) params.append('search', search.value);
     if (filterLm.value) params.append('filter_lm', filterLm.value);
+    if (sortBy.value) params.append('sort_by', sortBy.value);
+    if (sortDir.value) params.append('sort_dir', sortDir.value);
     return `/dashboard/member/export/${type}?${params.toString()}`;
 }
 
@@ -280,13 +315,53 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                     <TableHeader>
                         <TableRow>
                             <TableHead class="w-10 text-xs font-semibold uppercase tracking-wider">#</TableHead>
-                            <TableHead class="text-xs font-semibold uppercase tracking-wider">No. Kartu</TableHead>
+                            <TableHead
+                                class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
+                                @click="toggleSort('no_kartu')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <span>No. Kartu</span>
+                                    <ArrowUp v-if="sortBy === 'no_kartu' && sortDir === 'asc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowDown v-else-if="sortBy === 'no_kartu' && sortDir === 'desc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </div>
+                            </TableHead>
                             <TableHead class="text-xs font-semibold uppercase tracking-wider">Nama Lengkap</TableHead>
                             <TableHead class="text-xs font-semibold uppercase tracking-wider">No. WA</TableHead>
                             <TableHead class="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
-                            <TableHead class="text-xs font-semibold uppercase tracking-wider">Chapter</TableHead>
-                            <TableHead class="text-xs font-semibold uppercase tracking-wider">Checkpoint</TableHead>
-                            <TableHead class="text-xs font-semibold uppercase tracking-wider">Terdaftar</TableHead>
+                            <TableHead
+                                class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
+                                @click="toggleSort('chapter')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <span>Chapter</span>
+                                    <ArrowUp v-if="sortBy === 'chapter' && sortDir === 'asc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowDown v-else-if="sortBy === 'chapter' && sortDir === 'desc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
+                                @click="toggleSort('checkpoint')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <span>Checkpoint</span>
+                                    <ArrowUp v-if="sortBy === 'checkpoint' && sortDir === 'asc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowDown v-else-if="sortBy === 'checkpoint' && sortDir === 'desc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
+                                @click="toggleSort('terdaftar_sejak')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <span>Terdaftar</span>
+                                    <ArrowUp v-if="sortBy === 'terdaftar_sejak' && sortDir === 'asc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowDown v-else-if="sortBy === 'terdaftar_sejak' && sortDir === 'desc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </div>
+                            </TableHead>
                             <TableHead class="text-center text-xs font-semibold uppercase tracking-wider">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
