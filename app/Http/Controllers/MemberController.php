@@ -125,7 +125,7 @@ class MemberController extends Controller
                   ->where('terdaftar_sejak', '>=', $cutoffYear);
         }
 
-        $allowedSorts = ['no_kartu', 'chapter', 'checkpoint', 'terdaftar_sejak'];
+        $allowedSorts = ['no_kartu', 'chapter', 'checkpoint', 'terdaftar_sejak', 'created_at'];
         $sortBy = $request->input('sort_by');
         $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
@@ -188,6 +188,7 @@ class MemberController extends Controller
                 'Checkpoint',
                 'Region',
                 'Terdaftar Sejak',
+                'Tanggal Register',
             ]);
 
             foreach ($members as $m) {
@@ -209,6 +210,7 @@ class MemberController extends Controller
                     $m->checkpoint ?? '—',
                     $m->region ?? '—',
                     $m->terdaftar_sejak ?? '—',
+                    $m->created_at ? $m->created_at->format('d/m/Y H:i') : '—',
                 ]);
             }
 

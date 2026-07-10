@@ -31,6 +31,7 @@ interface Member {
     chapter: string;
     checkpoint: string;
     status_keanggotaan: string;
+    terdaftar_sejak?: string;
     created_at: string;
 }
 
@@ -163,13 +164,14 @@ function formatDate(dateStr: string) {
                                 <TableHead class="text-xs font-semibold uppercase tracking-wider">Nama Lengkap</TableHead>
                                 <TableHead class="text-xs font-semibold uppercase tracking-wider">Chapter</TableHead>
                                 <TableHead class="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
-                                <TableHead class="text-xs font-semibold uppercase tracking-wider">Tanggal Daftar</TableHead>
+                                <TableHead class="text-xs font-semibold uppercase tracking-wider">TERDAFTAR ( MEMBER )</TableHead>
+                                <TableHead class="text-xs font-semibold uppercase tracking-wider">Tanggal Register</TableHead>
                                 <TableHead class="text-right text-xs font-semibold uppercase tracking-wider">Detail</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             <TableRow v-if="latest_members.length === 0">
-                                <TableCell colspan="6" class="text-center py-8 text-muted-foreground text-sm">
+                                <TableCell colspan="7" class="text-center py-8 text-muted-foreground text-sm">
                                     Belum ada data anggota terdaftar.
                                 </TableCell>
                             </TableRow>
@@ -202,6 +204,9 @@ function formatDate(dateStr: string) {
                                     <Badge variant="outline" :class="['whitespace-nowrap text-xs font-semibold', statusBadgeClass(member.status_keanggotaan)]">
                                         {{ member.status_keanggotaan }}
                                     </Badge>
+                                </TableCell>
+                                <TableCell class="text-muted-foreground text-xs font-medium whitespace-nowrap">
+                                    {{ member.terdaftar_sejak || '—' }}
                                 </TableCell>
                                 <TableCell class="text-muted-foreground text-xs whitespace-nowrap">
                                     <div class="flex items-center gap-1">

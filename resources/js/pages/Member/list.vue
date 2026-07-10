@@ -83,6 +83,16 @@ function exportUrl(type) {
     return `/dashboard/member/export/${type}?${params.toString()}`;
 }
 
+function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
 // ── View Modal ───────────────────────────────────────────────────────────────
 const viewTarget = ref(null);
 function openView(member) { viewTarget.value = member; }
@@ -362,13 +372,24 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                                     <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
                                 </div>
                             </TableHead>
+                            <TableHead
+                                class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
+                                @click="toggleSort('created_at')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <span>Tanggal Register</span>
+                                    <ArrowUp v-if="sortBy === 'created_at' && sortDir === 'asc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowDown v-else-if="sortBy === 'created_at' && sortDir === 'desc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </div>
+                            </TableHead>
                             <TableHead class="text-center text-xs font-semibold uppercase tracking-wider">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
 
                     <TableBody>
                         <!-- Empty -->
-                        <TableEmpty v-if="members.data.length === 0" :colspan="9">
+                        <TableEmpty v-if="members.data.length === 0" :colspan="10">
                             <div class="flex flex-col items-center gap-2 py-12 text-muted-foreground">
                                 <Users class="h-10 w-10 opacity-30" />
                                 <p class="font-medium text-sm">Tidak ada data anggota</p>
@@ -457,7 +478,12 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
 
                             <!-- Terdaftar Sejak -->
                             <TableCell class="text-muted-foreground text-xs whitespace-nowrap">
-                                {{ member.terdaftar_sejak }}
+                                {{ member.terdaftar_sejak || '—' }}
+                            </TableCell>
+
+                            <!-- Tanggal Register -->
+                            <TableCell class="text-muted-foreground text-xs whitespace-nowrap">
+                                {{ formatDate(member.created_at) }}
                             </TableCell>
 
                             <!-- Actions -->
