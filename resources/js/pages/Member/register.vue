@@ -306,7 +306,7 @@
               </div>
 
               <div>
-                <label class="field-label">Terdaftar Sejak (Tahun)</label>
+                <label class="field-label">Pengangkatan Life Member Terdaftar Sejak (Tahun)</label>
                 <input
                   v-model="form.terdaftar_sejak"
                   type="number"
