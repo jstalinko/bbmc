@@ -125,7 +125,7 @@ class MemberController extends Controller
                   ->where('terdaftar_sejak', '>=', $cutoffYear);
         }
 
-        $allowedSorts = ['no_kartu', 'chapter', 'checkpoint', 'terdaftar_sejak', 'created_at'];
+        $allowedSorts = ['no_kartu', 'chapter', 'checkpoint', 'terdaftar_sejak', 'created_at', 'penalty'];
         $sortBy = $request->input('sort_by');
         $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
@@ -148,6 +148,47 @@ class MemberController extends Controller
             'filters' => [
                 'search' => $request->input('search', ''),
                 'filter_lm' => $request->input('filter_lm', ''),
+                'sort_by' => $request->input('sort_by', ''),
+                'sort_dir' => $request->input('sort_dir', ''),
+            ],
+        ]);
+    }
+
+    public function penaltyList(Request $request)
+    {
+        $query = Member::whereNotNull('penalty')
+            ->where('penalty', '!=', 'clean')
+            ->where('penalty', '!=', '');
+
+        if ($request->filled('search')) {
+            $s = $request->input('search');
+            $query->where(function ($q) use ($s) {
+                $q->where('nama_lengkap', 'like', "%{$s}%")
+                    ->orWhere('nama_panggilan', 'like', "%{$s}%")
+                    ->orWhere('no_kartu', 'like', "%{$s}%")
+                    ->orWhere('no_wa', 'like', "%{$s}%")
+                    ->orWhere('status_keanggotaan', 'like', "%{$s}%")
+                    ->orWhere('penalty', 'like', "%{$s}%")
+                    ->orWhere('penalty_reason', 'like', "%{$s}%");
+            });
+        }
+
+        $allowedSorts = ['no_kartu', 'nama_lengkap', 'status_keanggotaan', 'penalty', 'created_at'];
+        $sortBy = $request->input('sort_by');
+        $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        if ($sortBy && in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortDir)->orderBy('id', 'asc');
+        } else {
+            $query->orderBy('no_kartu', 'asc');
+        }
+
+        $members = $query->paginate(10)->withQueryString();
+
+        return Inertia::render('Member/penalty', [
+            'members' => $members,
+            'filters' => [
+                'search' => $request->input('search', ''),
                 'sort_by' => $request->input('sort_by', ''),
                 'sort_dir' => $request->input('sort_dir', ''),
             ],
@@ -307,6 +348,8 @@ class MemberController extends Controller
             'checkpoint'         => 'nullable|string|max:100',
             'region'             => 'nullable|string|max:100',
             'terdaftar_sejak'    => 'nullable|string|digits:4',
+            'penalty'            => 'nullable|in:clean,warning,blacklist,banned',
+            'penalty_reason'     => 'nullable|string|max:1000',
         ], [
             'nama_lengkap.required'       => 'Nama lengkap wajib diisi.',
             'nama_panggilan.required'     => 'Nama panggilan wajib diisi.',
@@ -343,6 +386,21 @@ class MemberController extends Controller
         $member->update($validated);
 
         return back()->with('success', 'Data anggota berhasil diperbarui.');
+    }
+
+    public function updatePenalty(Request $request, Member $member)
+    {
+        $validated = $request->validate([
+            'penalty'        => 'required|in:clean,warning,blacklist,banned',
+            'penalty_reason' => 'nullable|string|max:1000',
+        ], [
+            'penalty.required' => 'Status penalty wajib dipilih.',
+            'penalty.in'       => 'Status penalty tidak valid.',
+        ]);
+
+        $member->update($validated);
+
+        return back()->with('success', 'Status penalty anggota berhasil diperbarui.');
     }
 
     public function destroy(Member $member)
@@ -382,6 +440,19 @@ class MemberController extends Controller
         if (!$member) {
             return back()->withErrors([
                 'no_kartu' => 'Nomor kartu tidak terdaftar sebagai anggota.'
+            ]);
+        }
+
+        if ($member->penalty && $member->penalty !== 'clean') {
+            return Inertia::render('Member/validate', [
+                'penalty_member' => [
+                    'nama_lengkap'       => $member->nama_lengkap,
+                    'no_kartu'           => $member->no_kartu,
+                    'penalty'            => $member->penalty,
+                    'penalty_reason'     => $member->penalty_reason,
+                    'status_keanggotaan' => $member->status_keanggotaan,
+                    'chapter'            => $member->chapter,
+                ],
             ]);
         }
 

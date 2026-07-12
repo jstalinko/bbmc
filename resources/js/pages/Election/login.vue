@@ -8,7 +8,8 @@ import {
     Loader2, 
     ArrowLeft, 
     Send,
-    AlertCircle
+    AlertCircle,
+    AlertTriangle
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -28,6 +29,11 @@ const step = ref<'nocard' | 'otp'>('nocard');
 const isSendingOtp = ref(false);
 const otpSentMessage = ref('');
 const searchError = ref('');
+const penaltyAlert = ref<{
+    status?: string;
+    reason?: string;
+    message?: string;
+} | null>(null);
 
 const form = useForm({
     no_kartu: '',
@@ -37,11 +43,13 @@ const form = useForm({
 const handleSendOtp = async () => {
     if (!noKartu.value || noKartu.value.length < 2) {
         searchError.value = 'Masukkan nomor KTA yang valid.';
+        penaltyAlert.value = null;
         return;
     }
     
     isSendingOtp.value = true;
     searchError.value = '';
+    penaltyAlert.value = null;
     
     try {
         const response = await fetch('/api/send-login-otp', {
@@ -57,7 +65,15 @@ const handleSendOtp = async () => {
             otpSentMessage.value = data.message;
             step.value = 'otp';
         } else {
-            searchError.value = data.message || 'Gagal mengirim OTP.';
+            if (data.penalty) {
+                penaltyAlert.value = {
+                    status: data.penalty_status,
+                    reason: data.penalty_reason,
+                    message: data.message
+                };
+            } else {
+                searchError.value = data.message || 'Gagal mengirim OTP.';
+            }
         }
     } catch (e) {
         searchError.value = 'Gagal menghubungi server.';
@@ -159,7 +175,39 @@ const goBackToNocard = () => {
                                 />
                             </div>
                             
-                            <!-- Search Error Warning -->
+                            <!-- Penalty Alert Banner -->
+                            <div
+                                v-if="penaltyAlert"
+                                class="mt-4 rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-red-50 to-amber-50 p-4 shadow-md overflow-hidden relative animate-in fade-in zoom-in duration-200"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="p-2 rounded-xl bg-amber-500 text-white shrink-0 shadow-sm mt-0.5">
+                                        <AlertTriangle class="h-5 w-5" />
+                                    </div>
+                                    <div class="space-y-1.5 flex-1">
+                                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                                            <span class="text-xs font-black uppercase tracking-wider text-amber-900">
+                                                Akses Login Ditolak (Penalty)
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-600 text-white shadow-sm">
+                                                STATUS: {{ penaltyAlert.status || 'PENALTY' }}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs font-medium text-zinc-800 leading-relaxed">
+                                            {{ penaltyAlert.message }}
+                                        </p>
+                                        <div
+                                            v-if="penaltyAlert.reason"
+                                            class="mt-2 p-2.5 rounded-lg bg-white/90 border border-amber-200 text-xs text-zinc-800"
+                                        >
+                                            <span class="font-bold text-amber-900">Keterangan Penalty:</span>
+                                            {{ penaltyAlert.reason }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Search Error Warning (Non-penalty) -->
                             <p v-if="searchError || form.errors.no_kartu" class="text-xs text-red-600 font-semibold mt-2 flex items-center gap-1">
                                 <AlertCircle class="h-4 w-4 shrink-0" />
                                 <span>{{ searchError || form.errors.no_kartu }}</span>

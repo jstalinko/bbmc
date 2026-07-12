@@ -31,12 +31,14 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     })->name('dashboard');
 
     Route::get('/member', [MemberController::class, 'list'])->name('member.list');
+    Route::get('/member/penalty', [MemberController::class, 'penaltyList'])->name('member.penalty');
     Route::get('/member/export/pdf', [MemberController::class, 'exportPdf'])->name('member.export.pdf');
     Route::get('/member/export/csv', [MemberController::class, 'exportCsv'])->name('member.export.csv');
     Route::get('/member/{member}/print', [MemberController::class, 'printCard'])->name('member.print');
     Route::get('/member/{member}/print-pdf', [MemberController::class, 'printCardPdf'])->name('member.print.pdf');
     Route::get('/member/{member}', [MemberController::class, 'show'])->name('member.show');
     Route::put('/member/{member}', [MemberController::class, 'update'])->name('member.update');
+    Route::put('/member/{member}/penalty', [MemberController::class, 'updatePenalty'])->name('member.update_penalty');
     Route::delete('/member/{member}', [MemberController::class, 'destroy'])->name('member.destroy');
 
     Route::get('/candidate' , [CandidateController::class,'index'])->name('candidate.list');

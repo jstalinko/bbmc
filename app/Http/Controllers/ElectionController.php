@@ -120,6 +120,17 @@ class ElectionController extends Controller
             ], 404);
         }
 
+        if ($member->penalty && $member->penalty !== 'clean') {
+            $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
+            return response()->json([
+                'success' => false,
+                'penalty' => true,
+                'penalty_status' => strtoupper($member->penalty),
+                'penalty_reason' => $member->penalty_reason,
+                'message' => "Anda tidak dapat masuk karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"
+            ], 403);
+        }
+
         $status = strtoupper($member->status_keanggotaan);
         if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
             return response()->json([
@@ -183,6 +194,11 @@ class ElectionController extends Controller
         
         if (!$member) {
             return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
+        }
+
+        if ($member->penalty && $member->penalty !== 'clean') {
+            $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
+            return back()->withErrors(['no_kartu' => "Anda tidak dapat masuk karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
         }
 
         $status = strtoupper($member->status_keanggotaan);

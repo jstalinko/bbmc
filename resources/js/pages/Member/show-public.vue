@@ -50,10 +50,16 @@
                 </div>
                 <div class="text-red-200 text-sm italic mt-0.5">"{{ member.nama_panggilan }}"</div>
                 <!-- Status badge -->
-                <div class="mt-2">
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
                   <span :class="['inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border', statusClass]">
                     <span class="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
                     {{ member.status_keanggotaan }}
+                  </span>
+                  <span
+                    v-if="member.penalty && member.penalty !== 'clean'"
+                    class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500 text-white shadow-sm"
+                  >
+                    ⚠️ Penalty: {{ member.penalty }}
                   </span>
                 </div>
               </div>
@@ -140,6 +146,19 @@
               <div class="px-5 py-3.5">
                 <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Terdaftar Sejak</div>
                 <div class="text-sm font-semibold text-gray-800">{{ member.terdaftar_sejak }}</div>
+              </div>
+            </div>
+
+            <!-- Penalty Alert Row -->
+            <div v-if="member.penalty && member.penalty !== 'clean'" class="px-5 py-4 bg-red-50/90 border-t border-red-100">
+              <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-red-700 mb-1">
+                <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                Status Penalty: <span class="uppercase font-black">{{ member.penalty }}</span>
+              </div>
+              <div class="text-sm text-red-800 font-medium">
+                {{ member.penalty_reason || 'Anggota memiliki status penalty aktif.' }}
               </div>
             </div>
 

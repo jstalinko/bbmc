@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Cog, Crown, Folder, LayoutGrid, Users2,MessageSquareQuote } from 'lucide-vue-next';
+import { BookOpen, Cog, Crown, Folder, LayoutGrid, Users2,MessageSquareQuote, UserRoundX } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -18,6 +18,11 @@ const mainNavItems: NavItem[] = [
         title: 'Data Anggota',
         href:'/dashboard/member',
         icon: Users2
+    },
+    {
+        title: 'Anggota Penalty',
+        href:'/dashboard/member/penalty',
+        icon: UserRoundX
     },
     {
         title: 'Calon Presidente',

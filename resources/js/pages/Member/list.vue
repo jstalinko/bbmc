@@ -209,6 +209,39 @@ function submitEditNoKartu() {
     });
 }
 
+// ── Edit Penalty Modal ───────────────────────────────────────────────────────
+const editPenaltyTarget = ref(null);
+const editPenaltyForm = ref({
+    penalty: 'clean',
+    penalty_reason: '',
+});
+const editPenaltyErrors = ref({});
+const isEditingPenalty = ref(false);
+
+function openEditPenalty(member) {
+    editPenaltyTarget.value = member;
+    editPenaltyForm.value = {
+        penalty: member.penalty || 'clean',
+        penalty_reason: member.penalty_reason || '',
+    };
+    editPenaltyErrors.value = {};
+}
+function closeEditPenalty() { editPenaltyTarget.value = null; }
+function submitEditPenalty() {
+    if (!editPenaltyTarget.value) return;
+    isEditingPenalty.value = true;
+    editPenaltyErrors.value = {};
+    const data = new FormData();
+    data.append('_method', 'PUT');
+    data.append('penalty', editPenaltyForm.value.penalty);
+    data.append('penalty_reason', editPenaltyForm.value.penalty_reason || '');
+    router.post(`/dashboard/member/${editPenaltyTarget.value.id}/penalty`, data, {
+        forceFormData: true,
+        onSuccess: () => { isEditingPenalty.value = false; closeEditPenalty(); },
+        onError: (errs) => { isEditingPenalty.value = false; editPenaltyErrors.value = errs; },
+    });
+}
+
 
 // ── Delete Dialog ────────────────────────────────────────────────────────────
 const deleteTarget = ref(null);
@@ -232,6 +265,17 @@ const statusClass = {
     'PROSPECT':      'bg-red-100 text-red-700 border-red-200',
 };
 function statusBadgeClass(s) { return statusClass[s] ?? 'bg-gray-100 text-gray-600 border-gray-200'; }
+const penaltyClass = {
+    'clean':     'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800',
+    'warning':   'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800',
+    'blacklist': 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800',
+    'banned':    'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800',
+};
+function penaltyBadgeClass(p) { return penaltyClass[p] ?? 'bg-gray-100 text-gray-600 border-gray-200'; }
+function formatPenaltyLabel(p) {
+    if (!p) return 'Clean';
+    return p.charAt(0).toUpperCase() + p.slice(1);
+}
 function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,'62')}`; }
 </script>
 
@@ -341,6 +385,17 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <TableHead class="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
                             <TableHead
                                 class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
+                                @click="toggleSort('penalty')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <span>Penalty Status</span>
+                                    <ArrowUp v-if="sortBy === 'penalty' && sortDir === 'asc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowDown v-else-if="sortBy === 'penalty' && sortDir === 'desc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
                                 @click="toggleSort('chapter')"
                             >
                                 <div class="flex items-center gap-1">
@@ -389,7 +444,7 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
 
                     <TableBody>
                         <!-- Empty -->
-                        <TableEmpty v-if="members.data.length === 0" :colspan="10">
+                        <TableEmpty v-if="members.data.length === 0" :colspan="11">
                             <div class="flex flex-col items-center gap-2 py-12 text-muted-foreground">
                                 <Users class="h-10 w-10 opacity-30" />
                                 <p class="font-medium text-sm">Tidak ada data anggota</p>
@@ -452,6 +507,28 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                                 >
                                     {{ member.status_keanggotaan }}
                                 </Badge>
+                            </TableCell>
+
+                            <!-- Penalty Status -->
+                            <TableCell>
+                                <div class="flex items-center gap-1.5">
+                                    <Badge
+                                        variant="outline"
+                                        :class="['whitespace-nowrap text-xs font-semibold capitalize', penaltyBadgeClass(member.penalty || 'clean')]"
+                                    >
+                                        {{ formatPenaltyLabel(member.penalty || 'clean') }}
+                                    </Badge>
+                                    <button 
+                                        @click="openEditPenalty(member)" 
+                                        class="text-muted-foreground hover:text-amber-500 transition-colors p-0.5 shrink-0"
+                                        title="Edit Status Penalty"
+                                    >
+                                        <Pencil class="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                                <div v-if="member.penalty_reason" class="text-[11px] text-muted-foreground mt-0.5 max-w-[180px] truncate" :title="member.penalty_reason">
+                                    {{ member.penalty_reason }}
+                                </div>
                             </TableCell>
 
                             <!-- Chapter -->
@@ -576,9 +653,14 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                 <div class="relative -mt-8 mx-4 mb-4 rounded-xl bg-card border shadow-md px-5 py-4 space-y-3">
                     <!-- Status badge -->
                     <div class="flex items-center justify-between">
-                        <Badge variant="outline" :class="['text-xs font-bold px-3 py-1', statusBadgeClass(viewTarget?.status_keanggotaan)]">
-                            {{ viewTarget?.status_keanggotaan }}
-                        </Badge>
+                        <div class="flex items-center gap-2">
+                            <Badge variant="outline" :class="['text-xs font-bold px-3 py-1', statusBadgeClass(viewTarget?.status_keanggotaan)]">
+                                {{ viewTarget?.status_keanggotaan }}
+                            </Badge>
+                            <Badge variant="outline" :class="['text-xs font-bold px-3 py-1 capitalize', penaltyBadgeClass(viewTarget?.penalty || 'clean')]">
+                                {{ formatPenaltyLabel(viewTarget?.penalty || 'clean') }}
+                            </Badge>
+                        </div>
                         <div class="text-right">
                             <span class="text-xs text-muted-foreground block">Sejak {{ viewTarget?.terdaftar_sejak || '—' }}</span>
                             <span v-if="viewTarget?.status_keanggotaan === 'LIFE MEMBER' && memberDuration !== null" class="text-[10px] text-blue-600 font-bold block">
@@ -606,6 +688,10 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                                 class="font-mono font-semibold mt-0.5 text-green-600 hover:underline block">
                                 {{ viewTarget?.no_wa || '—' }}
                             </a>
+                        </div>
+                        <div v-if="viewTarget?.penalty_reason" class="col-span-2">
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Alasan Penalty</p>
+                            <p class="font-semibold mt-0.5 text-red-600 dark:text-red-400">{{ viewTarget.penalty_reason }}</p>
                         </div>
                     </div>
                     <div class="pt-1 border-t text-xs text-muted-foreground text-center">
@@ -731,6 +817,21 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <option value="PROSPECT">PROSPECT</option>
                         </select>
                     </div>
+                    <!-- Penalty Status -->
+                    <div>
+                        <label class="el">Status Penalty</label>
+                        <select v-model="editForm.penalty" class="ei capitalize">
+                            <option value="clean">Clean</option>
+                            <option value="warning">Warning</option>
+                            <option value="blacklist">Blacklist</option>
+                            <option value="banned">Banned</option>
+                        </select>
+                    </div>
+                    <!-- Penalty Reason -->
+                    <div>
+                        <label class="el">Alasan Penalty</label>
+                        <input v-model="editForm.penalty_reason" placeholder="Keterangan / alasan penalty..." class="ei"/>
+                    </div>
                     <!-- Chapter -->
                     <div>
                         <label class="el">Chapter *</label>
@@ -829,6 +930,62 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
                         {{ isEditingNoKartu ? 'Menyimpan...' : 'Simpan' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ═══ EDIT PENALTY DIALOG ═══ -->
+        <Dialog :open="!!editPenaltyTarget" @update:open="(v) => { if (!v) closeEditPenalty() }">
+            <DialogContent class="max-w-sm rounded-2xl">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-amber-600">
+                        <Pencil class="h-4 w-4" /> Edit Status Penalty
+                    </DialogTitle>
+                    <DialogDescription class="text-xs">
+                        Ubah status penalty untuk <span class="font-semibold text-foreground">{{ editPenaltyTarget?.nama_lengkap }}</span>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <!-- Error banner -->
+                <div v-if="Object.keys(editPenaltyErrors).length" class="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 space-y-1">
+                    <p class="font-semibold">Terdapat kesalahan:</p>
+                    <p v-for="(err, k) in editPenaltyErrors" :key="k">• {{ err }}</p>
+                </div>
+
+                <div class="py-3 space-y-3">
+                    <div>
+                        <label class="el">Status Penalty *</label>
+                        <select v-model="editPenaltyForm.penalty" class="ei capitalize">
+                            <option value="clean">Clean</option>
+                            <option value="warning">Warning</option>
+                            <option value="blacklist">Blacklist</option>
+                            <option value="banned">Banned</option>
+                        </select>
+                        <p v-if="editPenaltyErrors.penalty" class="ee">{{ editPenaltyErrors.penalty }}</p>
+                    </div>
+
+                    <div>
+                        <label class="el">Alasan Penalty (Penalty Reason)</label>
+                        <textarea
+                            v-model="editPenaltyForm.penalty_reason"
+                            rows="3"
+                            placeholder="Tuliskan keterangan / alasan penalty jika ada..."
+                            class="ei resize-none"
+                            :class="editPenaltyErrors.penalty_reason?'border-red-400':''"
+                        ></textarea>
+                        <p v-if="editPenaltyErrors.penalty_reason" class="ee">{{ editPenaltyErrors.penalty_reason }}</p>
+                    </div>
+                </div>
+
+                <DialogFooter class="flex gap-2">
+                    <Button variant="outline" class="flex-1" @click="closeEditPenalty" :disabled="isEditingPenalty">Batal</Button>
+                    <Button class="flex-1 bg-amber-500 hover:bg-amber-600 text-white" :disabled="isEditingPenalty" @click="submitEditPenalty">
+                        <svg v-if="isEditingPenalty" class="mr-1.5 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        {{ isEditingPenalty ? 'Menyimpan...' : 'Simpan' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -70,6 +70,81 @@
           </div>
         </div>
 
+        <!-- Penalty Member Result Card -->
+        <div
+          v-if="props.penalty_member"
+          class="mt-6 rounded-2xl border-2 overflow-hidden shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-top-4"
+          :class="penaltyCardBorderClass(props.penalty_member.penalty)"
+        >
+          <!-- Header banner -->
+          <div
+            class="px-6 py-4 flex items-center justify-between text-white"
+            :class="penaltyCardHeaderClass(props.penalty_member.penalty)"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">{{ penaltyIcon(props.penalty_member.penalty) }}</span>
+              <div>
+                <h3 class="font-black text-sm uppercase tracking-wider">
+                  STATUS PENALTY: {{ formatPenalty(props.penalty_member.penalty) }}
+                </h3>
+                <p class="text-xs opacity-90">
+                  Hasil Validasi Kartu BBMC 38 2026 {{ props.penalty_member.no_kartu }}
+                </p>
+              </div>
+            </div>
+            <span
+              class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest bg-white/20 border border-white/30"
+            >
+              {{ props.penalty_member.penalty }}
+            </span>
+          </div>
+
+          <!-- Body -->
+          <div class="bg-white p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Nama Anggota</div>
+                <div class="text-base font-black text-gray-800 uppercase" style="font-family: Georgia, serif;">
+                  {{ props.penalty_member.nama_lengkap }}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">No. Kartu</div>
+                <div class="text-sm font-mono font-bold text-gray-700">
+                  BBMC 38 2026 {{ props.penalty_member.no_kartu }}
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-xs">
+              <div v-if="props.penalty_member.status_keanggotaan">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Status Keanggotaan</div>
+                <div class="font-semibold text-gray-700 mt-0.5">{{ props.penalty_member.status_keanggotaan }}</div>
+              </div>
+              <div v-if="props.penalty_member.chapter">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Chapter</div>
+                <div class="font-semibold text-gray-700 mt-0.5">{{ props.penalty_member.chapter }}</div>
+              </div>
+            </div>
+
+            <!-- Alasan Penalty -->
+            <div
+              class="rounded-xl p-4 border"
+              :class="penaltyReasonBoxClass(props.penalty_member.penalty)"
+            >
+              <div class="text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                Alasan / Keterangan Penalty
+              </div>
+              <p class="text-sm font-medium leading-relaxed">
+                {{ props.penalty_member.penalty_reason || 'Tidak ada keterangan tambahan yang dicantumkan.' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Back to Registration -->
         <div class="text-center mt-6">
           <a
@@ -101,6 +176,17 @@ import { useForm } from '@inertiajs/vue3'
 // Inject standard Ziggy route helper globally/locally
 declare function route(name: string, params?: any): string
 
+const props = defineProps<{
+  penalty_member?: {
+    nama_lengkap: string
+    no_kartu: string
+    penalty: string
+    penalty_reason?: string
+    status_keanggotaan?: string
+    chapter?: string
+  } | null
+}>()
+
 const form = useForm({
   no_kartu: '',
 })
@@ -118,6 +204,39 @@ function submitForm() {
   form.get(route('member.validate'), {
     preserveState: true,
   })
+}
+
+function formatPenalty(p?: string) {
+  if (!p || p === 'clean') return 'Clean'
+  return p.charAt(0).toUpperCase() + p.slice(1)
+}
+
+function penaltyIcon(p?: string) {
+  if (p === 'warning') return '⚠️'
+  if (p === 'blacklist') return '🚫'
+  if (p === 'banned') return '❌'
+  return 'ℹ️'
+}
+
+function penaltyCardBorderClass(p?: string) {
+  if (p === 'warning') return 'border-amber-300 shadow-amber-100'
+  if (p === 'blacklist') return 'border-red-400 shadow-red-100'
+  if (p === 'banned') return 'border-purple-400 shadow-purple-100'
+  return 'border-gray-200'
+}
+
+function penaltyCardHeaderClass(p?: string) {
+  if (p === 'warning') return 'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600'
+  if (p === 'blacklist') return 'bg-gradient-to-r from-red-700 via-red-600 to-red-700'
+  if (p === 'banned') return 'bg-gradient-to-r from-purple-800 via-purple-700 to-purple-800'
+  return 'bg-gradient-to-r from-gray-700 to-gray-600'
+}
+
+function penaltyReasonBoxClass(p?: string) {
+  if (p === 'warning') return 'bg-amber-50 border-amber-200 text-amber-900'
+  if (p === 'blacklist') return 'bg-red-50 border-red-200 text-red-900'
+  if (p === 'banned') return 'bg-purple-50 border-purple-200 text-purple-900'
+  return 'bg-gray-50 border-gray-200 text-gray-800'
 }
 </script>
 

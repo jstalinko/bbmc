@@ -25,5 +25,7 @@ class Member extends Model
         'checkpoint',
         'region',
         'terdaftar_sejak',
+        'penalty',
+        'penalty_reason',
     ];
 }
