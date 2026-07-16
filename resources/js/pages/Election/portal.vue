@@ -97,6 +97,8 @@ const selfForm = useForm({
 
 const memberForm = useForm({
     candidate_name: '',
+    candidate_no_kartu: '',
+    candidate_id: null as number | null,
     nominator_no_kartu: '',
     otp: '',
 });
@@ -129,6 +131,8 @@ watch(selfCardQuery, async (newVal) => {
 // Watch candidate name search to trigger autocomplete list
 watch(candidateSearchQuery, async (newVal) => {
     memberForm.candidate_name = newVal;
+    memberForm.candidate_no_kartu = '';
+    memberForm.candidate_id = null;
     candidateMemberDetails.value = null;
     candidateSearchResults.value = [];
     
@@ -153,6 +157,8 @@ const selectCandidate = (member: any) => {
     candidateMemberDetails.value = member;
     candidateSearchQuery.value = member.nama_lengkap;
     memberForm.candidate_name = member.nama_lengkap;
+    memberForm.candidate_no_kartu = member.no_kartu;
+    memberForm.candidate_id = member.id;
     showCandidateDropdown.value = false;
 };
 
@@ -450,7 +456,7 @@ const closeAlert = () => {
                             Ajukan Diri Sebagai El Presidente
                         </h3>
                         <p class="text-xs leading-relaxed text-zinc-500 mt-2">
-                            Daftarkan diri Anda secara resmi sebagai bakal calon presiden (Khusus Life Member dengan masa keanggotaan minimal 10 tahun). Profil anggota Anda akan otomatis dimuat dan diverifikasi.
+                            Daftarkan diri Anda secara resmi sebagai bakal calon presiden (Khusus Life Member &amp; SS Diponegoro dengan masa keanggotaan minimal 10 tahun dan status Clean/tanpa penalty). Profil anggota Anda akan otomatis dimuat dan diverifikasi.
                         </p>
                     </div>
 
@@ -484,7 +490,7 @@ const closeAlert = () => {
                             Ajukan Anggota Sebagai El Presidente
                         </h3>
                         <p class="text-xs leading-relaxed text-zinc-500 mt-2">
-                            Calonkan saudara Life Member dengan masa keanggotaan minimal 10 tahun yang Anda nilai layak. Baik calon maupun pengusul harus memenuhi kriteria tersebut.
+                            Calonkan saudara (Life Member / SS Diponegoro terdaftar minimal 10 tahun dan berstatus Clean/tanpa penalty) yang Anda nilai layak. Semua status member (berstatus Clean) dapat mengajukan rekomendasi ini.
                         </p>
                     </div>
 
@@ -579,7 +585,7 @@ const closeAlert = () => {
                                 {{ selfMemberDetails.nama_lengkap }}
                             </h4>
                             <p class="text-xs text-zinc-500 font-semibold mt-0.5">
-                                KTA: {{ selfMemberDetails.no_kartu }} | Chapter: {{ selfMemberDetails.chapter }} | Status: {{ selfMemberDetails.status_keanggotaan || 'Life Member' }}
+                                KTA: {{ selfMemberDetails.no_kartu }} | Chapter: {{ selfMemberDetails.chapter }}<template v-if="selfMemberDetails.checkpoint"> | Checkpoint: {{ selfMemberDetails.checkpoint }}</template> | Status: {{ selfMemberDetails.status_keanggotaan }}
                             </p>
                         </div>
                     </div>
@@ -612,7 +618,7 @@ const closeAlert = () => {
                                 <input 
                                     v-model="candidateSearchQuery" 
                                     type="text" 
-                                    placeholder="Cari nama, panggilan, KTA, atau chapter..." 
+                                    placeholder="Cari nama, panggilan, KTA, chapter, atau checkpoint..." 
                                     class="f-input pr-10" 
                                     required 
                                     @focus="showCandidateDropdown = candidateSearchResults.length > 0"
@@ -644,7 +650,7 @@ const closeAlert = () => {
                                             {{ m.nama_lengkap }}
                                             <span v-if="m.nama_panggilan" class="text-xs text-zinc-500 font-normal">({{ m.nama_panggilan }})</span>
                                         </span>
-                                        <span class="block text-[10px] text-zinc-500 mt-0.5">KTA: {{ m.no_kartu }} | Chapter: {{ m.chapter }}</span>
+                                        <span class="block text-[10px] text-zinc-500 mt-0.5">KTA: {{ m.no_kartu }} | Chapter: {{ m.chapter }}<template v-if="m.checkpoint"> | Checkpoint: {{ m.checkpoint }}</template> | Status: {{ m.status_keanggotaan }}</span>
                                     </div>
                                 </button>
                             </div>
@@ -653,14 +659,14 @@ const closeAlert = () => {
                         <!-- Nominator Card Field -->
                         <div>
                             <label class="block text-xs font-bold uppercase text-zinc-500 tracking-wider mb-1">
-                                Nomor Kartu Anda (Pengusul) <span class="text-red-500">*</span>
+                                Nomor Kartu Anda / KTA Pengusul <span class="text-red-500">*</span>
                             </label>
                             <div class="relative">
                                 <input 
                                     v-model="nominatorCardQuery" 
                                     type="text" 
                                     maxlength="4" 
-                                    placeholder="KTA Anda (Bisa pengaju mandiri)" 
+                                    placeholder="KTA Anda (Semua status member bisa mengajukan)" 
                                     class="f-input font-mono pr-10" 
                                     required 
                                 />
@@ -688,7 +694,7 @@ const closeAlert = () => {
                         <div>
                             <span class="text-[9px] font-bold uppercase tracking-wider text-red-600 bg-red-100/50 px-1.5 py-0.5 rounded">Target Pencalonan</span>
                             <h5 class="font-oswald text-sm font-bold text-zinc-800 uppercase mt-0.5">{{ candidateMemberDetails.nama_lengkap }}</h5>
-                            <p class="text-[10px] text-zinc-500 font-medium">KTA: {{ candidateMemberDetails.no_kartu }} | Chapter: {{ candidateMemberDetails.chapter }}</p>
+                            <p class="text-[10px] text-zinc-500 font-medium">KTA: {{ candidateMemberDetails.no_kartu }} | Chapter: {{ candidateMemberDetails.chapter }}<template v-if="candidateMemberDetails.checkpoint"> | Checkpoint: {{ candidateMemberDetails.checkpoint }}</template> | Status: {{ candidateMemberDetails.status_keanggotaan }}</p>
                         </div>
                     </div>
 
@@ -699,7 +705,7 @@ const closeAlert = () => {
                     >
                         <CheckCircle2 class="h-4 w-4 text-green-600 shrink-0" />
                         <span class="text-xs text-zinc-600 font-semibold">
-                            Pengusul Terverifikasi: <strong>{{ nominatorMemberDetails.nama_lengkap }}</strong> (Chapter: {{ nominatorMemberDetails.chapter }})
+                            Pengusul Terverifikasi: <strong>{{ nominatorMemberDetails.nama_lengkap }}</strong> (Chapter: {{ nominatorMemberDetails.chapter }} | Status: {{ nominatorMemberDetails.status_keanggotaan }})
                         </span>
                     </div>
 

@@ -341,9 +341,18 @@ class ElectionController extends Controller
             $query->where('nama_lengkap', 'like', "%{$q}%")
                   ->orWhere('nama_panggilan', 'like', "%{$q}%")
                   ->orWhere('no_kartu', 'like', "%{$q}%")
-                  ->orWhere('chapter', 'like', "%{$q}%");
+                  ->orWhere('chapter', 'like', "%{$q}%")
+                  ->orWhere('checkpoint', 'like', "%{$q}%");
         })
-        ->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
+        ->where(function($sq) {
+            $sq->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
+               ->orWhereRaw('UPPER(status_keanggotaan) = ?', ['SS DIPONEGORO']);
+        })
+        ->where(function($pq) {
+            $pq->whereNull('penalty')
+               ->orWhere('penalty', '')
+               ->orWhere('penalty', 'clean');
+        })
         ->whereNotNull('terdaftar_sejak')
         ->where('terdaftar_sejak', '<=', $cutoffYear)
         ->take(15)->get();
@@ -369,25 +378,32 @@ class ElectionController extends Controller
             ]);
         }
 
-        $status = strtoupper($member->status_keanggotaan);
-        if ($status !== 'LIFE MEMBER') {
+        if ($member->penalty && $member->penalty !== 'clean') {
+            $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
             return response()->json([
                 'success' => false,
-                'message' => "Hanya anggota dengan status LIFE MEMBER yang dapat berpartisipasi dalam pencalonan/pengajuan."
+                'message' => "Anggota dengan No. Kartu {$member->no_kartu} sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"
             ]);
         }
 
-        $currentYear = intval(date('Y'));
-        $memberYear = intval($member->terdaftar_sejak);
-        if (empty($member->terdaftar_sejak) || ($currentYear - $memberYear) < 10) {
-            return response()->json([
-                'success' => false,
-                'message' => "Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat berpartisipasi dalam pencalonan/pengajuan."
-            ]);
-        }
-        
-        // Candidate KTA checks (candidates cannot be duplicated)
         if ($role === 'candidate') {
+            $status = strtoupper($member->status_keanggotaan);
+            if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat berpartisipasi dalam pencalonan/pengajuan."
+                ]);
+            }
+
+            $currentYear = intval(date('Y'));
+            $memberYear = intval($member->terdaftar_sejak);
+            if (empty($member->terdaftar_sejak) || ($currentYear - $memberYear) < 10) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat berpartisipasi dalam pencalonan/pengajuan."
+                ]);
+            }
+
             $alreadyNominated = Calon::where('no_kartu', $nocard)->first();
             if ($alreadyNominated) {
                 $statusText = $alreadyNominated->status === 'mengajukan' ? 'Pencalonan Mandiri' : 'Direkomendasikan Anggota';
@@ -398,8 +414,8 @@ class ElectionController extends Controller
             }
         }
         
-        // Note: For 'nominator' role, we ignore whether they are already nominated
-        // because an active self-nominated candidate is allowed to nominate others!
+        // Note: For 'nominator' role, we allow all status members to nominate and do not check 10-year restriction.
+        // Penalty is already checked above.
         
         return response()->json([
             'success' => true,
@@ -424,6 +440,32 @@ class ElectionController extends Controller
                 'success' => false,
                 'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
             ], 404);
+        }
+
+        if ($member->penalty && $member->penalty !== 'clean') {
+            $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
+            return response()->json([
+                'success' => false,
+                'message' => "Anda tidak dapat melanjutkan karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"
+            ], 403);
+        }
+
+        if ($request->type === 'self') {
+            $status = strtoupper($member->status_keanggotaan);
+            if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat mengajukan diri.'
+                ], 403);
+            }
+            $currentYear = intval(date('Y'));
+            $memberYear = intval($member->terdaftar_sejak);
+            if (empty($member->terdaftar_sejak) || ($currentYear - $memberYear) < 10) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat mengajukan diri.'
+                ], 403);
+            }
         }
 
         if (!$member->no_wa) {
@@ -475,14 +517,19 @@ class ElectionController extends Controller
             return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
         }
 
+        if ($member->penalty && $member->penalty !== 'clean') {
+            $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
+            return back()->withErrors(['no_kartu' => "Anda tidak dapat mengajukan diri karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
+        }
+
         $status = strtoupper($member->status_keanggotaan);
-        if ($status !== 'LIFE MEMBER') {
-            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan status LIFE MEMBER yang dapat diajukan/mengajukan.']);
+        if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
+            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat mengajukan diri.']);
         }
         $currentYear = intval(date('Y'));
         $memberYear = intval($member->terdaftar_sejak);
         if (empty($member->terdaftar_sejak) || ($currentYear - $memberYear) < 10) {
-            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat diajukan/mengajukan.']);
+            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat mengajukan diri.']);
         }
 
         // Verify OTP
@@ -546,14 +593,9 @@ class ElectionController extends Controller
             return back()->withErrors(['nominator_no_kartu' => "Nomor kartu pengusul ($nominatorNocard) tidak valid atau tidak terdaftar."]);
         }
 
-        $nominatorStatus = strtoupper($nominator->status_keanggotaan);
-        if ($nominatorStatus !== 'LIFE MEMBER') {
-            return back()->withErrors(['nominator_no_kartu' => 'Hanya anggota dengan status LIFE MEMBER yang dapat mengajukan/merekomendasikan.']);
-        }
-        $currentYear = intval(date('Y'));
-        $nominatorYear = intval($nominator->terdaftar_sejak);
-        if (empty($nominator->terdaftar_sejak) || ($currentYear - $nominatorYear) < 10) {
-            return back()->withErrors(['nominator_no_kartu' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat mengajukan/merekomendasikan.']);
+        if ($nominator->penalty && $nominator->penalty !== 'clean') {
+            $reasonMsg = $nominator->penalty_reason ? " Alasan: {$nominator->penalty_reason}" : "";
+            return back()->withErrors(['nominator_no_kartu' => "Anda tidak dapat merekomendasikan karena status keanggotaan Anda sedang dalam masa penalty (" . strtoupper($nominator->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
         }
 
         // Verify OTP
@@ -570,27 +612,41 @@ class ElectionController extends Controller
         
         $otpRecord->update(['is_verified' => true]);
 
-        // Find candidate by name
-        $candidateName = $request->candidate_name;
-        $candidate = Member::where('nama_lengkap', $candidateName)
-            ->orWhere('nama_panggilan', $candidateName)
-            ->first();
-            
-        // Fallback robust search if exact match fails
+        // Find candidate by card number / id first if passed, fallback to candidate_name
+        $candidate = null;
+        if ($request->filled('candidate_no_kartu')) {
+            $candidate = Member::where('no_kartu', str_pad($request->candidate_no_kartu, 4, '0', STR_PAD_LEFT))->first();
+        }
+        if (!$candidate && $request->filled('candidate_id')) {
+            $candidate = Member::find($request->candidate_id);
+        }
         if (!$candidate) {
-            $candidate = Member::where('nama_lengkap', 'like', "%{$candidateName}%")
-                ->orWhere('nama_panggilan', 'like', "%{$candidateName}%")
+            $candidateName = $request->candidate_name;
+            $candidate = Member::where('nama_lengkap', $candidateName)
+                ->orWhere('nama_panggilan', $candidateName)
                 ->first();
+                
+            if (!$candidate) {
+                $candidate = Member::where('nama_lengkap', 'like', "%{$candidateName}%")
+                    ->orWhere('nama_panggilan', 'like', "%{$candidateName}%")
+                    ->first();
+            }
         }
             
         if (!$candidate) {
-            return back()->withErrors(['candidate_name' => "Nama anggota yang dicalonkan ('$candidateName') tidak ditemukan dalam database."]);
+            return back()->withErrors(['candidate_name' => "Nama anggota yang dicalonkan tidak ditemukan dalam database."]);
+        }
+
+        if ($candidate->penalty && $candidate->penalty !== 'clean') {
+            $reasonMsg = $candidate->penalty_reason ? " Alasan: {$candidate->penalty_reason}" : "";
+            return back()->withErrors(['candidate_name' => "Anggota yang diajukan ('{$candidate->nama_lengkap}') tidak dapat dicalonkan karena sedang dalam masa penalty (" . strtoupper($candidate->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
         }
 
         $candidateStatus = strtoupper($candidate->status_keanggotaan);
-        if ($candidateStatus !== 'LIFE MEMBER') {
-            return back()->withErrors(['candidate_name' => 'Hanya anggota dengan status LIFE MEMBER yang dapat diajukan sebagai calon.']);
+        if ($candidateStatus !== 'LIFE MEMBER' && $candidateStatus !== 'SS DIPONEGORO') {
+            return back()->withErrors(['candidate_name' => 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat diajukan sebagai calon.']);
         }
+        $currentYear = intval(date('Y'));
         $candidateYear = intval($candidate->terdaftar_sejak);
         if (empty($candidate->terdaftar_sejak) || ($currentYear - $candidateYear) < 10) {
             return back()->withErrors(['candidate_name' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat diajukan sebagai calon.']);
