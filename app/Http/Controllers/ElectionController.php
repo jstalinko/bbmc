@@ -154,6 +154,19 @@ class ElectionController extends Controller
             ], 400);
         }
 
+        // Cooldown request ulang setiap 1 menit
+        $recentOtp = Otp::where('member_id', $member->id)
+            ->where('is_verified', false)
+            ->where('created_at', '>', now()->subMinute())
+            ->first();
+
+        if ($recentOtp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda baru saja meminta kode OTP. Mohon tunggu 1 menit sebelum meminta kembali.'
+            ], 429);
+        }
+
         $otpCode = (string) rand(100000, 999999);
         
         Otp::create([
@@ -254,7 +267,7 @@ class ElectionController extends Controller
         $memberId = $request->session()->get('election_member_id');
         $existingVote = Polling::where('member_id', $memberId)->first();
 
-        $candidates = Calon::with('member')->where('status', 'ditetapkan')->get();
+        $candidates = Calon::with('member')->where('status', 'ditetapkan')->get()->unique('member_id')->values();
         return Inertia::render('Election/dashboard', [
             'candidates' => $candidates,
             'hasVoted' => !is_null($existingVote),
@@ -404,12 +417,11 @@ class ElectionController extends Controller
                 ]);
             }
 
-            $alreadyNominated = Calon::where('no_kartu', $nocard)->first();
-            if ($alreadyNominated) {
-                $statusText = $alreadyNominated->status === 'mengajukan' ? 'Pencalonan Mandiri' : 'Direkomendasikan Anggota';
+            $alreadyNominatedSelf = Calon::where('no_kartu', $nocard)->where('diajukan_oleh', 'self')->first();
+            if ($alreadyNominatedSelf) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Anggota dengan No. Kartu $nocard sudah terdaftar sebagai Calon El Presidente (Status: $statusText)."
+                    'message' => "Anggota dengan No. Kartu $nocard sudah melakukan Pencalonan Mandiri sebelumnya."
                 ]);
             }
         }
@@ -473,6 +485,19 @@ class ElectionController extends Controller
                 'success' => false,
                 'message' => "Nomor WhatsApp anggota tidak ditemukan di database."
             ], 400);
+        }
+
+        // Cooldown request ulang setiap 1 menit
+        $recentOtp = Otp::where('member_id', $member->id)
+            ->where('is_verified', false)
+            ->where('created_at', '>', now()->subMinute())
+            ->first();
+
+        if ($recentOtp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda baru saja meminta kode OTP. Mohon tunggu 1 menit sebelum meminta kembali.'
+            ], 429);
         }
 
         $otpCode = (string) rand(100000, 999999);
@@ -546,9 +571,9 @@ class ElectionController extends Controller
         
         $otpRecord->update(['is_verified' => true]);
         
-        $alreadyNominated = Calon::where('no_kartu', $nocard)->exists();
-        if ($alreadyNominated) {
-            return back()->withErrors(['no_kartu' => 'Nomor kartu ini sudah terdaftar sebagai Calon El Presidente.']);
+        $alreadyNominatedSelf = Calon::where('no_kartu', $nocard)->where('diajukan_oleh', 'self')->exists();
+        if ($alreadyNominatedSelf) {
+            return back()->withErrors(['no_kartu' => 'Anda sudah melakukan Pencalonan Mandiri sebelumnya.']);
         }
         
         Calon::create([
@@ -652,10 +677,12 @@ class ElectionController extends Controller
             return back()->withErrors(['candidate_name' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat diajukan sebagai calon.']);
         }
         
-        // Check if candidate is already registered
-        $alreadyNominated = Calon::where('no_kartu', $candidate->no_kartu)->exists();
-        if ($alreadyNominated) {
-            return back()->withErrors(['candidate_name' => "Anggota '{$candidate->nama_lengkap}' sudah terdaftar sebagai Calon El Presidente."]);
+        // Check if nominator already recommended this exact candidate
+        $alreadyNominatedByThisMember = Calon::where('member_id', $candidate->id)
+            ->where('no_kartu_diajukan_oleh', $nominator->no_kartu)
+            ->exists();
+        if ($alreadyNominatedByThisMember) {
+            return back()->withErrors(['candidate_name' => "Anda ('{$nominator->nama_lengkap}') sudah merekomendasikan '{$candidate->nama_lengkap}' sebagai Calon El Presidente sebelumnya."]);
         }
         
         Calon::create([

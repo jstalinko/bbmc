@@ -31,24 +31,35 @@ class Polling extends Model
     public function hasVoted()
     {
         $member = Auth::user();
-        return Polling::where('member_id', $member->id)->where('calon_id', $this->id)->exists();
+        $calonIds = Calon::where('member_id', $this->member_id ? $this->member_id : ($this->calon ? $this->calon->member_id : 0))->pluck('id');
+        return Polling::where('member_id', $member->id)->whereIn('calon_id', $calonIds)->exists();
+    }
+
+    public function totalVoteByMember($member_id)
+    {
+        $calonIds = Calon::where('member_id', $member_id)->pluck('id');
+        return Polling::whereIn('calon_id', $calonIds)->count();
     }
 
     public function totalVote($calon_id)
     {
+        $calon = Calon::find($calon_id);
+        if ($calon) {
+            return $this->totalVoteByMember($calon->member_id);
+        }
         return Polling::where('calon_id', $calon_id)->count();
     }
+
     public function resultVotes()
     {
-        // all Calon where status ditetapkan then count polling->totalVote($calon->id)
-        $calons = Calon::where('status', 'ditetapkan')->get();
+        $calons = Calon::with('member')->where('status', 'ditetapkan')->get()->unique('member_id')->values();
         $result = [];
         foreach ($calons as $calon) {
             $result[] = [
                 'calon_id' => $calon->id,
-                'calon_name' => $calon->member->nama_lengkap,
+                'calon_name' => $calon->member ? $calon->member->nama_lengkap : 'Unknown',
                 'calon_foto' => $calon->foto_calon,
-                'total_vote' => $this->totalVote($calon->id),
+                'total_vote' => $this->totalVoteByMember($calon->member_id),
             ];
         }
         return $result;

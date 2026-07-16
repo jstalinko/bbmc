@@ -248,12 +248,12 @@ function getCandidatePhoto(c) {
 
                             <!-- Pengusul -->
                             <TableCell class="text-xs">
-                                <div v-if="candidate.diajukan_oleh === 'self'">
-                                    <Badge variant="secondary" class="bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400">Pencalonan Diri</Badge>
-                                </div>
-                                <div v-else>
-                                    <span class="font-semibold">{{ candidate.diajukan_oleh || '—' }}</span>
-                                    <div v-if="candidate.no_kartu_diajukan_oleh" class="text-[10px] text-muted-foreground font-mono">KTA: {{ candidate.no_kartu_diajukan_oleh }}</div>
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <Badge v-if="candidate.self_nominations > 0" variant="secondary" class="bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 text-[11px] font-semibold">Pencalonan Diri</Badge>
+                                        <Badge v-if="candidate.member_nominations > 0" variant="secondary" class="bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400 text-[11px] font-semibold">{{ candidate.member_nominations }} Rekomendasi Anggota</Badge>
+                                    </div>
+                                    <span class="text-[11px] text-muted-foreground font-medium">Total {{ candidate.total_nominations ?? 1 }} Pengajuan</span>
                                 </div>
                             </TableCell>
 
@@ -395,27 +395,49 @@ function getCandidatePhoto(c) {
                             <p class="font-semibold mt-0.5">{{ viewTarget?.chapter || '—' }}</p>
                         </div>
                         <div>
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pengusul</p>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total Pengusul</p>
                             <p class="font-semibold mt-0.5">
-                                {{ viewTarget?.diajukan_oleh === 'self' ? 'Pencalonan Diri (Self)' : (viewTarget?.diajukan_oleh || '—') }}
-                                <span v-if="viewTarget?.no_kartu_diajukan_oleh" class="font-mono text-xs text-muted-foreground block">(KTA: {{ viewTarget.no_kartu_diajukan_oleh }})</span>
+                                {{ viewTarget?.total_nominations ?? 1 }} Pengajuan
+                                <span class="text-xs text-muted-foreground font-normal block">({{ viewTarget?.self_nominations > 0 ? 'Pencalonan Mandiri & ' : '' }}{{ viewTarget?.member_nominations || 0 }} Rekomendasi Anggota)</span>
                             </p>
                         </div>
                     </div>
 
-                    <!-- Visi & Misi Section -->
-                    <div class="border-t pt-3 space-y-3">
-                        <div>
-                            <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wider">Visi</h3>
-                            <p class="text-sm mt-1 bg-muted/40 rounded-lg p-2.5 italic border-l-2 border-amber-500 whitespace-pre-line text-foreground/90">
-                                {{ viewTarget?.visi || 'Tidak mencantumkan visi.' }}
-                            </p>
+                    <!-- Visi & Misi / Daftar Pengusul Section -->
+                    <div class="border-t pt-3 space-y-3 max-h-72 overflow-y-auto pr-1">
+                        <div v-if="viewTarget?.nominations_list && viewTarget.nominations_list.length > 0" class="space-y-3">
+                            <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wider">Daftar Pengusul & Rekomendasi ({{ viewTarget.nominations_list.length }})</h3>
+                            <div v-for="nom in viewTarget.nominations_list" :key="nom.id" class="rounded-lg border bg-muted/30 p-3 text-xs space-y-1.5">
+                                <div class="flex items-center justify-between font-semibold border-b pb-1">
+                                    <span :class="nom.diajukan_oleh === 'self' ? 'text-blue-600' : 'text-purple-600'">
+                                        {{ nom.diajukan_oleh === 'self' ? 'Pencalonan Mandiri (Self)' : nom.diajukan_oleh }}
+                                    </span>
+                                    <span v-if="nom.no_kartu_diajukan_oleh" class="font-mono text-[10px] text-muted-foreground">KTA: {{ nom.no_kartu_diajukan_oleh }}</span>
+                                    <span v-else class="text-[10px] text-muted-foreground">{{ new Date(nom.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) }}</span>
+                                </div>
+                                <div v-if="nom.visi" class="mt-1">
+                                    <span class="font-bold text-[10px] text-muted-foreground uppercase">Visi / Rekomendasi:</span>
+                                    <p class="text-foreground/90 italic mt-0.5">{{ nom.visi }}</p>
+                                </div>
+                                <div v-if="nom.misi" class="mt-1">
+                                    <span class="font-bold text-[10px] text-muted-foreground uppercase">Misi:</span>
+                                    <p class="text-foreground/90 mt-0.5 whitespace-pre-line">{{ nom.misi }}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wider">Misi / Alasan</h3>
-                            <p class="text-sm mt-1 bg-muted/40 rounded-lg p-2.5 whitespace-pre-line text-foreground/90">
-                                {{ viewTarget?.misi || 'Tidak mencantumkan misi.' }}
-                            </p>
+                        <div v-else class="space-y-3">
+                            <div>
+                                <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wider">Visi</h3>
+                                <p class="text-sm mt-1 bg-muted/40 rounded-lg p-2.5 italic border-l-2 border-amber-500 whitespace-pre-line text-foreground/90">
+                                    {{ viewTarget?.visi || 'Tidak mencantumkan visi.' }}
+                                </p>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-bold text-amber-600 uppercase tracking-wider">Misi / Alasan</h3>
+                                <p class="text-sm mt-1 bg-muted/40 rounded-lg p-2.5 whitespace-pre-line text-foreground/90">
+                                    {{ viewTarget?.misi || 'Tidak mencantumkan misi.' }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

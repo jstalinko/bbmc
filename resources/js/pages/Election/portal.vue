@@ -87,6 +87,20 @@ const isSubmittingWithOtp = ref(false);
 const otpError = ref('');
 const otpTarget = ref<'self' | 'member' | null>(null);
 const otpSentMessage = ref('');
+const otpCountdown = ref(0);
+let countdownTimer: any = null;
+
+const startOtpCountdown = (seconds = 60) => {
+    otpCountdown.value = seconds;
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+        if (otpCountdown.value > 0) {
+            otpCountdown.value--;
+        } else {
+            if (countdownTimer) clearInterval(countdownTimer);
+        }
+    }, 1000);
+};
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Inertia Forms
@@ -187,7 +201,11 @@ watch(nominatorCardQuery, async (newVal) => {
     }
 });
 
-const requestOtp = async (formType: 'self' | 'member') => {
+const requestOtp = async (formType: 'self' | 'member', isResend = false) => {
+    if (!isResend) {
+        otpCode.value = '';
+        otpError.value = '';
+    }
     isSendingOtp.value = true;
     try {
         const response = await fetch('/api/send-otp', {
@@ -203,11 +221,13 @@ const requestOtp = async (formType: 'self' | 'member') => {
             otpTarget.value = formType;
             otpSentMessage.value = data.message;
             showOtpModal.value = true;
+            otpError.value = '';
+            startOtpCountdown(60);
         } else {
             otpError.value = data.message;
         }
     } catch (e) {
-        alert('Gagal mengirim OTP' + e);
+        otpError.value = 'Gagal mengirim OTP: ' + e;
     } finally {
         isSendingOtp.value = false;
     }
@@ -243,7 +263,8 @@ const confirmOtpAndSubmit = () => {
             }
         },
         onError: (err: any) => {
-            otpError.value = err.otp || 'Kode OTP tidak valid atau kadaluwarsa.';
+            const firstError = err.otp || err.candidate_name || err.no_kartu || err.nominator_no_kartu || Object.values(err)[0] || 'Kode OTP tidak valid atau kadaluwarsa.';
+            otpError.value = firstError;
         },
         onFinish: () => {
             isSubmittingWithOtp.value = false;
@@ -261,6 +282,8 @@ const closeOtpModal = () => {
     otpError.value = '';
     otpTarget.value = null;
     isSubmittingWithOtp.value = false;
+    if (countdownTimer) clearInterval(countdownTimer);
+    otpCountdown.value = 0;
 };
 
 const closeAlert = () => {
@@ -517,8 +540,19 @@ const closeAlert = () => {
                     <div class="bg-white rounded-xl shadow-lg p-6 w-80">
                         <h3 class="text-lg font-semibold mb-2">Masukkan Kode OTP</h3>
                         <p class="text-sm text-gray-600 mb-4">{{ otpSentMessage }}</p>
-                        <input v-model="otpCode" type="text" maxlength="6" placeholder="6 digit OTP" class="w-full border border-gray-300 rounded px-3 py-2 mb-2 focus:outline-none focus:border-red-500" />
+                        <input v-model="otpCode" type="text" maxlength="6" placeholder="6 digit OTP" class="w-full border border-gray-300 rounded px-3 py-2 mb-2 focus:outline-none focus:border-red-500 font-mono text-center tracking-widest text-lg" />
                         <p v-if="otpError" class="text-red-500 text-sm mb-2">{{ otpError }}</p>
+                        <div class="flex items-center justify-between mt-3 mb-1">
+                            <span class="text-xs text-gray-500">Belum terima kode?</span>
+                            <button
+                                type="button"
+                                @click="otpTarget && requestOtp(otpTarget, true)"
+                                :disabled="otpCountdown > 0 || isSendingOtp"
+                                class="text-xs font-semibold text-red-600 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {{ otpCountdown > 0 ? `Kirim Ulang (${otpCountdown}s)` : (isSendingOtp ? 'Mengirim...' : 'Kirim Ulang OTP') }}
+                            </button>
+                        </div>
                         <div class="flex justify-end space-x-2 mt-4">
                             <button @click="closeOtpModal" type="button" class="px-4 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300">Batal</button>
                             <button @click="confirmOtpAndSubmit" :disabled="isSubmittingWithOtp" class="px-4 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">{{ isSubmittingWithOtp ? 'Mengirim...' : 'Konfirmasi' }}</button>
