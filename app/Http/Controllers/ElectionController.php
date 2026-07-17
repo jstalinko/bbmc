@@ -327,13 +327,58 @@ class ElectionController extends Controller
     }
 
     /**
+     * Check if a member has already submitted any nomination (either self-nomination or peer-nomination).
+     * Every member is only allowed 1 choice/submission in total.
+     */
+    private function checkAlreadyNominated($nocard)
+    {
+        $nocard = str_pad($nocard, 4, '0', STR_PAD_LEFT);
+        
+        $existing = Calon::where(function($query) use ($nocard) {
+            $query->where(function($q) use ($nocard) {
+                $q->where('no_kartu', $nocard)->where('diajukan_oleh', 'self');
+            })->orWhere('no_kartu_diajukan_oleh', $nocard);
+        })->first();
+
+        if ($existing) {
+            if ($existing->diajukan_oleh === 'self' && $existing->no_kartu === $nocard) {
+                return [
+                    'already' => true,
+                    'message' => "Anggota dengan No. Kartu $nocard sudah melakukan Pencalonan Mandiri (Self Nomination). Sesuai aturan, setiap anggota hanya diperbolehkan melakukan 1 kali pengajuan (pilih salah satu)."
+                ];
+            } else {
+                return [
+                    'already' => true,
+                    'message' => "Anggota dengan No. Kartu $nocard sudah merekomendasikan calon lain (Endorsement). Sesuai aturan, setiap anggota hanya diperbolehkan melakukan 1 kali pengajuan (pilih salah satu)."
+                ];
+            }
+        }
+
+        return ['already' => false];
+    }
+
+    /**
      * Render the Pra-Election portal.
      */
-    public function portal()
+    public function portal(Request $request)
     {
         $settings = $this->getSettings();
+        $memberId = $request->session()->get('election_member_id');
+        $userNomination = null;
+        if ($memberId) {
+            $member = Member::find($memberId);
+            if ($member) {
+                $nc = $member->no_kartu;
+                $userNomination = Calon::where(function($query) use ($nc) {
+                    $query->where(function($q) use ($nc) {
+                        $q->where('no_kartu', $nc)->where('diajukan_oleh', 'self');
+                    })->orWhere('no_kartu_diajukan_oleh', $nc);
+                })->first();
+            }
+        }
         return Inertia::render('Election/portal', [
-            'settings' => $settings
+            'settings' => $settings,
+            'userNomination' => $userNomination
         ]);    
     }
 
@@ -357,6 +402,7 @@ class ElectionController extends Controller
                   ->orWhere('chapter', 'like', "%{$q}%")
                   ->orWhere('checkpoint', 'like', "%{$q}%");
         })
+        ->whereNotIn('no_kartu', Calon::pluck('no_kartu'))
         ->where(function($sq) {
             $sq->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
                ->orWhereRaw('UPPER(status_keanggotaan) = ?', ['SS DIPONEGORO']);
@@ -385,9 +431,12 @@ class ElectionController extends Controller
         $member = Member::where('no_kartu', $nocard)->first();
         
         if (!$member) {
+            $msg = $role === 'nominator' 
+                ? "Nomor kartu pengusul ($nocard) tidak valid atau tidak terdaftar." 
+                : "Nomor kartu $nocard tidak valid atau tidak terdaftar.";
             return response()->json([
                 'success' => false,
-                'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
+                'message' => $msg
             ]);
         }
 
@@ -396,6 +445,14 @@ class ElectionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "Anggota dengan No. Kartu {$member->no_kartu} sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"
+            ]);
+        }
+
+        $nominationCheck = $this->checkAlreadyNominated($member->no_kartu);
+        if ($nominationCheck['already']) {
+            return response()->json([
+                'success' => false,
+                'message' => $nominationCheck['message']
             ]);
         }
 
@@ -417,11 +474,11 @@ class ElectionController extends Controller
                 ]);
             }
 
-            $alreadyNominatedSelf = Calon::where('no_kartu', $nocard)->where('diajukan_oleh', 'self')->first();
-            if ($alreadyNominatedSelf) {
+            $existingAsCandidate = Calon::where('no_kartu', $member->no_kartu)->first();
+            if ($existingAsCandidate) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Anggota dengan No. Kartu $nocard sudah melakukan Pencalonan Mandiri sebelumnya."
+                    'message' => "Anggota dengan No. Kartu {$member->no_kartu} sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingAsCandidate->diajukan_oleh})."
                 ]);
             }
         }
@@ -448,9 +505,12 @@ class ElectionController extends Controller
         $member = Member::where('no_kartu', $nocard)->first();
 
         if (!$member) {
+            $msg = $request->type === 'member'
+                ? "Nomor kartu pengusul ($nocard) tidak valid atau tidak terdaftar."
+                : "Nomor kartu $nocard tidak valid atau tidak terdaftar.";
             return response()->json([
                 'success' => false,
-                'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
+                'message' => $msg
             ], 404);
         }
 
@@ -460,6 +520,16 @@ class ElectionController extends Controller
                 'success' => false,
                 'message' => "Anda tidak dapat melanjutkan karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"
             ], 403);
+        }
+
+        if ($request->type === 'self' || $request->type === 'member') {
+            $nominationCheck = $this->checkAlreadyNominated($member->no_kartu);
+            if ($nominationCheck['already']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $nominationCheck['message']
+                ], 403);
+            }
         }
 
         if ($request->type === 'self') {
@@ -476,6 +546,13 @@ class ElectionController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat mengajukan diri.'
+                ], 403);
+            }
+            $existingAsCandidate = Calon::where('no_kartu', $member->no_kartu)->first();
+            if ($existingAsCandidate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Anggota dengan No. Kartu {$member->no_kartu} sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingAsCandidate->diajukan_oleh})."
                 ], 403);
             }
         }
@@ -571,9 +648,14 @@ class ElectionController extends Controller
         
         $otpRecord->update(['is_verified' => true]);
         
-        $alreadyNominatedSelf = Calon::where('no_kartu', $nocard)->where('diajukan_oleh', 'self')->exists();
-        if ($alreadyNominatedSelf) {
-            return back()->withErrors(['no_kartu' => 'Anda sudah melakukan Pencalonan Mandiri sebelumnya.']);
+        $nominationCheck = $this->checkAlreadyNominated($member->no_kartu);
+        if ($nominationCheck['already']) {
+            return back()->withErrors(['no_kartu' => $nominationCheck['message']]);
+        }
+        
+        $existingAsCandidate = Calon::where('no_kartu', $member->no_kartu)->first();
+        if ($existingAsCandidate) {
+            return back()->withErrors(['no_kartu' => "Anggota dengan No. Kartu {$member->no_kartu} sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingAsCandidate->diajukan_oleh})."]);
         }
         
         Calon::create([
@@ -621,6 +703,11 @@ class ElectionController extends Controller
         if ($nominator->penalty && $nominator->penalty !== 'clean') {
             $reasonMsg = $nominator->penalty_reason ? " Alasan: {$nominator->penalty_reason}" : "";
             return back()->withErrors(['nominator_no_kartu' => "Anda tidak dapat merekomendasikan karena status keanggotaan Anda sedang dalam masa penalty (" . strtoupper($nominator->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
+        }
+
+        $nominationCheck = $this->checkAlreadyNominated($nominator->no_kartu);
+        if ($nominationCheck['already']) {
+            return back()->withErrors(['nominator_no_kartu' => $nominationCheck['message']]);
         }
 
         // Verify OTP
@@ -677,12 +764,13 @@ class ElectionController extends Controller
             return back()->withErrors(['candidate_name' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat diajukan sebagai calon.']);
         }
         
-        // Check if nominator already recommended this exact candidate
-        $alreadyNominatedByThisMember = Calon::where('member_id', $candidate->id)
-            ->where('no_kartu_diajukan_oleh', $nominator->no_kartu)
-            ->exists();
-        if ($alreadyNominatedByThisMember) {
-            return back()->withErrors(['candidate_name' => "Anda ('{$nominator->nama_lengkap}') sudah merekomendasikan '{$candidate->nama_lengkap}' sebagai Calon El Presidente sebelumnya."]);
+        if ($candidate->id === $nominator->id || $candidate->no_kartu === $nominator->no_kartu) {
+            return back()->withErrors(['candidate_name' => "Untuk mencalonkan diri sendiri, silakan gunakan menu 'Ajukan Diri Sebagai El Presidente' (Self Nomination)."]);
+        }
+        
+        $existingCandidate = Calon::where('no_kartu', $candidate->no_kartu)->first();
+        if ($existingCandidate) {
+            return back()->withErrors(['candidate_name' => "Anggota yang diajukan ('{$candidate->nama_lengkap}') sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingCandidate->diajukan_oleh}). Setiap calon hanya perlu didaftarkan/diajukan satu kali."]);
         }
         
         Calon::create([

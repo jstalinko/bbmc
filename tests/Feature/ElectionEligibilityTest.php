@@ -206,7 +206,7 @@ test('member-info fails for non-LIFE MEMBER', function () {
     $response = $this->getJson('/election/member-info/0004');
     $response->assertStatus(200);
     $response->assertJsonPath('success', false);
-    $response->assertJsonPath('message', 'Hanya anggota dengan status LIFE MEMBER yang dapat berpartisipasi dalam pencalonan/pengajuan.');
+    $response->assertJsonPath('message', 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat berpartisipasi dalam pencalonan/pengajuan.');
 });
 
 test('member-info fails for LIFE MEMBER registered less than 10 years ago', function () {
@@ -302,11 +302,12 @@ test('nominateSelf succeeds for eligible member', function () {
 test('nominateMember fails if nominator is ineligible', function () {
     $currentYear = intval(date('Y'));
     
-    // Ineligible Nominator (registered 5 years ago)
+    // Ineligible Nominator (under penalty)
     $nominator = createTestMember([
         'no_kartu' => '0009',
         'status_keanggotaan' => 'LIFE MEMBER',
         'terdaftar_sejak' => (string)($currentYear - 5),
+        'penalty' => 'warning',
         'nik' => '1234567890123418',
     ]);
 
@@ -414,3 +415,98 @@ test('nominateMember succeeds if both are eligible', function () {
         'diajukan_oleh' => $nominator->nama_lengkap,
     ]);
 });
+
+test('member cannot nominate self if they already nominated self or someone else', function () {
+    $currentYear = intval(date('Y'));
+    $member = createTestMember([
+        'no_kartu' => '0015',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 12),
+        'nik' => '1234567890123424',
+    ]);
+
+    \App\Models\Calon::create([
+        'member_id' => $member->id,
+        'no_kartu' => '0015',
+        'chapter' => 'Jakarta',
+        'status' => 'mengajukan',
+        'diajukan_oleh' => 'self',
+        'no_kartu_diajukan_oleh' => '0015',
+    ]);
+
+    Otp::create([
+        'member_id' => $member->id,
+        'otp' => '123456',
+        'phone' => $member->no_wa,
+        'expires_at' => now()->addMinutes(5),
+        'is_verified' => false,
+    ]);
+
+    $response = $this->post('/election/nominate-self', [
+        'no_kartu' => '0015',
+        'otp' => '123456',
+    ]);
+
+    $response->assertSessionHasErrors(['no_kartu']);
+});
+
+test('member cannot nominate someone else if they already nominated self or someone else', function () {
+    $currentYear = intval(date('Y'));
+    $nominator = createTestMember([
+        'nama_lengkap' => 'Existing Nominator',
+        'no_kartu' => '0016',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 12),
+        'nik' => '1234567890123425',
+    ]);
+
+    $candidate = createTestMember([
+        'nama_lengkap' => 'New Candidate',
+        'no_kartu' => '0017',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 12),
+        'nik' => '1234567890123426',
+    ]);
+
+    \App\Models\Calon::create([
+        'member_id' => $nominator->id,
+        'no_kartu' => '0016',
+        'chapter' => 'Jakarta',
+        'status' => 'mengajukan',
+        'diajukan_oleh' => 'self',
+        'no_kartu_diajukan_oleh' => '0016',
+    ]);
+
+    Otp::create([
+        'member_id' => $nominator->id,
+        'otp' => '123456',
+        'phone' => $nominator->no_wa,
+        'expires_at' => now()->addMinutes(5),
+        'is_verified' => false,
+    ]);
+
+    $response = $this->post('/election/nominate-member', [
+        'candidate_name' => 'New Candidate',
+        'nominator_no_kartu' => '0016',
+        'otp' => '123456',
+    ]);
+
+    $response->assertSessionHasErrors(['nominator_no_kartu']);
+});
+
+test('send-otp and member-info return clear error message for unregistered card before sending OTP', function () {
+    $responseInfo = $this->getJson('/election/member-info/9999');
+    $responseInfo->assertStatus(200);
+    $responseInfo->assertJsonPath('success', false);
+    $responseInfo->assertJsonPath('message', 'Nomor kartu 9999 tidak valid atau tidak terdaftar.');
+
+    $responseOtp = $this->postJson('/api/send-otp', [
+        'type' => 'self',
+        'no_kartu' => '9999',
+    ]);
+    $responseOtp->assertStatus(404);
+    $responseOtp->assertJsonPath('success', false);
+    $responseOtp->assertJsonPath('message', 'Nomor kartu 9999 tidak valid atau tidak terdaftar.');
+});
+
+

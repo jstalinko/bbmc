@@ -44,6 +44,7 @@ const props = defineProps<{
         tanggal_mulai: string | null;
         tanggal_selesai: string | null;
     };
+    userNomination?: any;
 }>();
 
 const settings = computed(() => props.settings ?? {
@@ -57,8 +58,13 @@ const settings = computed(() => props.settings ?? {
 const showNominationOptions = ref(false);
 const activeForm = ref<'self' | 'member' | null>(null);
 const submissionSuccess = ref(false);
+const hasSubmittedThisSession = ref(false);
 const submittedName = ref('');
 const flashMessage = ref('');
+
+const hasAlreadyNominated = computed(() => {
+    return Boolean(props.userNomination || hasSubmittedThisSession.value);
+});
 
 // Autocomplete States for Self-Nomination
 const selfCardQuery = ref('');
@@ -205,6 +211,20 @@ const requestOtp = async (formType: 'self' | 'member', isResend = false) => {
     if (!isResend) {
         otpCode.value = '';
         otpError.value = '';
+        if (formType === 'self') {
+            if (selfSearchError.value) return;
+            if (!selfMemberDetails.value || selfForm.no_kartu !== selfMemberDetails.value.no_kartu) {
+                selfSearchError.value = `Nomor kartu ${selfForm.no_kartu || selfCardQuery.value} tidak valid atau tidak terdaftar.`;
+                return;
+            }
+        } else {
+            if (!candidateMemberDetails.value) return;
+            if (nominatorSearchError.value) return;
+            if (!nominatorMemberDetails.value || memberForm.nominator_no_kartu !== nominatorMemberDetails.value.no_kartu) {
+                nominatorSearchError.value = `Nomor kartu pengusul (${memberForm.nominator_no_kartu || nominatorCardQuery.value}) tidak valid atau tidak terdaftar.`;
+                return;
+            }
+        }
     }
     isSendingOtp.value = true;
     try {
@@ -224,10 +244,26 @@ const requestOtp = async (formType: 'self' | 'member', isResend = false) => {
             otpError.value = '';
             startOtpCountdown(60);
         } else {
-            otpError.value = data.message;
+            if (showOtpModal.value || isResend) {
+                otpError.value = data.message;
+            } else {
+                if (formType === 'self') {
+                    selfSearchError.value = data.message;
+                } else {
+                    nominatorSearchError.value = data.message;
+                }
+            }
         }
     } catch (e) {
-        otpError.value = 'Gagal mengirim OTP: ' + e;
+        if (showOtpModal.value || isResend) {
+            otpError.value = 'Gagal mengirim OTP: ' + e;
+        } else {
+            if (formType === 'self') {
+                selfSearchError.value = 'Gagal mengirim OTP.';
+            } else {
+                nominatorSearchError.value = 'Gagal mengirim OTP.';
+            }
+        }
     } finally {
         isSendingOtp.value = false;
     }
@@ -250,6 +286,7 @@ const confirmOtpAndSubmit = () => {
             submittedName.value = otpTarget.value === 'self' ? selfMemberDetails.value?.nama_lengkap : memberForm.candidate_name;
             flashMessage.value = page.props.flash?.message || 'Pengajuan berhasil!';
             submissionSuccess.value = true;
+            hasSubmittedThisSession.value = true;
             closeOtpModal();
             if (otpTarget.value === 'self') {
                 selfCardQuery.value = '';
@@ -274,6 +311,21 @@ const confirmOtpAndSubmit = () => {
 
 const handleMemberSubmit = () => {
     requestOtp('member');
+};
+
+const selectForm = (type: 'self' | 'member') => {
+    if (hasAlreadyNominated.value) return;
+    activeForm.value = type;
+    if (electionMember.value && electionMember.value.no_kartu) {
+        if (type === 'self' && !selfCardQuery.value) {
+            selfCardQuery.value = electionMember.value.no_kartu;
+        } else if (type === 'member' && !nominatorCardQuery.value) {
+            nominatorCardQuery.value = electionMember.value.no_kartu;
+        }
+    }
+    setTimeout(() => {
+        window.scrollTo({ top: 500, behavior: 'smooth' });
+    }, 50);
 };
 
 const closeOtpModal = () => {
@@ -385,6 +437,9 @@ const closeAlert = () => {
                     <p class="text-sm text-green-700 mt-1">
                         {{ flashMessage || 'Formulir pencalonan untuk ' + submittedName + ' telah terkirim secara aman ke Dewan Adat.' }}
                     </p>
+                    <p class="text-xs text-green-800 font-semibold mt-2 border-t border-green-200 pt-2">
+                        Sesuai ketentuan, hak pengajuan pencalonan Anda telah digunakan. Setiap anggota hanya diperbolehkan melakukan 1 (satu) kali pengajuan/pilihan.
+                    </p>
                     <button 
                         @click="closeAlert" 
                         class="mt-3 inline-flex items-center gap-1 px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-wider transition-all"
@@ -462,10 +517,30 @@ const closeAlert = () => {
             <!-- Expandable Nomination Panel containing the 2 requested cards -->
             <div v-if="showNominationOptions" class="grid grid-cols-1 gap-6 sm:grid-cols-2 mb-8 transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
                 
+                <!-- Status Banner if already nominated -->
+                <div v-if="hasAlreadyNominated" class="col-span-1 sm:col-span-2 rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm flex items-start gap-4 animate-in fade-in">
+                    <div class="rounded-xl bg-red-500/10 border border-red-500/20 p-2.5 text-red-600 shrink-0">
+                        <CheckCircle2 class="h-6 w-6" />
+                    </div>
+                    <div>
+                        <h4 class="font-oswald text-base font-bold text-zinc-900 uppercase">Hak Pengajuan Pencalonan Telah Digunakan</h4>
+                        <p class="text-xs text-zinc-600 mt-1 leading-relaxed">
+                            <template v-if="props.userNomination">
+                                Anda (KTA: <strong class="font-mono text-red-600">{{ props.userNomination.no_kartu }}</strong>) sudah melakukan pengajuan pencalonan dengan pilihan:
+                                <strong class="text-zinc-900">{{ props.userNomination.diajukan_oleh === 'self' ? 'Ajukan Diri Sebagai El Presidente (Self Nomination)' : 'Ajukan Anggota Sebagai El Presidente (Endorsement)' }}</strong>.
+                            </template>
+                            <template v-else>
+                                Anda telah berhasil mengirimkan formulir pengajuan pencalonan.
+                            </template>
+                            Sesuai ketentuan pemilihan, setiap anggota hanya diperbolehkan melakukan <strong>1 (satu) kali pengajuan</strong> dan <strong>hanya memilih satu pilihan saja</strong> (memilih diri sendiri ataupun mengajukan anggota lain).
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Action 1: Ajukan Diri Sebagai El Presidente -->
                 <div 
                     class="group flex flex-col justify-between rounded-2xl border p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
-                    :class="!settings.ajukan_diri ? 'opacity-65 border-zinc-200' : (activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
+                    :class="!settings.ajukan_diri || hasAlreadyNominated ? 'opacity-65 border-zinc-200' : (activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
                 >
                     <div>
                         <div class="flex items-center justify-between">
@@ -486,9 +561,12 @@ const closeAlert = () => {
                     <div v-if="!settings.ajukan_diri" class="mt-6 w-full text-center py-2.5 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
                         Pendaftaran Mandiri Ditutup
                     </div>
+                    <div v-else-if="hasAlreadyNominated" class="mt-6 w-full text-center py-2.5 bg-red-100/60 text-red-600 text-xs font-bold uppercase rounded-xl border border-red-200 cursor-not-allowed">
+                        Hak Pengajuan Telah Digunakan
+                    </div>
                     <button 
                         v-else
-                        @click="activeForm = 'self'; window.scrollTo({ top: 500, behavior: 'smooth' })"
+                        @click="selectForm('self')"
                         class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white"
                     >
                         <span>Mulai Pendaftaran Mandiri</span>
@@ -499,7 +577,7 @@ const closeAlert = () => {
                 <!-- Action 2: Ajukan Anggota Sebagai El Presidente -->
                 <div 
                     class="group flex flex-col justify-between rounded-2xl border p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
-                    :class="!settings.ajukan_anggota ? 'opacity-65 border-zinc-200' : (activeForm === 'member' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
+                    :class="!settings.ajukan_anggota || hasAlreadyNominated ? 'opacity-65 border-zinc-200' : (activeForm === 'member' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
                 >
                     <div>
                         <div class="flex items-center justify-between">
@@ -520,9 +598,12 @@ const closeAlert = () => {
                     <div v-if="!settings.ajukan_anggota" class="mt-6 w-full text-center py-2.5 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
                         Rekomendasi Saudara Ditutup
                     </div>
+                    <div v-else-if="hasAlreadyNominated" class="mt-6 w-full text-center py-2.5 bg-red-100/60 text-red-600 text-xs font-bold uppercase rounded-xl border border-red-200 cursor-not-allowed">
+                        Hak Pengajuan Telah Digunakan
+                    </div>
                     <button 
                         v-else
-                        @click="activeForm = 'member'; window.scrollTo({ top: 500, behavior: 'smooth' })"
+                        @click="selectForm('member')"
                         class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white"
                     >
                         <span>Rekomendasikan Saudara</span>
@@ -561,12 +642,19 @@ const closeAlert = () => {
                 </div>
 
                 <!-- Form Header -->
-                <div class="border-b border-red-100 pb-4 mb-5 flex items-center justify-between">
+                <div class="border-b border-red-100 pb-4 mb-4 flex items-center justify-between">
                     <h3 class="font-oswald text-lg font-bold text-zinc-950 uppercase tracking-wide flex items-center gap-2">
                         <BookOpen class="h-5 w-5 text-red-600" />
                         <span>{{ activeForm === 'self' ? 'Formulir Pengajuan Diri Calon Presiden' : 'Formulir Rekomendasi Calon Presiden' }}</span>
                     </h3>
                     <button @click="activeForm = null" class="text-xs font-bold uppercase text-zinc-400 hover:text-red-600 px-2 py-1 transition-colors">Batal</button>
+                </div>
+
+                <div class="mb-5 rounded-xl bg-red-50/70 border border-red-100 p-3.5 flex items-start gap-2.5 text-xs text-zinc-600">
+                    <Info class="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
+                    <span class="leading-relaxed">
+                        <strong>Perhatian:</strong> Sesuai ketentuan pemilihan, setiap anggota hanya memiliki <strong>1 (satu) kali hak pengajuan</strong> dan <strong>satu pilihan saja</strong> (memilih diri sendiri <em>ataupun</em> mengajukan orang lain). Setelah pengajuan berhasil diverifikasi, Anda tidak dapat mengubah atau mengajukan pilihan lain.
+                    </span>
                 </div>
 
                 <!-- FORM A: Self Nomination Form -->
