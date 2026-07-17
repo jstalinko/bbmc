@@ -150,6 +150,9 @@ watch(selfCardQuery, async (newVal) => {
 
 // Watch candidate name search to trigger autocomplete list
 watch(candidateSearchQuery, async (newVal) => {
+    if (candidateMemberDetails.value && newVal === candidateMemberDetails.value.nama_lengkap) {
+        return;
+    }
     memberForm.candidate_name = newVal;
     memberForm.candidate_no_kartu = '';
     memberForm.candidate_id = null;
