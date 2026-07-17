@@ -536,7 +536,7 @@ const closeAlert = () => {
                         <h4 class="font-oswald text-base font-bold text-zinc-900 uppercase">Hak Pengajuan Pencalonan Telah Digunakan</h4>
                         <p class="text-xs text-zinc-600 mt-1 leading-relaxed">
                             <template v-if="props.userNomination">
-                                Anda (KTA: <strong class="font-mono text-red-600">{{ props.userNomination.no_kartu }}</strong>) sudah melakukan pengajuan pencalonan dengan pilihan:
+                                Anda (KTA: <strong class="font-mono text-red-600">{{ props.userNomination.diajukan_oleh === 'self' ? props.userNomination.no_kartu : (props.userNomination.no_kartu_diajukan_oleh || props.userNomination.no_kartu) }}</strong>) sudah melakukan pengajuan pencalonan dengan pilihan:
                                 <strong class="text-zinc-900">{{ props.userNomination.diajukan_oleh === 'self' ? 'Ajukan Diri Sebagai El Presidente (Self Nomination)' : 'Ajukan Anggota Sebagai El Presidente (Endorsement)' }}</strong>.
                             </template>
                             <template v-else>
@@ -866,15 +866,7 @@ const closeAlert = () => {
 
             </div>
 
-            <!-- Notice Badge -->
-            <div class="rounded-2xl border border-red-100 bg-white p-6 shadow-xl shadow-red-100/40">
-                <div class="flex items-start gap-2.5 text-xs text-zinc-500">
-                    <Info class="h-4.5 w-4.5 text-red-500 mt-0.5 shrink-0" />
-                    <p class="leading-relaxed">
-                        Seluruh berkas pencalonan mandiri maupun rekomendasi dari anggota akan diverifikasi secara teliti oleh **Dewan Adat BBMC Indonesia** untuk memastikan keabsahan status kepesertaan, loyalitas, kelayakan hukum adat, dan kepemimpinan moral sebelum dideklarasikan sebagai Calon Presiden resmi yang berhak melaju ke tahap pemilihan.
-                    </p>
-                </div>
-            </div>
+          
 
         </main>
 

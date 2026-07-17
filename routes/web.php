@@ -14,8 +14,8 @@ Route::get('/', function () {
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], function () {
     Route::get('/', function () {
         $totalMembers = \App\Models\Member::count();
-        $totalCandidates = \App\Models\Calon::count();
-        $totalCandidatesDitetapkan = \App\Models\Calon::where('status', 'ditetapkan')->count();
+        $totalCandidates = \App\Models\Calon::distinct()->count('member_id');
+        $totalCandidatesDitetapkan = \App\Models\Calon::where('status', 'ditetapkan')->distinct()->count('member_id');
         $totalLifeMembers = \App\Models\Member::where('status_keanggotaan', 'LIFE MEMBER')->count();
         $latestMembers = \App\Models\Member::orderBy('created_at', 'desc')->take(5)->get();
 

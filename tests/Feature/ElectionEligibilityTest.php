@@ -195,6 +195,53 @@ test('search-members only returns LIFE MEMBERs registered for at least 10 years'
     $this->assertEquals('Ahmad Fauzi', $results[0]['nama_lengkap']);
 });
 
+test('search-members still returns candidates who are already nominated and prioritizes name over chapter matches', function () {
+    $currentYear = intval(date('Y'));
+    
+    // Create member whose name is Jaka (Mother Chapter)
+    $jaka = createTestMember([
+        'nama_lengkap' => 'Jaka Pratama',
+        'nama_panggilan' => 'Jaka',
+        'chapter' => 'Mother Chapter',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 15),
+        'nik' => '1234567890123501',
+        'no_kartu' => '0501',
+    ]);
+
+    // Create member from Jakarta Chapter who does not have jaka in their name
+    $jakartaMember = createTestMember([
+        'nama_lengkap' => 'Samiaji Brokenbones',
+        'nama_panggilan' => 'Aji',
+        'chapter' => 'Jakarta Chapter',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 15),
+        'nik' => '1234567890123502',
+        'no_kartu' => '0502',
+    ]);
+
+    // Jaka is ALREADY in calons table (nominated by 1001)
+    \App\Models\Calon::create([
+        'member_id' => $jaka->id,
+        'no_kartu' => $jaka->no_kartu,
+        'chapter' => $jaka->chapter,
+        'status' => 'diajukan',
+        'diajukan_oleh' => 'Benny Gumilar',
+        'no_kartu_diajukan_oleh' => '1001',
+    ]);
+
+    // Search for 'jaka'
+    $response = $this->getJson('/election/search-members?q=jaka');
+    $response->assertStatus(200);
+    
+    $results = $response->json();
+    $this->assertGreaterThanOrEqual(2, count($results));
+    
+    // Jaka Pratama (exact name match) must be first, before Samiaji (who only matched because of Jakarta Chapter)
+    $this->assertEquals('Jaka Pratama', $results[0]['nama_lengkap']);
+    $this->assertTrue(collect($results)->pluck('nama_lengkap')->contains('Jaka Pratama'));
+});
+
 test('member-info fails for non-LIFE MEMBER', function () {
     createTestMember([
         'no_kartu' => '0004',
@@ -508,5 +555,95 @@ test('send-otp and member-info return clear error message for unregistered card 
     $responseOtp->assertJsonPath('success', false);
     $responseOtp->assertJsonPath('message', 'Nomor kartu 9999 tidak valid atau tidak terdaftar.');
 });
+
+test('member who has been nominated by someone else can still nominate self without revealing nominator', function () {
+    $currentYear = intval(date('Y'));
+    $candidate = createTestMember([
+        'nama_lengkap' => 'Candidate Member 1111',
+        'no_kartu' => '1111',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 12),
+        'nik' => '1234567890111111',
+    ]);
+
+    $nominator = createTestMember([
+        'nama_lengkap' => 'Nominator Member 2222',
+        'no_kartu' => '2222',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 12),
+        'nik' => '1234567890222222',
+    ]);
+
+    // 2222 recommends 1111
+    \App\Models\Calon::create([
+        'member_id' => $candidate->id,
+        'no_kartu' => '1111',
+        'chapter' => 'Mother Chapter',
+        'status' => 'diajukan',
+        'diajukan_oleh' => 'Nominator Member 2222',
+        'no_kartu_diajukan_oleh' => '2222',
+    ]);
+
+    // Check member-info for 1111 as candidate should succeed without revealing 2222
+    $infoRes = $this->getJson('/election/member-info/1111?role=candidate');
+    $infoRes->assertStatus(200);
+    $infoRes->assertJsonPath('success', true);
+
+    // Now 1111 attempts self-nomination
+    Otp::create([
+        'member_id' => $candidate->id,
+        'otp' => '123456',
+        'phone' => $candidate->no_wa,
+        'expires_at' => now()->addMinutes(5),
+        'is_verified' => false,
+    ]);
+
+    $response = $this->post('/election/nominate-self', [
+        'no_kartu' => '1111',
+        'otp' => '123456',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $this->assertDatabaseHas('calons', [
+        'no_kartu' => '1111',
+        'diajukan_oleh' => 'self',
+    ]);
+});
+
+test('nominator who has nominated someone cannot nominate self or someone else', function () {
+    $currentYear = intval(date('Y'));
+    $nominator = createTestMember([
+        'nama_lengkap' => 'Nominator Member 2222',
+        'no_kartu' => '2222',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'terdaftar_sejak' => (string)($currentYear - 12),
+        'nik' => '1234567890222223',
+    ]);
+
+    // 2222 already recommended 1111
+    \App\Models\Calon::create([
+        'member_id' => 1,
+        'no_kartu' => '1111',
+        'chapter' => 'Mother Chapter',
+        'status' => 'diajukan',
+        'diajukan_oleh' => 'Nominator Member 2222',
+        'no_kartu_diajukan_oleh' => '2222',
+    ]);
+
+    Otp::create([
+        'member_id' => $nominator->id,
+        'otp' => '123456',
+        'phone' => $nominator->no_wa,
+        'expires_at' => now()->addMinutes(5),
+        'is_verified' => false,
+    ]);
+
+    $resSelf = $this->post('/election/nominate-self', [
+        'no_kartu' => '2222',
+        'otp' => '123456',
+    ]);
+    $resSelf->assertSessionHasErrors(['no_kartu']);
+});
+
 
 

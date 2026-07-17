@@ -394,7 +394,6 @@ class ElectionController extends Controller
                   ->orWhere('chapter', 'like', "%{$q}%")
                   ->orWhere('checkpoint', 'like', "%{$q}%");
         })
-        ->whereNotIn('no_kartu', Calon::pluck('no_kartu'))
         ->where(function($sq) {
             $sq->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
                ->orWhereRaw('UPPER(status_keanggotaan) = ?', ['SS DIPONEGORO']);
@@ -406,7 +405,8 @@ class ElectionController extends Controller
         })
         ->whereNotNull('terdaftar_sejak')
         ->where('terdaftar_sejak', '<=', $cutoffYear)
-        ->take(15)->get();
+        ->orderByRaw("CASE WHEN nama_lengkap LIKE ? OR nama_panggilan LIKE ? OR no_kartu LIKE ? THEN 0 ELSE 1 END, nama_lengkap ASC", ["%{$q}%", "%{$q}%", "%{$q}%"])
+        ->take(25)->get();
         
         return response()->json($members);
     }
@@ -463,14 +463,6 @@ class ElectionController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => "Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat berpartisipasi dalam pencalonan/pengajuan."
-                ]);
-            }
-
-            $existingAsCandidate = Calon::where('no_kartu', $member->no_kartu)->first();
-            if ($existingAsCandidate) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Anggota dengan No. Kartu {$member->no_kartu} sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingAsCandidate->diajukan_oleh})."
                 ]);
             }
         }
@@ -538,13 +530,6 @@ class ElectionController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Hanya anggota dengan masa keanggotaan minimal 10 tahun yang dapat mengajukan diri.'
-                ], 403);
-            }
-            $existingAsCandidate = Calon::where('no_kartu', $member->no_kartu)->first();
-            if ($existingAsCandidate) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Anggota dengan No. Kartu {$member->no_kartu} sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingAsCandidate->diajukan_oleh})."
                 ], 403);
             }
         }
@@ -643,11 +628,6 @@ class ElectionController extends Controller
         $nominationCheck = $this->checkAlreadyNominated($member->no_kartu);
         if ($nominationCheck['already']) {
             return back()->withErrors(['no_kartu' => $nominationCheck['message']]);
-        }
-        
-        $existingAsCandidate = Calon::where('no_kartu', $member->no_kartu)->first();
-        if ($existingAsCandidate) {
-            return back()->withErrors(['no_kartu' => "Anggota dengan No. Kartu {$member->no_kartu} sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingAsCandidate->diajukan_oleh})."]);
         }
         
         Calon::create([
@@ -758,11 +738,6 @@ class ElectionController extends Controller
         
         if ($candidate->id === $nominator->id || $candidate->no_kartu === $nominator->no_kartu) {
             return back()->withErrors(['candidate_name' => "Untuk mencalonkan diri sendiri, silakan gunakan menu 'Ajukan Diri Sebagai El Presidente' (Self Nomination)."]);
-        }
-        
-        $existingCandidate = Calon::where('no_kartu', $candidate->no_kartu)->first();
-        if ($existingCandidate) {
-            return back()->withErrors(['candidate_name' => "Anggota yang diajukan ('{$candidate->nama_lengkap}') sudah terdaftar sebagai Bakal Calon El Presidente (diajukan oleh {$existingCandidate->diajukan_oleh}). Setiap calon hanya perlu didaftarkan/diajukan satu kali."]);
         }
         
         Calon::create([
