@@ -310,19 +310,11 @@ class ElectionController extends Controller
             return redirect()->route('election.portal')->with('error', $timeline['message']);
         }
 
-        $pollingModel = new Polling();
-        $results = $pollingModel->resultVotes();
-
-        // Calculate percentages
-        $totalVotes = array_sum(array_column($results, 'total_vote'));
-
-        foreach ($results as &$res) {
-            $res['percentage'] = $totalVotes > 0 ? round(($res['total_vote'] / $totalVotes) * 100, 1) : 0;
-        }
+        $throttled = (new Polling())->getThrottledResultVotes();
 
         return Inertia::render('Election/polling', [
-            'results' => $results,
-            'totalVotes' => $totalVotes
+            'results' => $throttled['results'],
+            'totalVotes' => $throttled['totalVotes']
         ]);
     }
 
@@ -798,9 +790,11 @@ class ElectionController extends Controller
             return redirect()->route('election.portal')->with('error', $timeline['message']);
         }
 
-        $data = (new Polling())->resultVotes();
-        return Inertia::render('Election/polling',[
-            'results' => $data
+        $throttled = (new Polling())->getThrottledResultVotes();
+
+        return Inertia::render('Election/polling', [
+            'results' => $throttled['results'],
+            'totalVotes' => $throttled['totalVotes']
         ]);
     }
 

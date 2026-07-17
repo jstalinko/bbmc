@@ -183,10 +183,20 @@ const selectCandidate = (member: any) => {
 };
 
 // Watch nominator KTA input to trigger autocomplete search
+// Watch nominator KTA input to trigger autocomplete search
 watch(nominatorCardQuery, async (newVal) => {
     memberForm.nominator_no_kartu = newVal;
     nominatorMemberDetails.value = null;
     nominatorSearchError.value = '';
+    
+    // Reset candidate selection when nominator card is modified or re-verified
+    candidateSearchQuery.value = '';
+    candidateMemberDetails.value = null;
+    memberForm.candidate_name = '';
+    memberForm.candidate_no_kartu = '';
+    memberForm.candidate_id = null;
+    candidateSearchResults.value = [];
+    showCandidateDropdown.value = false;
     
     if (newVal.length >= 2) {
         isNominatorSearching.value = true;
@@ -728,13 +738,58 @@ const closeAlert = () => {
                 </form>
 
                 <!-- FORM B: Member Nomination Form -->
-                <form v-if="activeForm === 'member'" @submit.prevent="handleMemberSubmit" class="space-y-4">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        
-                        <!-- Candidate Search Field with Dropdown Autocomplete -->
+                <form v-if="activeForm === 'member'" @submit.prevent="handleMemberSubmit" class="space-y-5">
+                    <!-- Step 1: Nominator KTA verification -->
+                    <div class="bg-zinc-50/70 rounded-2xl border border-zinc-200/80 p-4 sm:p-5 space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-700 tracking-wider mb-1 flex items-center justify-between">
+                                <span>Langkah 1: Nomor Kartu Anda / KTA Pengusul <span class="text-red-500">*</span></span>
+                                <span class="text-[10px] font-normal text-zinc-500">Ketik 4 digit KTA untuk verifikasi kelayakan</span>
+                            </label>
+                            <div class="relative max-w-sm">
+                                <input 
+                                    v-model="nominatorCardQuery" 
+                                    type="text" 
+                                    maxlength="4" 
+                                    placeholder="KTA Anda (Contoh: 0016)" 
+                                    class="f-input font-mono pr-10 text-base font-bold" 
+                                    required 
+                                />
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <Loader2 v-if="isNominatorSearching" class="h-4 w-4 text-red-500 animate-spin" />
+                                    <Search v-else class="h-4 w-4 text-zinc-400" />
+                                </div>
+                            </div>
+                            <!-- Nominator Search Error -->
+                            <p v-if="nominatorSearchError" class="text-xs text-red-600 font-semibold mt-1.5 flex items-center gap-1.5 animate-in fade-in">
+                                <CircleAlert class="h-3.5 w-3.5 shrink-0" />
+                                <span>{{ nominatorSearchError }}</span>
+                            </p>
+                        </div>
+
+                        <!-- AUTO-COMPLETE DISPLAY FOR NOMINATOR: Show when nominator is fetched successfully -->
+                        <div 
+                            v-if="nominatorMemberDetails && !nominatorSearchError" 
+                            class="bg-gradient-to-r from-green-50 to-emerald-50/50 rounded-xl border border-green-200/80 px-4 py-3 flex items-center gap-3 animate-in slide-in-from-left-4 duration-300"
+                        >
+                            <CheckCircle2 class="h-5 w-5 text-green-600 shrink-0" />
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100/80 px-1.5 py-0.5 rounded border border-green-200">Pengusul Terverifikasi &amp; Layak</span>
+                                <h5 class="font-oswald text-sm font-bold text-zinc-900 uppercase mt-1">{{ nominatorMemberDetails.nama_lengkap }} <span class="text-xs font-mono text-zinc-500 font-normal">({{ nominatorMemberDetails.no_kartu }})</span></h5>
+                                <p class="text-[10px] text-zinc-600 font-medium">Chapter: {{ nominatorMemberDetails.chapter }} | Status: {{ nominatorMemberDetails.status_keanggotaan }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Candidate Search Field (ONLY APPEARS after nominator is valid/eligible/not yet submitted) -->
+                    <div 
+                        v-if="nominatorMemberDetails && !nominatorSearchError" 
+                        class="bg-white rounded-2xl border border-red-100 p-4 sm:p-5 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300"
+                    >
                         <div class="relative">
-                            <label class="block text-xs font-bold uppercase text-zinc-500 tracking-wider mb-1">
-                                Nama Anggota Yang Diajukan <span class="text-red-500">*</span>
+                            <label class="block text-xs font-bold uppercase text-zinc-800 tracking-wider mb-1 flex items-center justify-between">
+                                <span>Langkah 2: Nama Anggota Yang Diajukan (Calon Presiden) <span class="text-red-500">*</span></span>
+                                <span class="text-[10px] font-normal text-zinc-500">Cari calon yang berstatus LIFE MEMBER / SS DIPONEGORO</span>
                             </label>
                             <div class="relative">
                                 <input 
@@ -778,71 +833,34 @@ const closeAlert = () => {
                             </div>
                         </div>
 
-                        <!-- Nominator Card Field -->
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-500 tracking-wider mb-1">
-                                Nomor Kartu Anda / KTA Pengusul <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative">
-                                <input 
-                                    v-model="nominatorCardQuery" 
-                                    type="text" 
-                                    maxlength="4" 
-                                    placeholder="KTA Anda (Semua status member bisa mengajukan)" 
-                                    class="f-input font-mono pr-10" 
-                                    required 
-                                />
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <Loader2 v-if="isNominatorSearching" class="h-4 w-4 text-red-500 animate-spin" />
-                                    <Search v-else class="h-4 w-4 text-zinc-400" />
-                                </div>
-                            </div>
-                            <!-- Nominator Search Error -->
-                            <p v-if="nominatorSearchError" class="text-[11px] text-red-600 font-semibold mt-1">
-                                {{ nominatorSearchError }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- AUTO-COMPLETE DISPLAY FOR CANDIDATE: Show when candidate is selected -->
-                    <div 
-                        v-if="candidateMemberDetails" 
-                        class="bg-gradient-to-r from-red-50/40 to-orange-50/30 rounded-xl border border-red-100/60 p-4 flex items-center gap-3 animate-in slide-in-from-left-4"
-                    >
-                        <div class="h-12 w-12 rounded-full border border-red-200 overflow-hidden bg-zinc-100 flex items-center justify-center shrink-0">
-                            <img v-if="candidateMemberDetails.foto" :src="'/storage/' + candidateMemberDetails.foto" class="h-full w-full object-cover" />
-                            <Users v-else class="h-5 w-5 text-red-500" />
-                        </div>
-                        <div>
-                            <span class="text-[9px] font-bold uppercase tracking-wider text-red-600 bg-red-100/50 px-1.5 py-0.5 rounded">Target Pencalonan</span>
-                            <h5 class="font-oswald text-sm font-bold text-zinc-800 uppercase mt-0.5">{{ candidateMemberDetails.nama_lengkap }}</h5>
-                            <p class="text-[10px] text-zinc-500 font-medium">KTA: {{ candidateMemberDetails.no_kartu }} | Chapter: {{ candidateMemberDetails.chapter }}<template v-if="candidateMemberDetails.checkpoint"> | Checkpoint: {{ candidateMemberDetails.checkpoint }}</template> | Status: {{ candidateMemberDetails.status_keanggotaan }}</p>
-                        </div>
-                    </div>
-
-                    <!-- AUTO-COMPLETE DISPLAY FOR NOMINATOR: Show when nominator is fetched successfully -->
-                    <div 
-                        v-if="nominatorMemberDetails" 
-                        class="bg-gradient-to-r from-zinc-50 to-zinc-100/70 rounded-xl border border-zinc-200 px-4 py-2.5 flex items-center gap-2 animate-in slide-in-from-left-4"
-                    >
-                        <CheckCircle2 class="h-4 w-4 text-green-600 shrink-0" />
-                        <span class="text-xs text-zinc-600 font-semibold">
-                            Pengusul Terverifikasi: <strong>{{ nominatorMemberDetails.nama_lengkap }}</strong> (Chapter: {{ nominatorMemberDetails.chapter }} | Status: {{ nominatorMemberDetails.status_keanggotaan }})
-                        </span>
-                    </div>
-
-
-
-                    <div class="flex justify-end pt-3">
-                        <button 
-                            type="submit" 
-                            class="inline-flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider shadow-md shadow-red-200 transition-all disabled:opacity-45"
-                            :disabled="!candidateMemberDetails || !nominatorMemberDetails || memberForm.processing"
+                        <!-- AUTO-COMPLETE DISPLAY FOR CANDIDATE: Show when candidate is selected -->
+                        <div 
+                            v-if="candidateMemberDetails" 
+                            class="bg-gradient-to-r from-red-50/40 to-orange-50/30 rounded-xl border border-red-100/60 p-4 flex items-center gap-3 animate-in slide-in-from-left-4"
                         >
-                            <Loader2 v-if="memberForm.processing" class="h-4 w-4 animate-spin" />
-                            <Send v-else class="h-4 w-4" />
-                            <span>Kirim Rekomendasi Calon</span>
-                        </button>
+                            <div class="h-12 w-12 rounded-full border border-red-200 overflow-hidden bg-zinc-100 flex items-center justify-center shrink-0">
+                                <img v-if="candidateMemberDetails.foto" :src="'/storage/' + candidateMemberDetails.foto" class="h-full w-full object-cover" />
+                                <Users v-else class="h-5 w-5 text-red-500" />
+                            </div>
+                            <div>
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-red-600 bg-red-100/50 px-1.5 py-0.5 rounded">Target Pencalonan</span>
+                                <h5 class="font-oswald text-sm font-bold text-zinc-800 uppercase mt-0.5">{{ candidateMemberDetails.nama_lengkap }}</h5>
+                                <p class="text-[10px] text-zinc-500 font-medium">KTA: {{ candidateMemberDetails.no_kartu }} | Chapter: {{ candidateMemberDetails.chapter }}<template v-if="candidateMemberDetails.checkpoint"> | Checkpoint: {{ candidateMemberDetails.checkpoint }}</template> | Status: {{ candidateMemberDetails.status_keanggotaan }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex justify-end pt-3 border-t border-zinc-100">
+                            <button 
+                                type="submit" 
+                                class="inline-flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider shadow-md shadow-red-200 transition-all disabled:opacity-45"
+                                :disabled="!candidateMemberDetails || !nominatorMemberDetails || memberForm.processing"
+                            >
+                                <Loader2 v-if="memberForm.processing" class="h-4 w-4 animate-spin" />
+                                <Send v-else class="h-4 w-4" />
+                                <span>Kirim Rekomendasi Calon</span>
+                            </button>
+                        </div>
                     </div>
                 </form>
 

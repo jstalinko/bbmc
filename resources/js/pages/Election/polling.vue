@@ -7,26 +7,27 @@ import {
     Info, 
     ArrowLeft,
     RefreshCw,
-    Activity,
     CheckCircle2
 } from 'lucide-vue-next';
 
+interface CandidateResult {
+    calon_id: number;
+    calon_name: string;
+    calon_foto: string | null;
+    total_vote: number;
+    percentage: number;
+}
+
 const props = defineProps<{
-    results: Array<{
-        calon_id: number;
-        calon_name: string;
-        calon_foto: string | null;
-        total_vote: number;
-        percentage: number;
-    }>;
+    results: Array<CandidateResult>;
     totalVotes: number;
 }>();
 
 const page = usePage();
 const flashMessage = ref<string | null>(page.props.flash?.message || null);
 
-// Auto-refresh mechanism: reload page properties every 5 seconds
-const countdown = ref(5);
+// Auto-refresh mechanism: reload page properties from server every 4 seconds
+const countdown = ref(4);
 const isRefreshing = ref(false);
 let timerId: any = null;
 
@@ -35,7 +36,7 @@ onMounted(() => {
         if (countdown.value > 1) {
             countdown.value--;
         } else {
-            countdown.value = 5;
+            countdown.value = 4;
             isRefreshing.value = true;
             router.reload({
                 only: ['results', 'totalVotes'],
@@ -95,10 +96,6 @@ const getCandidatePhoto = (foto: string | null) => {
             
             <!-- Hero Title Segment -->
             <div class="mb-10 text-center">
-                <div class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-red-600 shadow-sm">
-                    <Activity class="h-3 w-3 animate-pulse" />
-                    <span>Real-time Live Count</span>
-                </div>
                 <h1 class="font-bebas text-4xl sm:text-6xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-zinc-950 via-red-600 to-red-800 leading-none">
                     HASIL PERHITUNGAN SUARA SEMENTARA
                 </h1>
@@ -121,40 +118,27 @@ const getCandidatePhoto = (foto: string | null) => {
                 </div>
             </div>
 
-            <!-- Dashboard Summary Card (Total votes) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                <!-- Total Votes Card -->
-                <div class="rounded-2xl border border-red-100/60 bg-white p-6 shadow-xl shadow-red-100/20 flex flex-col justify-between relative overflow-hidden">
-                    <div class="absolute -right-4 -bottom-4 opacity-5 text-red-600">
-                        <Users class="h-32 w-32" />
+            <!-- Dashboard Summary Card (Total votes & Sync Status) -->
+            <div class="rounded-2xl border border-red-100/60 bg-white p-6 shadow-xl shadow-red-100/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 relative overflow-hidden">
+                <div class="absolute -right-4 -bottom-4 opacity-5 text-red-600 pointer-events-none">
+                    <Users class="h-32 w-32" />
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Suara Masuk</span>
+                    <div class="text-4xl font-black text-zinc-950 mt-1 font-mono tracking-tight flex items-baseline gap-2">
+                        <span>{{ totalVotes }}</span>
                     </div>
-                    <div>
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Suara Masuk</span>
-                        <div class="text-3xl font-black text-zinc-950 mt-1 font-mono tracking-tight">{{ totalVotes }}</div>
-                    </div>
-                    <p class="text-[10px] text-zinc-500 mt-4">Diperbarui secara real-time dari database pemilihan.</p>
                 </div>
 
-                <!-- Live Updates Status Card -->
-                <div class="rounded-2xl border border-red-100/60 bg-white p-6 shadow-xl shadow-red-100/20 flex flex-col justify-between">
-                    <div>
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Status Sinkronisasi</span>
-                        <div class="flex items-center gap-2 mt-2">
-                            <span class="relative flex h-2.5 w-2.5">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                            </span>
-                            <span class="text-xs font-bold text-zinc-800 uppercase tracking-wider">Live &amp; Aktif</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-zinc-500 mt-4 border-t border-red-50 pt-3">
-                        <span class="flex items-center gap-1.5">
+                <div class="flex flex-col sm:items-end justify-between gap-3 z-10">
+                    <div class="flex items-center gap-3 text-xs text-zinc-500">
+                        <span class="flex items-center gap-1.5 font-mono">
                             <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin text-red-500': isRefreshing }" />
-                            Memuat ulang dalam {{ countdown }}s
+                            <span>Sync server berikutnya dalam {{ countdown }}s</span>
                         </span>
                         <button 
-                            @click="() => { countdown = 5; router.reload(); }" 
-                            class="hover:text-red-600 transition-colors uppercase font-bold tracking-wider"
+                            @click="() => { countdown = 4; router.reload({ only: ['results', 'totalVotes'] }); }" 
+                            class="rounded-lg bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 transition-colors uppercase font-bold text-[11px] tracking-wider border border-red-100/80"
                         >
                             Segarkan
                         </button>
@@ -213,15 +197,15 @@ const getCandidatePhoto = (foto: string | null) => {
                                     </h4>
                                 </div>
                                 <div class="text-right">
-                                    <div class="text-lg font-black text-red-600 font-mono leading-none">{{ candidate.percentage }}%</div>
-                                    <div class="text-[10px] text-zinc-500 font-mono mt-0.5">{{ candidate.total_vote }} Suara</div>
+                                    <div class="text-lg font-black text-red-600 font-mono leading-none transition-all duration-300">{{ candidate.percentage }}%</div>
+                                    <div class="text-[10px] text-zinc-500 font-mono mt-0.5 transition-all duration-300">{{ candidate.total_vote }} Suara</div>
                                 </div>
                             </div>
 
                             <!-- Animated Custom Progress Bar -->
                             <div class="relative w-full h-3 rounded-full bg-zinc-100 overflow-hidden border border-zinc-200/80">
                                 <div 
-                                    class="h-full rounded-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-1000 ease-out relative"
+                                    class="h-full rounded-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-700 ease-out relative"
                                     :style="{ width: candidate.percentage + '%' }"
                                 >
                                     <!-- Shiny overlay on progress bar -->
@@ -230,16 +214,6 @@ const getCandidatePhoto = (foto: string | null) => {
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Notice segment -->
-            <div class="rounded-2xl border border-red-100 bg-white p-5 shadow-xl shadow-red-100/20 mt-8">
-                <div class="flex items-start gap-2.5 text-[10px] text-zinc-500 leading-relaxed">
-                    <Info class="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
-                    <p>
-                        Grafik ini merepresentasikan perhitungan suara sementara dari pemilih terdaftar Bikers Brotherhood MC Indonesia yang telah menyalurkan suaranya. Hasil ini bersifat dinamis dan akan terus diperbarui secara langsung saat pemilih baru selesai memberikan suaranya di bilik suara digital.
-                    </p>
                 </div>
             </div>
 
