@@ -91,13 +91,33 @@ class Polling extends Model
 
         $intervalSeconds = (int) env('POLLING_THROTTLE_INTERVAL', 10); // jeda detik per penambahan suara
 
+        $totalVoters = \Illuminate\Support\Facades\Cache::remember('polling_total_eligible_voters', 60, function () {
+            $currentYear = intval(date('Y'));
+            $cutoffYear = $currentYear - 10;
+            return \App\Models\Member::where(function($sq) {
+                $sq->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
+                   ->orWhereRaw('UPPER(status_keanggotaan) = ?', ['SS DIPONEGORO']);
+            })
+            ->where(function($pq) {
+                $pq->whereNull('penalty')
+                   ->orWhere('penalty', '')
+                   ->orWhere('penalty', 'clean');
+            })
+            ->whereNotNull('terdaftar_sejak')
+            ->where('terdaftar_sejak', '<=', $cutoffYear)
+            ->count();
+        });
+
         if (!$throttleEnabled || $realTotalVotes <= 0) {
             foreach ($realResults as &$res) {
                 $res['percentage'] = $realTotalVotes > 0 ? round(($res['total_vote'] / $realTotalVotes) * 100, 1) : 0;
             }
+            $percentageVoted = $totalVoters > 0 ? round(($realTotalVotes / $totalVoters) * 100, 1) : 0;
             return [
                 'results' => $realResults,
-                'totalVotes' => $realTotalVotes
+                'totalVotes' => $realTotalVotes,
+                'totalVoters' => $totalVoters,
+                'percentageVoted' => $percentageVoted
             ];
         }
 
@@ -198,9 +218,13 @@ class Polling extends Model
             ];
         }
 
+        $percentageVoted = $totalVoters > 0 ? round(($currentTotal / $totalVoters) * 100, 1) : 0;
+
         return [
             'results' => $formattedResults,
-            'totalVotes' => $currentTotal
+            'totalVotes' => $currentTotal,
+            'totalVoters' => $totalVoters,
+            'percentageVoted' => $percentageVoted
         ];
     }
 }

@@ -5,13 +5,11 @@ import {
     ShieldCheck, 
     UserCheck, 
     Users, 
-    Calendar, 
     Info, 
     CheckCircle2, 
     ChevronRight, 
     Award, 
     ArrowLeft, 
-    Sparkles, 
     Send, 
     Search,
     BookOpen,
@@ -55,7 +53,6 @@ const settings = computed(() => props.settings ?? {
 });
 
 // State management for interactive forms
-const showNominationOptions = ref(false);
 const activeForm = ref<'self' | 'member' | null>(null);
 const submissionSuccess = ref(false);
 const hasSubmittedThisSession = ref(false);
@@ -337,7 +334,12 @@ const selectForm = (type: 'self' | 'member') => {
         }
     }
     setTimeout(() => {
-        window.scrollTo({ top: 500, behavior: 'smooth' });
+        const formEl = document.getElementById('nomination-form-section');
+        if (formEl) {
+            formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.scrollTo({ top: 350, behavior: 'smooth' });
+        }
     }, 50);
 };
 
@@ -355,6 +357,31 @@ const closeAlert = () => {
     submissionSuccess.value = false;
     activeForm.value = null;
     flashMessage.value = '';
+};
+
+const selectedPhotoModal = ref<{
+    foto: string | null;
+    nama_lengkap: string;
+    no_kartu: string;
+    chapter: string;
+    status_keanggotaan: string;
+    title: string;
+} | null>(null);
+
+const openPhotoModal = (member: any, title = 'Foto Anggota') => {
+    if (!member || !member.foto) return;
+    selectedPhotoModal.value = {
+        foto: member.foto,
+        nama_lengkap: member.nama_lengkap,
+        no_kartu: member.no_kartu,
+        chapter: member.chapter,
+        status_keanggotaan: member.status_keanggotaan,
+        title
+    };
+};
+
+const closePhotoModal = () => {
+    selectedPhotoModal.value = null;
 };
 </script>
 
@@ -382,13 +409,13 @@ const closeAlert = () => {
                     <span class="text-xs font-bold uppercase tracking-wider hidden sm:inline">Kembali</span>
                 </Link>
                 
-                <div class="flex items-center gap-3">
-                    <img src="/bbmc-logo.png" class="h-8 w-auto filter drop-shadow" alt="Logo" />
-                    <span class="font-bebas text-lg tracking-wider text-red-600">BBMC ELECTION 2026</span>
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <img src="/bbmc-logo.png" class="h-7 sm:h-8 w-auto filter drop-shadow" alt="Logo" />
+                    <span class="font-bebas text-base sm:text-lg tracking-wider text-red-600">BBMC ELECTION 2026</span>
                 </div>
 
-                <div class="flex items-center gap-4">
-                    <div v-if="electionMember" class="flex items-center gap-3">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <div v-if="electionMember" class="flex items-center gap-2 sm:gap-3">
                         <div class="hidden md:flex flex-col items-end text-right">
                             <span class="text-xs font-bold text-zinc-800 uppercase leading-none">{{ electionMember.nama_lengkap }}</span>
                             <span class="text-[10px] text-zinc-500 font-semibold mt-1">KTA: {{ electionMember.no_kartu }} | {{ electionMember.chapter }}</span>
@@ -399,9 +426,10 @@ const closeAlert = () => {
                         </div>
                         <Link 
                             :href="route('election.dashboard')"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider transition-all border border-red-200"
+                            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider transition-all border border-red-200"
                         >
-                            <span>Dashboard Suara</span>
+                            <span class="hidden sm:inline">Dashboard Suara</span>
+                            <span class="sm:hidden">Dashboard</span>
                         </Link>
                         <button 
                             @click="handleLogout" 
@@ -423,18 +451,18 @@ const closeAlert = () => {
         </header>
 
         <!-- Main Body -->
-        <main class="relative z-10 mx-auto flex w-full max-w-5xl flex-col px-4 py-10 sm:px-6 lg:px-8">
+        <main class="relative z-10 mx-auto flex w-full max-w-5xl flex-col px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
             
             <!-- Hero Title Segment -->
-            <div class="mb-10 text-center">
-                <div class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-1 text-xs uppercase tracking-[0.2em] text-red-600 shadow-sm">
+            <div class="mb-6 sm:mb-10 text-center">
+                <div class="mb-2 sm:mb-3 inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-1 text-[10px] sm:text-xs uppercase tracking-[0.2em] text-red-600 shadow-sm">
                     <Award class="h-3.5 w-3.5 animate-bounce" />
                     <span>Pra-Election Portal</span>
                 </div>
-                <h1 class="font-bebas text-4xl sm:text-6xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-zinc-950 via-red-600 to-red-800">
+                <h1 class="font-bebas text-3xl sm:text-6xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-zinc-950 via-red-600 to-red-800 leading-tight sm:leading-normal">
                     EL PRESIDENTE BBMC INDONESIA
                 </h1>
-                <p class="mx-auto mt-2 max-w-lg text-xs tracking-[0.15em] text-zinc-600 font-semibold uppercase">
+                <p class="mx-auto mt-1 sm:mt-2 max-w-lg text-[11px] sm:text-xs tracking-[0.15em] text-zinc-600 font-semibold uppercase">
                     Masa Bakti Bhakti 2026 — 2030
                 </p>
                 <div class="mt-3 h-[2px] w-24 mx-auto bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
@@ -475,69 +503,17 @@ const closeAlert = () => {
                 </div>
             </div>
 
-            <!-- Timeline Tracker Section -->
-            <div class="bg-white rounded-2xl border border-red-100 p-6 shadow-xl shadow-red-100/40 mb-8">
-                <h2 class="font-oswald text-lg font-bold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Calendar class="h-5 w-5 text-red-600" />
-                    <span>Garis Waktu Pemilihan Presiden</span>
-                </h2>
-                
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-4 relative">
-                    <!-- Step 1 (Active) -->
-                    <div class="relative rounded-xl border border-red-200 bg-red-50/50 p-4 shadow-sm">
-                        <span class="absolute top-3 right-3 rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-bold text-white uppercase animate-pulse">Aktif</span>
-                        <span class="text-xs font-bold text-red-600">TAHAP 1</span>
-                        <h4 class="font-oswald text-sm font-bold text-zinc-950 uppercase mt-0.5">Pencalonan</h4>
-                        <p class="text-[11px] text-zinc-500 mt-1">Pengusulan dan pendaftaran bakal calon.</p>
-                    </div>
-
-                    <!-- Step 2 -->
-                    <div class="rounded-xl border border-zinc-100 bg-white p-4 shadow-sm">
-                        <span class="text-xs font-bold text-zinc-400">TAHAP 2</span>
-                        <h4 class="font-oswald text-sm font-semibold text-zinc-800 uppercase mt-0.5">Penetapan</h4>
-                        <p class="text-[11px] text-zinc-400 mt-1">Penetapan calon el presidente.</p>
-                    </div>
-
-                    <!-- Step 3 -->
-                    <div class="rounded-xl border border-zinc-100 bg-white p-4 shadow-sm">
-                        <span class="text-xs font-bold text-zinc-400">TAHAP 3</span>
-                        <h4 class="font-oswald text-sm font-semibold text-zinc-800 uppercase mt-0.5">Pemilihan</h4>
-                        <p class="text-[11px] text-zinc-400 mt-1">Pemilihan calon yang ditetapkan.</p>
-                    </div>
-
-                    <!-- Step 4 -->
-                    <div class="rounded-xl border border-zinc-100 bg-white p-4 shadow-sm">
-                        <span class="text-xs font-bold text-zinc-400">TAHAP 4</span>
-                        <h4 class="font-oswald text-sm font-semibold text-zinc-800 uppercase mt-0.5">Live Polling Hasil</h4>
-                        <p class="text-[11px] text-zinc-400 mt-1">Hasil perolehan suara waktu nyata.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Grand Action Button Container (Proses Bakal Calon dan Pencalonan) -->
-            <div class="text-center mb-8">
-                <button 
-                    @click="showNominationOptions = !showNominationOptions"
-                    class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-red-600 via-red-500 to-red-700 px-8 py-4 text-sm sm:text-base font-bold uppercase tracking-wider text-white shadow-lg shadow-red-200/80 transition-all duration-300 hover:scale-102 hover:shadow-xl hover:shadow-red-300/80 active:scale-98"
-                >
-                    <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <Sparkles class="h-5 w-5" />
-                    <span>Proses bakal calon dan pencalonan</span>
-                    <ChevronRight class="h-5 w-5 transition-transform duration-300" :class="{ 'rotate-90': showNominationOptions }" />
-                </button>
-            </div>
-
-            <!-- Expandable Nomination Panel containing the 2 requested cards -->
-            <div v-if="showNominationOptions" class="grid grid-cols-1 gap-6 sm:grid-cols-2 mb-8 transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
+            <!-- Nomination Cards Section (Directly displayed when no form is active) -->
+            <div v-if="!activeForm" class="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 mb-8 animate-in fade-in duration-300">
                 
                 <!-- Status Banner if already nominated -->
-                <div v-if="hasAlreadyNominated" class="col-span-1 sm:col-span-2 rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm flex items-start gap-4 animate-in fade-in">
+                <div v-if="hasAlreadyNominated" class="col-span-1 sm:col-span-2 rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start gap-3 sm:gap-4 animate-in fade-in">
                     <div class="rounded-xl bg-red-500/10 border border-red-500/20 p-2.5 text-red-600 shrink-0">
                         <CheckCircle2 class="h-6 w-6" />
                     </div>
                     <div>
                         <h4 class="font-oswald text-base font-bold text-zinc-900 uppercase">Hak Pengajuan Pencalonan Telah Digunakan</h4>
-                        <p class="text-xs text-zinc-600 mt-1 leading-relaxed">
+                        <p class="text-xs sm:text-sm text-zinc-600 mt-1 leading-relaxed">
                             <template v-if="props.userNomination">
                                 Anda (KTA: <strong class="font-mono text-red-600">{{ props.userNomination.diajukan_oleh === 'self' ? props.userNomination.no_kartu : (props.userNomination.no_kartu_diajukan_oleh || props.userNomination.no_kartu) }}</strong>) sudah melakukan pengajuan pencalonan dengan pilihan:
                                 <strong class="text-zinc-900">{{ props.userNomination.diajukan_oleh === 'self' ? 'Ajukan Diri Sebagai El Presidente (Self Nomination)' : 'Ajukan Anggota Sebagai El Presidente (Endorsement)' }}</strong>.
@@ -552,82 +528,82 @@ const closeAlert = () => {
 
                 <!-- Action 1: Ajukan Diri Sebagai El Presidente -->
                 <div 
-                    class="group flex flex-col justify-between rounded-2xl border p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
-                    :class="!settings.ajukan_diri || hasAlreadyNominated ? 'opacity-65 border-zinc-200' : (activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
+                    class="group flex flex-col justify-between rounded-2xl border p-5 sm:p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
+                    :class="!settings.ajukan_diri || hasAlreadyNominated ? 'opacity-65 border-zinc-200' : (activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400 hover:shadow-2xl hover:-translate-y-0.5')"
                 >
                     <div>
                         <div class="flex items-center justify-between">
-                            <div class="rounded-xl bg-red-50 border border-red-100 p-3 text-red-600">
+                            <div class="rounded-xl bg-red-50 border border-red-100 p-3 text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
                                 <UserCheck class="h-6 w-6" />
                             </div>
-                            <span class="rounded bg-red-600/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-red-500 border border-red-500/20">Self Nomination</span>
+                            <span class="rounded bg-red-600/10 px-2.5 py-0.5 font-mono text-[10px] sm:text-xs font-bold text-red-500 border border-red-500/20">Self Nomination</span>
                         </div>
                         
-                        <h3 class="font-oswald text-xl font-bold tracking-wide text-zinc-950 mt-4 uppercase">
+                        <h3 class="font-oswald text-lg sm:text-xl font-bold tracking-wide text-zinc-950 mt-4 uppercase">
                             Ajukan Diri Sebagai El Presidente
                         </h3>
-                        <p class="text-xs leading-relaxed text-zinc-500 mt-2">
+                        <p class="text-xs sm:text-sm leading-relaxed text-zinc-500 mt-2">
                             Daftarkan diri Anda secara resmi sebagai bakal calon presiden (Khusus Life Member &amp; SS Diponegoro dengan masa keanggotaan minimal 10 tahun dan status Clean/tanpa penalty). Profil anggota Anda akan otomatis dimuat dan diverifikasi.
                         </p>
                     </div>
 
-                    <div v-if="!settings.ajukan_diri" class="mt-6 w-full text-center py-2.5 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
+                    <div v-if="!settings.ajukan_diri" class="mt-6 w-full text-center py-2.5 sm:py-3 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
                         Pendaftaran Mandiri Ditutup
                     </div>
-                    <div v-else-if="hasAlreadyNominated" class="mt-6 w-full text-center py-2.5 bg-red-100/60 text-red-600 text-xs font-bold uppercase rounded-xl border border-red-200 cursor-not-allowed">
+                    <div v-else-if="hasAlreadyNominated" class="mt-6 w-full text-center py-2.5 sm:py-3 bg-red-100/60 text-red-600 text-xs font-bold uppercase rounded-xl border border-red-200 cursor-not-allowed">
                         Hak Pengajuan Telah Digunakan
                     </div>
                     <button 
                         v-else
                         @click="selectForm('self')"
-                        class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white"
+                        class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white active:scale-[0.98]"
                     >
                         <span>Mulai Pendaftaran Mandiri</span>
-                        <ChevronRight class="h-3.5 w-3.5" />
+                        <ChevronRight class="h-4 w-4" />
                     </button>
                 </div>
 
                 <!-- Action 2: Ajukan Anggota Sebagai El Presidente -->
                 <div 
-                    class="group flex flex-col justify-between rounded-2xl border p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
-                    :class="!settings.ajukan_anggota || hasAlreadyNominated ? 'opacity-65 border-zinc-200' : (activeForm === 'member' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400')"
+                    class="group flex flex-col justify-between rounded-2xl border p-5 sm:p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
+                    :class="!settings.ajukan_anggota || hasAlreadyNominated ? 'opacity-65 border-zinc-200' : (activeForm === 'member' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400 hover:shadow-2xl hover:-translate-y-0.5')"
                 >
                     <div>
                         <div class="flex items-center justify-between">
-                            <div class="rounded-xl bg-red-50 border border-red-100 p-3 text-red-600">
+                            <div class="rounded-xl bg-red-50 border border-red-100 p-3 text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
                                 <Users class="h-6 w-6" />
                             </div>
-                            <span class="rounded bg-red-600/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-red-500 border border-red-500/20">Endorsement</span>
+                            <span class="rounded bg-red-600/10 px-2.5 py-0.5 font-mono text-[10px] sm:text-xs font-bold text-red-500 border border-red-500/20">Endorsement</span>
                         </div>
                         
-                        <h3 class="font-oswald text-xl font-bold tracking-wide text-zinc-950 mt-4 uppercase">
+                        <h3 class="font-oswald text-lg sm:text-xl font-bold tracking-wide text-zinc-950 mt-4 uppercase">
                             Ajukan Anggota Sebagai El Presidente
                         </h3>
-                        <p class="text-xs leading-relaxed text-zinc-500 mt-2">
+                        <p class="text-xs sm:text-sm leading-relaxed text-zinc-500 mt-2">
                             Calonkan saudara (Life Member / SS Diponegoro terdaftar minimal 10 tahun dan berstatus Clean/tanpa penalty) yang Anda nilai layak. Semua status member (berstatus Clean) dapat mengajukan rekomendasi ini.
                         </p>
                     </div>
 
-                    <div v-if="!settings.ajukan_anggota" class="mt-6 w-full text-center py-2.5 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
+                    <div v-if="!settings.ajukan_anggota" class="mt-6 w-full text-center py-2.5 sm:py-3 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200">
                         Rekomendasi Saudara Ditutup
                     </div>
-                    <div v-else-if="hasAlreadyNominated" class="mt-6 w-full text-center py-2.5 bg-red-100/60 text-red-600 text-xs font-bold uppercase rounded-xl border border-red-200 cursor-not-allowed">
+                    <div v-else-if="hasAlreadyNominated" class="mt-6 w-full text-center py-2.5 sm:py-3 bg-red-100/60 text-red-600 text-xs font-bold uppercase rounded-xl border border-red-200 cursor-not-allowed">
                         Hak Pengajuan Telah Digunakan
                     </div>
                     <button 
                         v-else
                         @click="selectForm('member')"
-                        class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white"
+                        class="mt-6 w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-50 px-4 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-red-600 transition-all hover:bg-red-600 hover:text-white active:scale-[0.98]"
                     >
                         <span>Rekomendasikan Saudara</span>
-                        <ChevronRight class="h-3.5 w-3.5" />
+                        <ChevronRight class="h-4 w-4" />
                     </button>
                 </div>
 
             </div>
 
             <!-- Dynamic Input Forms based on selection -->
-            <div v-if="showNominationOptions && activeForm" class="bg-white rounded-2xl border border-red-200 p-6 shadow-xl shadow-red-100/50 mb-8 animate-in fade-in zoom-in-95 duration-200">
+            <div v-if="activeForm" id="nomination-form-section" class="bg-white rounded-2xl border border-red-200 p-4 sm:p-6 shadow-xl shadow-red-100/50 mb-8 animate-in fade-in zoom-in-95 duration-200 scroll-mt-6">
                 
                 <!-- OTP Modal -->
                 <div v-if="showOtpModal" class="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50">
@@ -654,13 +630,66 @@ const closeAlert = () => {
                     </div>
                 </div>
 
-                <!-- Form Header -->
-                <div class="border-b border-red-100 pb-4 mb-4 flex items-center justify-between">
-                    <h3 class="font-oswald text-lg font-bold text-zinc-950 uppercase tracking-wide flex items-center gap-2">
-                        <BookOpen class="h-5 w-5 text-red-600" />
-                        <span>{{ activeForm === 'self' ? 'Formulir Pengajuan Diri Calon Presiden' : 'Formulir Rekomendasi Calon Presiden' }}</span>
-                    </h3>
-                    <button @click="activeForm = null" class="text-xs font-bold uppercase text-zinc-400 hover:text-red-600 px-2 py-1 transition-colors">Batal</button>
+                <!-- Photo Modal (Enlarge Photo View) -->
+                <div v-if="selectedPhotoModal" class="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-[100] p-4 animate-in fade-in duration-200">
+                    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-zinc-100 flex flex-col relative animate-in zoom-in-95 duration-200">
+                        <!-- Header / Title -->
+                        <div class="p-4 sm:p-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/80">
+                            <div class="flex items-center gap-2">
+                                <span class="rounded bg-red-600/10 px-2 py-0.5 font-mono text-[10px] font-bold text-red-600 border border-red-500/20 uppercase">{{ selectedPhotoModal.title }}</span>
+                            </div>
+                            <button @click="closePhotoModal" type="button" class="rounded-full p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 transition-colors">
+                                <X class="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <!-- Photo Display -->
+                        <div class="p-6 bg-zinc-950 flex items-center justify-center relative min-h-[260px] max-h-[60vh]">
+                            <img 
+                                v-if="selectedPhotoModal.foto" 
+                                :src="'/storage/' + selectedPhotoModal.foto" 
+                                class="max-h-[50vh] w-auto object-contain rounded-xl shadow-lg mx-auto" 
+                                alt="Foto Anggota Diperbesar"
+                            />
+                        </div>
+
+                        <!-- Details Below Photo -->
+                        <div class="p-5 bg-white text-center sm:text-left space-y-2">
+                            <h4 class="font-oswald text-xl font-bold text-zinc-950 uppercase tracking-wide">
+                                {{ selectedPhotoModal.nama_lengkap }}
+                            </h4>
+                            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 text-xs">
+                                <span class="rounded bg-zinc-100 px-2 py-0.5 font-mono font-bold text-zinc-800 border border-zinc-200">KTA: {{ selectedPhotoModal.no_kartu }}</span>
+                                <span class="rounded bg-zinc-100 px-2 py-0.5 font-semibold text-zinc-800 border border-zinc-200">Chapter: {{ selectedPhotoModal.chapter }}</span>
+                                <span class="rounded bg-red-50 px-2 py-0.5 font-bold text-red-600 border border-red-200">Status: {{ selectedPhotoModal.status_keanggotaan }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Modal Action -->
+                        <div class="p-4 border-t border-zinc-100 bg-zinc-50 flex justify-end">
+                            <button @click="closePhotoModal" type="button" class="px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 transition-colors">
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Header with Back Button -->
+                <div class="border-b border-red-100 pb-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <button 
+                            @click="activeForm = null" 
+                            type="button"
+                            class="group inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white text-xs font-bold uppercase tracking-wider transition-all border border-red-200 shadow-sm shrink-0"
+                        >
+                            <ArrowLeft class="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                            <span>Kembali ke Menu</span>
+                        </button>
+                        <h3 class="font-oswald text-base sm:text-lg font-bold text-zinc-950 uppercase tracking-wide flex items-center gap-2">
+                            <BookOpen class="h-5 w-5 text-red-600 shrink-0" />
+                            <span>{{ activeForm === 'self' ? 'Formulir Pengajuan Diri Calon Presiden' : 'Formulir Rekomendasi Calon Presiden' }}</span>
+                        </h3>
+                    </div>
                 </div>
 
                 <div class="mb-5 rounded-xl bg-red-50/70 border border-red-100 p-3.5 flex items-start gap-2.5 text-xs text-zinc-600">
@@ -698,30 +727,58 @@ const closeAlert = () => {
                         </p>
                     </div>
 
-                    <!-- AUTO-COMPLETE DISPLAY: Show when member is fetched successfully -->
+                    <!-- AUTO-COMPLETE DISPLAY: Profile Card with Centered Photo for Self Nomination -->
                     <div 
                         v-if="selfMemberDetails" 
-                        class="bg-gradient-to-r from-red-50/50 to-orange-50/40 rounded-xl border border-red-100 p-4 flex flex-col sm:flex-row items-center gap-4 animate-in slide-in-from-left-4"
+                        class="bg-gradient-to-b from-red-50/80 via-white to-red-50/30 rounded-3xl border-2 border-red-200/80 p-6 flex flex-col items-center text-center shadow-lg shadow-red-100/50 animate-in zoom-in-95 duration-300 relative overflow-hidden"
                     >
-                        <div class="h-16 w-16 shrink-0 rounded-full border-2 border-red-200 overflow-hidden bg-zinc-100 shadow-inner flex items-center justify-center">
-                            <img 
-                                v-if="selfMemberDetails.foto" 
-                                :src="'/storage/' + selfMemberDetails.foto" 
-                                class="h-full w-full object-cover" 
-                                alt="Foto Member" 
-                            />
-                            <UserCheck v-else class="h-8 w-8 text-red-400" />
+                        <span class="inline-block rounded-full bg-red-600/10 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-red-600 border border-red-500/20 mb-4">
+                            Pendaftar Mandiri Terverifikasi
+                        </span>
+
+                        <!-- Centered Circular Photo with Hover/Click Enlarge Overlay -->
+                        <div 
+                            class="relative group cursor-pointer" 
+                            @click="selfMemberDetails.foto && openPhotoModal(selfMemberDetails, 'Foto Pendaftar Mandiri')"
+                        >
+                            <div class="h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-zinc-100 flex items-center justify-center relative ring-4 ring-red-500/20 group-hover:ring-red-500/40 transition-all duration-300 mx-auto">
+                                <img 
+                                    v-if="selfMemberDetails.foto" 
+                                    :src="'/storage/' + selfMemberDetails.foto" 
+                                    class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                                    alt="Foto Member" 
+                                />
+                                <UserCheck v-else class="h-14 w-14 text-red-400" />
+                            </div>
+                            
+                            <!-- Enlarge photo badge overlay -->
+                            <div v-if="selfMemberDetails.foto" class="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200">
+                                <Search class="h-6 w-6 mb-1" />
+                                <span class="text-[10px] font-bold uppercase tracking-wider">Perbesar</span>
+                            </div>
                         </div>
-                        <div class="flex-1 text-center sm:text-left">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-red-600 bg-red-100/60 px-2 py-0.5 rounded border border-red-200">
-                                Anggota Terverifikasi
-                            </span>
-                            <h4 class="font-oswald text-lg font-bold text-zinc-900 uppercase mt-1">
+
+                        <!-- Candidate Details -->
+                        <div class="mt-4 space-y-2 w-full">
+                            <h4 class="font-oswald text-xl sm:text-2xl font-bold text-zinc-950 uppercase tracking-wide">
                                 {{ selfMemberDetails.nama_lengkap }}
+                                <span v-if="selfMemberDetails.nama_panggilan" class="block sm:inline text-base font-normal text-zinc-500">({{ selfMemberDetails.nama_panggilan }})</span>
                             </h4>
-                            <p class="text-xs text-zinc-500 font-semibold mt-0.5">
-                                KTA: {{ selfMemberDetails.no_kartu }} | Chapter: {{ selfMemberDetails.chapter }}<template v-if="selfMemberDetails.checkpoint"> | Checkpoint: {{ selfMemberDetails.checkpoint }}</template> | Status: {{ selfMemberDetails.status_keanggotaan }}
-                            </p>
+                            
+                            <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+                                <span class="rounded-lg bg-zinc-100 px-2.5 py-1 font-mono text-xs font-bold text-zinc-800 border border-zinc-200">
+                                    KTA: {{ selfMemberDetails.no_kartu }}
+                                </span>
+                                <span class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
+                                    Chapter: {{ selfMemberDetails.chapter }}
+                                </span>
+                                <span v-if="selfMemberDetails.checkpoint" class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
+                                    Checkpoint: {{ selfMemberDetails.checkpoint }}
+                                </span>
+                                <span class="rounded-lg bg-red-100/80 px-2.5 py-1 text-xs font-bold text-red-700 border border-red-200">
+                                    Status: {{ selfMemberDetails.status_keanggotaan }}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -836,19 +893,58 @@ const closeAlert = () => {
                             </div>
                         </div>
 
-                        <!-- AUTO-COMPLETE DISPLAY FOR CANDIDATE: Show when candidate is selected -->
+                        <!-- AUTO-COMPLETE DISPLAY FOR CANDIDATE: Profile Card with Centered Photo -->
                         <div 
                             v-if="candidateMemberDetails" 
-                            class="bg-gradient-to-r from-red-50/40 to-orange-50/30 rounded-xl border border-red-100/60 p-4 flex items-center gap-3 animate-in slide-in-from-left-4"
+                            class="bg-gradient-to-b from-red-50/80 via-white to-orange-50/30 rounded-3xl border-2 border-red-200/80 p-6 flex flex-col items-center text-center shadow-lg shadow-red-100/50 animate-in zoom-in-95 duration-300 relative overflow-hidden"
                         >
-                            <div class="h-12 w-12 rounded-full border border-red-200 overflow-hidden bg-zinc-100 flex items-center justify-center shrink-0">
-                                <img v-if="candidateMemberDetails.foto" :src="'/storage/' + candidateMemberDetails.foto" class="h-full w-full object-cover" />
-                                <Users v-else class="h-5 w-5 text-red-500" />
+                            <span class="inline-block rounded-full bg-red-600/10 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-red-600 border border-red-500/20 mb-4">
+                                Target Pencalonan (Calon Presiden)
+                            </span>
+
+                            <!-- Centered Circular Photo with Hover/Click Enlarge Overlay -->
+                            <div 
+                                class="relative group cursor-pointer" 
+                                @click="candidateMemberDetails.foto && openPhotoModal(candidateMemberDetails, 'Foto Target Pencalonan')"
+                            >
+                                <div class="h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-zinc-100 flex items-center justify-center relative ring-4 ring-red-500/20 group-hover:ring-red-500/40 transition-all duration-300 mx-auto">
+                                    <img 
+                                        v-if="candidateMemberDetails.foto" 
+                                        :src="'/storage/' + candidateMemberDetails.foto" 
+                                        class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                                        alt="Foto Target Pencalonan" 
+                                    />
+                                    <Users v-else class="h-14 w-14 text-red-400" />
+                                </div>
+                                
+                                <!-- Enlarge photo badge overlay -->
+                                <div v-if="candidateMemberDetails.foto" class="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200">
+                                    <Search class="h-6 w-6 mb-1" />
+                                    <span class="text-[10px] font-bold uppercase tracking-wider">Perbesar</span>
+                                </div>
                             </div>
-                            <div>
-                                <span class="text-[9px] font-bold uppercase tracking-wider text-red-600 bg-red-100/50 px-1.5 py-0.5 rounded">Target Pencalonan</span>
-                                <h5 class="font-oswald text-sm font-bold text-zinc-800 uppercase mt-0.5">{{ candidateMemberDetails.nama_lengkap }}</h5>
-                                <p class="text-[10px] text-zinc-500 font-medium">KTA: {{ candidateMemberDetails.no_kartu }} | Chapter: {{ candidateMemberDetails.chapter }}<template v-if="candidateMemberDetails.checkpoint"> | Checkpoint: {{ candidateMemberDetails.checkpoint }}</template> | Status: {{ candidateMemberDetails.status_keanggotaan }}</p>
+
+                            <!-- Candidate Details -->
+                            <div class="mt-4 space-y-2 w-full">
+                                <h4 class="font-oswald text-xl sm:text-2xl font-bold text-zinc-950 uppercase tracking-wide">
+                                    {{ candidateMemberDetails.nama_lengkap }}
+                                    <span v-if="candidateMemberDetails.nama_panggilan" class="block sm:inline text-base font-normal text-zinc-500">({{ candidateMemberDetails.nama_panggilan }})</span>
+                                </h4>
+                                
+                                <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+                                    <span class="rounded-lg bg-zinc-100 px-2.5 py-1 font-mono text-xs font-bold text-zinc-800 border border-zinc-200">
+                                        KTA: {{ candidateMemberDetails.no_kartu }}
+                                    </span>
+                                    <span class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
+                                        Chapter: {{ candidateMemberDetails.chapter }}
+                                    </span>
+                                    <span v-if="candidateMemberDetails.checkpoint" class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
+                                        Checkpoint: {{ candidateMemberDetails.checkpoint }}
+                                    </span>
+                                    <span class="rounded-lg bg-red-100/80 px-2.5 py-1 text-xs font-bold text-red-700 border border-red-200">
+                                        Status: {{ candidateMemberDetails.status_keanggotaan }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 

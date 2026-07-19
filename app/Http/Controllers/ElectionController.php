@@ -314,7 +314,9 @@ class ElectionController extends Controller
 
         return Inertia::render('Election/polling', [
             'results' => $throttled['results'],
-            'totalVotes' => $throttled['totalVotes']
+            'totalVotes' => $throttled['totalVotes'],
+            'totalVoters' => $throttled['totalVoters'] ?? 0,
+            'percentageVoted' => $throttled['percentageVoted'] ?? 0
         ]);
     }
 
@@ -769,7 +771,9 @@ class ElectionController extends Controller
 
         return Inertia::render('Election/polling', [
             'results' => $throttled['results'],
-            'totalVotes' => $throttled['totalVotes']
+            'totalVotes' => $throttled['totalVotes'],
+            'totalVoters' => $throttled['totalVoters'] ?? 0,
+            'percentageVoted' => $throttled['percentageVoted'] ?? 0
         ]);
     }
 
