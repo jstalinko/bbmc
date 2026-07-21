@@ -30,7 +30,7 @@ class CandidateController extends Controller
 
         $query = Calon::with('member')
             ->whereIn('id', $groupedIds)
-            ->orderBy('created_at', 'desc');
+            ->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC, created_at DESC');
 
         $candidates = $query->paginate(10)->withQueryString();
 
@@ -65,14 +65,23 @@ class CandidateController extends Controller
     public function updateStatus(Request $request, Calon $calon)
     {
         $validated = $request->validate([
-            'status' => 'required|in:mengajukan,diajukan,ditetapkan,ditolak',
+            'status' => 'nullable|in:mengajukan,diajukan,ditetapkan,ditolak',
+            'no_urut' => 'nullable|integer',
         ]);
 
-        Calon::where('member_id', $calon->member_id)->update([
-            'status' => $validated['status'],
-        ]);
+        $updateData = [];
+        if (!empty($validated['status'])) {
+            $updateData['status'] = $validated['status'];
+        }
+        if ($request->has('no_urut')) {
+            $updateData['no_urut'] = $validated['no_urut'] !== '' && $validated['no_urut'] !== null ? (int)$validated['no_urut'] : null;
+        }
 
-        return back()->with('success', 'Status calon berhasil diperbarui.');
+        if (!empty($updateData)) {
+            Calon::where('member_id', $calon->member_id)->update($updateData);
+        }
+
+        return back()->with('success', 'Data calon berhasil diperbarui.');
     }
 
     public function destroy(Calon $calon)

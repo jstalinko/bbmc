@@ -18,6 +18,7 @@ class Member extends Model
         'no_wa',
         'email',
         'profesi',
+        'jabatan',
         'foto',
         'no_kartu',
         'status_keanggotaan',

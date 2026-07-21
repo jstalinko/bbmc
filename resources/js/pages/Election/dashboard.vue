@@ -79,8 +79,8 @@ const getCandidatePhoto = (c: any) => {
         </div>
 
         <!-- Navigation Bar -->
-        <header class="relative z-10 w-full border-b border-red-100 bg-white/60 backdrop-blur-md px-4 py-3 sm:px-6 lg:px-8">
-            <div class="mx-auto flex max-w-7xl items-center justify-between">
+        <header class="relative z-10 w-full border-b border-red-100 bg-white/60 backdrop-blur-md py-4 sm:py-6">
+            <div class="mx-auto flex w-full max-w-full px-4 sm:px-8 lg:px-12 items-center justify-between">
                 <Link :href="route('election.portal')" class="flex items-center gap-2 group text-zinc-600 hover:text-red-600 transition-colors">
                     <span class="text-xs font-bold uppercase tracking-wider">Pencalonan Portal</span>
                 </Link>
@@ -113,7 +113,7 @@ const getCandidatePhoto = (c: any) => {
         </header>
 
         <!-- Main Body -->
-        <main class="relative z-10 mx-auto flex w-full max-w-5xl flex-col px-4 py-10 sm:px-6 lg:px-8">
+        <main class="relative z-10 mx-auto flex w-full max-w-full flex-col px-4 py-10 sm:px-8 lg:px-12">
             
             <!-- Hero Title Segment -->
             <div class="mb-10 text-center">
@@ -122,12 +122,9 @@ const getCandidatePhoto = (c: any) => {
                     <span>Election Dashboard</span>
                 </div>
                 <h1 class="font-bebas text-4xl sm:text-6xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-zinc-950 via-red-600 to-red-800">
-                    CALON EL PRESIDENTE TERPILIH
+                    CALON EL PRESIDENTE
                 </h1>
-                <p class="mx-auto mt-2 max-w-lg text-xs tracking-[0.15em] text-zinc-600 font-semibold uppercase">
-                    Salurkan Suara Anda Untuk Masa Bakti 2026 — 2030
-                </p>
-                <div class="mt-3 h-[2px] w-24 mx-auto bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
+                <div class="mt-4 h-[2px] w-24 mx-auto bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
             </div>
 
             <!-- SUCCESS DIALOG ALERT MODAL -->
@@ -166,55 +163,60 @@ const getCandidatePhoto = (c: any) => {
                     </p>
                 </div>
 
-                <!-- Grid of Candidates -->
-                <div v-else class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 justify-center">
+                <!-- Inline Horizontal of Candidates (Fit all on mobile without scroll) -->
+                <div v-else class="flex flex-row flex-nowrap items-stretch justify-center gap-2 sm:gap-8 w-full pb-6 px-1">
                     <div 
                         v-for="candidate in candidates" 
                         :key="candidate.id" 
-                        class="group flex flex-col items-center justify-between rounded-2xl border border-red-100/60 bg-white p-6 shadow-xl shadow-red-100/20 hover:border-red-500 hover:shadow-red-200/30 transition-all duration-300 relative overflow-hidden"
+                        class="group flex flex-col items-center justify-between rounded-xl sm:rounded-2xl border border-red-100/60 bg-white p-2.5 sm:p-6 shadow-xl shadow-red-100/20 hover:border-red-500 hover:shadow-red-200/30 transition-all duration-300 relative overflow-hidden min-w-0 flex-1 sm:min-w-[340px] max-w-2xl"
                         :class="{ 'border-green-500 bg-green-50/20 shadow-green-100/30': hasVoted && votedCalonId === candidate.id }"
                     >
                         <!-- Candidate Card Info -->
-                        <div class="flex flex-col items-center text-center w-full py-4">
+                        <div class="flex flex-col items-center text-center w-full py-1 sm:py-4">
+                            <!-- Nomor Urut Badge -->
+                            <div v-if="candidate.no_urut" class="mb-2 sm:mb-4 inline-flex items-center gap-1 rounded-full bg-amber-500 text-white px-2 sm:px-3.5 py-0.5 sm:py-1 font-mono text-[8px] sm:text-xs font-bold shadow-md uppercase tracking-wider">
+                                <span>No. Urut #{{ candidate.no_urut }}</span>
+                            </div>
+
                             <!-- Large Circle Photo -->
-                            <div class="h-32 w-32 shrink-0 rounded-full border-4 border-white shadow-xl overflow-hidden bg-zinc-100 flex items-center justify-center relative transition-transform duration-300 group-hover:scale-105"
-                                :class="hasVoted && votedCalonId === candidate.id ? 'ring-4 ring-green-500/30' : 'ring-4 ring-red-500/10 group-hover:ring-red-500/30'">
+                            <div class="h-16 w-16 sm:h-32 sm:w-32 shrink-0 rounded-full border-2 sm:border-4 border-white shadow-md sm:shadow-xl overflow-hidden bg-zinc-100 flex items-center justify-center relative transition-transform duration-300 group-hover:scale-105"
+                                :class="hasVoted && votedCalonId === candidate.id ? 'ring-2 sm:ring-4 ring-green-500/30' : 'ring-2 sm:ring-4 ring-red-500/10 group-hover:ring-red-500/30'">
                                 <img 
                                     v-if="getCandidatePhoto(candidate)" 
                                     :src="getCandidatePhoto(candidate)" 
                                     class="h-full w-full object-cover" 
                                     alt="Foto Calon" 
                                 />
-                                <div v-else class="h-full w-full flex items-center justify-center text-4xl font-black text-red-600 bg-red-50">
+                                <div v-else class="h-full w-full flex items-center justify-center text-xl sm:text-4xl font-black text-red-600 bg-red-50">
                                     {{ candidate.member?.nama_lengkap?.charAt(0) || 'C' }}
                                 </div>
                                 <!-- Active Selection Overlay -->
                                 <div v-if="hasVoted && votedCalonId === candidate.id" class="absolute inset-0 bg-green-950/40 flex items-center justify-center text-white backdrop-blur-[2px]">
-                                    <CheckCircle2 class="h-10 w-10 text-green-400 stroke-[2.5]" />
+                                    <CheckCircle2 class="h-6 w-6 sm:h-10 sm:w-10 text-green-400 stroke-[2.5]" />
                                 </div>
                             </div>
 
                             <!-- Names & Info -->
-                            <div class="mt-5">
-                                <h4 class="font-oswald text-xl font-bold text-zinc-950 uppercase leading-tight tracking-wide">
+                            <div class="mt-2 sm:mt-5">
+                                <h4 class="font-oswald text-xs sm:text-xl font-bold text-zinc-950 uppercase leading-tight tracking-wide line-clamp-2 break-words">
                                     {{ candidate.member?.nama_lengkap }}
                                 </h4>
-                                <p class="text-xs text-red-600 font-semibold mt-1 uppercase tracking-wider">
+                                <p class="text-[9px] sm:text-xs text-red-600 font-semibold mt-0.5 sm:mt-1 uppercase tracking-wider line-clamp-1 break-words">
                                     "{{ candidate.member?.nama_panggilan || '—' }}"
                                 </p>
-                                <div class="mt-3 flex items-center justify-center gap-2 text-[10px] font-mono text-zinc-500">
-                                    <span class="bg-zinc-100 px-2 py-0.5 rounded border">KTA: {{ candidate.no_kartu }}</span>
-                                    <span class="bg-zinc-100 px-2 py-0.5 rounded border">{{ candidate.chapter }}</span>
+                                <div class="mt-1.5 sm:mt-3 flex flex-wrap items-center justify-center gap-1 sm:gap-2 text-[8px] sm:text-[10px] font-mono text-zinc-500">
+                                    <span class="bg-zinc-100 px-1 sm:px-2 py-0.5 rounded border">KTA: {{ candidate.no_kartu }}</span>
+                                    <span class="bg-zinc-100 px-1 sm:px-2 py-0.5 rounded border">{{ candidate.chapter }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Vote Action Button -->
-                        <div class="w-full mt-4 border-t border-zinc-100/80 pt-4">
+                        <div class="w-full mt-2 sm:mt-4 border-t border-zinc-100/80 pt-2 sm:pt-4">
                             <button 
                                 @click="handleVote(candidate)" 
                                 :disabled="hasVoted || isVoting"
-                                class="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold uppercase tracking-wider shadow-md transition-all duration-200"
+                                class="w-full flex items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl py-2 sm:py-3 text-[9px] sm:text-xs font-bold uppercase tracking-wider shadow-md transition-all duration-200"
                                 :class="[
                                     hasVoted 
                                         ? (votedCalonId === candidate.id 
@@ -223,8 +225,8 @@ const getCandidatePhoto = (c: any) => {
                                         : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-red-200'
                                 ]"
                             >
-                                <Heart class="h-4 w-4" :class="{ 'animate-pulse text-red-300': isVoting && !hasVoted, 'fill-white': hasVoted && votedCalonId === candidate.id }" />
-                                <span>
+                                <Heart class="h-3 w-3 sm:h-4 sm:w-4 shrink-0" :class="{ 'animate-pulse text-red-300': isVoting && !hasVoted, 'fill-white': hasVoted && votedCalonId === candidate.id }" />
+                                <span class="line-clamp-1 break-words">
                                     {{ isVoting 
                                         ? 'Memproses...' 
                                         : (hasVoted 
@@ -237,22 +239,11 @@ const getCandidatePhoto = (c: any) => {
                     </div>
                 </div>
             </div>
-
-            <!-- Footer Notice -->
-            <div class="rounded-2xl border border-red-100 bg-white p-6 shadow-xl shadow-red-100/40 mt-8">
-                <div class="flex items-start gap-2.5 text-xs text-zinc-500">
-                    <Info class="h-4.5 w-4.5 text-red-500 mt-0.5 shrink-0" />
-                    <p class="leading-relaxed">
-                        Proses pemungutan suara ini diawasi ketat dan dijalankan secara mandiri, langsung, umum, bebas, rahasia, jujur, dan adil oleh **Panitia Pemilihan Dewan Adat BBMC Indonesia**. Suara Anda sah hanya jika diverifikasi menggunakan nomor kartu terdaftar.
-                    </p>
-                </div>
-            </div>
-
         </main>
 
         <!-- Footer Segment -->
         <footer class="relative z-10 w-full border-t border-red-100 bg-white/40 py-8 backdrop-blur-md">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="mx-auto w-full max-w-full px-4 sm:px-8 lg:px-12">
                 <div class="flex flex-col items-center text-center">
                     <span class="font-bebas text-xs sm:text-sm tracking-[0.25em] text-zinc-400 select-none">Bikers Brotherhood MC Indonesia</span>
                     <span class="font-bebas text-xl sm:text-2xl tracking-[0.15em] text-red-600 font-bold mt-2">

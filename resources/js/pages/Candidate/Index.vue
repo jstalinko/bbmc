@@ -46,30 +46,41 @@ function closeView() { viewTarget.value = null; }
 // ── Status Change Modal ───────────────────────────────────────────────────────
 const statusTarget = ref(null);
 const pendingStatus = ref('');
+const pendingNoUrut = ref('');
 const isUpdatingStatus = ref(false);
 
 function confirmStatusChange(candidate, status) {
     viewTarget.value = null;
     statusTarget.value = candidate;
     pendingStatus.value = status;
+    pendingNoUrut.value = candidate.no_urut !== null && candidate.no_urut !== undefined ? candidate.no_urut : '';
+}
+
+function openEditNoUrut(candidate) {
+    statusTarget.value = candidate;
+    pendingStatus.value = candidate.status;
+    pendingNoUrut.value = candidate.no_urut !== null && candidate.no_urut !== undefined ? candidate.no_urut : '';
 }
 
 function closeStatusConfirm() {
     statusTarget.value = null;
     pendingStatus.value = '';
+    pendingNoUrut.value = '';
 }
 
 function submitStatusChange() {
     if (!statusTarget.value) return;
     isUpdatingStatus.value = true;
     router.put(`/dashboard/candidate/${statusTarget.value.id}`, {
-        status: pendingStatus.value
+        status: pendingStatus.value || statusTarget.value.status,
+        no_urut: pendingNoUrut.value !== '' ? pendingNoUrut.value : null,
     }, {
         onSuccess: () => {
             isUpdatingStatus.value = false;
             // Update the viewTarget details if it's currently open
             if (viewTarget.value && viewTarget.value.id === statusTarget.value.id) {
-                viewTarget.value.status = pendingStatus.value;
+                viewTarget.value.status = pendingStatus.value || statusTarget.value.status;
+                viewTarget.value.no_urut = pendingNoUrut.value !== '' ? pendingNoUrut.value : null;
             }
             closeStatusConfirm();
         },
@@ -259,12 +270,17 @@ function getCandidatePhoto(c) {
 
                             <!-- Status Badge -->
                             <TableCell>
-                                <Badge
-                                    variant="outline"
-                                    :class="['whitespace-nowrap text-xs font-semibold px-2 py-0.5', statusBadgeClass(candidate.status)]"
-                                >
-                                    {{ getStatusLabel(candidate.status) }}
-                                </Badge>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <Badge
+                                        variant="outline"
+                                        :class="['whitespace-nowrap text-xs font-semibold px-2 py-0.5', statusBadgeClass(candidate.status)]"
+                                    >
+                                        {{ getStatusLabel(candidate.status) }}
+                                    </Badge>
+                                    <Badge v-if="candidate.no_urut" class="bg-amber-500 text-white font-mono font-bold text-xs px-2 py-0.5 shadow-sm">
+                                        No. {{ candidate.no_urut }}
+                                    </Badge>
+                                </div>
                             </TableCell>
 
                             <!-- Actions -->
@@ -285,6 +301,18 @@ function getCandidatePhoto(c) {
                                         @click="confirmStatusChange(candidate, 'ditetapkan')"
                                     >
                                         <Check class="h-4 w-4" />
+                                    </Button>
+
+                                    <!-- Ubah No Urut jika sudah ditetapkan -->
+                                    <Button
+                                        v-if="candidate.status === 'ditetapkan'"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="h-8 w-8 hover:bg-amber-500/10 text-amber-600 hover:text-amber-700 font-mono font-bold text-xs"
+                                        title="Ubah Nomor Urut"
+                                        @click="openEditNoUrut(candidate)"
+                                    >
+                                        #
                                     </Button>
 
                                     <!-- Tolak -->
@@ -383,9 +411,14 @@ function getCandidatePhoto(c) {
                 <div class="relative -mt-8 mx-4 mb-4 rounded-xl bg-card border shadow-md px-5 py-4 space-y-4">
                     <!-- Status Badge -->
                     <div class="flex items-center justify-between">
-                        <Badge variant="outline" :class="['text-xs font-bold px-3 py-1', statusBadgeClass(viewTarget?.status)]">
-                            {{ getStatusLabel(viewTarget?.status) }}
-                        </Badge>
+                        <div class="flex items-center gap-2">
+                            <Badge variant="outline" :class="['text-xs font-bold px-3 py-1', statusBadgeClass(viewTarget?.status)]">
+                                {{ getStatusLabel(viewTarget?.status) }}
+                            </Badge>
+                            <Badge v-if="viewTarget?.no_urut" class="bg-amber-500 text-white font-mono font-bold text-xs px-2.5 py-1">
+                                No. Urut: {{ viewTarget.no_urut }}
+                            </Badge>
+                        </div>
                         <span class="text-xs text-muted-foreground">Diajukan: {{ viewTarget?.created_at ? new Date(viewTarget.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) : '—' }}</span>
                     </div>
 
@@ -474,18 +507,28 @@ function getCandidatePhoto(c) {
         <Dialog :open="!!statusTarget" @update:open="(v) => { if (!v) closeStatusConfirm() }">
             <DialogContent class="max-w-sm rounded-2xl">
                 <DialogHeader>
-                    <DialogTitle class="flex items-center gap-2" :class="pendingStatus === 'ditetapkan' ? 'text-green-600' : 'text-red-600'">
-                        <UserCheck v-if="pendingStatus === 'ditetapkan'" class="h-5 w-5" />
+                    <DialogTitle class="flex items-center gap-2" :class="pendingStatus === 'ditetapkan' || statusTarget?.status === 'ditetapkan' ? 'text-green-600' : 'text-red-600'">
+                        <UserCheck v-if="pendingStatus === 'ditetapkan' || statusTarget?.status === 'ditetapkan'" class="h-5 w-5" />
                         <AlertTriangle v-else class="h-5 w-5" />
-                        Konfirmasi Perubahan Status
+                        Konfirmasi Perubahan Status & No. Urut
                     </DialogTitle>
                     <DialogDescription class="mt-2 text-sm">
-                        Apakah Anda yakin ingin mengubah status pengajuan calon
+                        Apakah Anda yakin ingin mengatur status pengajuan calon
                         <span class="font-semibold text-foreground">{{ statusTarget?.member?.nama_lengkap }}</span> menjadi
-                        <span class="font-bold" :class="pendingStatus === 'ditetapkan' ? 'text-green-600' : 'text-red-600'">
+                        <span class="font-bold" :class="pendingStatus === 'ditetapkan' || statusTarget?.status === 'ditetapkan' ? 'text-green-600' : 'text-red-600'">
                             {{ getStatusLabel(pendingStatus) }}
                         </span>?
                     </DialogDescription>
+                    <div v-if="pendingStatus === 'ditetapkan' || statusTarget?.status === 'ditetapkan'" class="mt-4 pt-4 border-t space-y-2 text-left">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-amber-600">Nomor Urut Calon (No. Urut)</label>
+                        <Input 
+                            v-model="pendingNoUrut" 
+                            type="number" 
+                            placeholder="Contoh: 1" 
+                            class="font-mono font-bold text-base"
+                        />
+                        <p class="text-[11px] text-muted-foreground">Masukkan nomor urut calon resmi saat ditetapkan agar tampil berurutan di Dashboard & Polling.</p>
+                    </div>
                 </DialogHeader>
                 <DialogFooter class="mt-4 flex gap-2">
                     <Button variant="outline" class="flex-1" @click="closeStatusConfirm" :disabled="isUpdatingStatus">Batal</Button>

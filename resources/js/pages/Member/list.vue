@@ -242,6 +242,34 @@ function submitEditPenalty() {
     });
 }
 
+// ── Edit Jabatan Modal ───────────────────────────────────────────────────────
+const editJabatanTarget = ref(null);
+const editJabatanForm = ref({ jabatan: '' });
+const editJabatanErrors = ref({});
+const isEditingJabatan = ref(false);
+
+function openEditJabatan(member) {
+    editJabatanTarget.value = member;
+    editJabatanForm.value = {
+        jabatan: member.jabatan || '',
+    };
+    editJabatanErrors.value = {};
+}
+function closeEditJabatan() { editJabatanTarget.value = null; }
+function submitEditJabatan() {
+    if (!editJabatanTarget.value) return;
+    isEditingJabatan.value = true;
+    editJabatanErrors.value = {};
+    const data = new FormData();
+    data.append('_method', 'PUT');
+    data.append('jabatan', editJabatanForm.value.jabatan || '');
+    router.post(`/dashboard/member/${editJabatanTarget.value.id}/jabatan`, data, {
+        forceFormData: true,
+        onSuccess: () => { isEditingJabatan.value = false; closeEditJabatan(); },
+        onError: (errs) => { isEditingJabatan.value = false; editJabatanErrors.value = errs; },
+    });
+}
+
 
 // ── Delete Dialog ────────────────────────────────────────────────────────────
 const deleteTarget = ref(null);
@@ -396,6 +424,17 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             </TableHead>
                             <TableHead
                                 class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
+                                @click="toggleSort('jabatan')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <span>Jabatan</span>
+                                    <ArrowUp v-if="sortBy === 'jabatan' && sortDir === 'asc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowDown v-else-if="sortBy === 'jabatan' && sortDir === 'desc'" class="h-3.5 w-3.5 text-red-600" />
+                                    <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                class="text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors"
                                 @click="toggleSort('chapter')"
                             >
                                 <div class="flex items-center gap-1">
@@ -444,7 +483,7 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
 
                     <TableBody>
                         <!-- Empty -->
-                        <TableEmpty v-if="members.data.length === 0" :colspan="11">
+                        <TableEmpty v-if="members.data.length === 0" :colspan="12">
                             <div class="flex flex-col items-center gap-2 py-12 text-muted-foreground">
                                 <Users class="h-10 w-10 opacity-30" />
                                 <p class="font-medium text-sm">Tidak ada data anggota</p>
@@ -528,6 +567,22 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                                 </div>
                                 <div v-if="member.penalty_reason" class="text-[11px] text-muted-foreground mt-0.5 max-w-[180px] truncate" :title="member.penalty_reason">
                                     {{ member.penalty_reason }}
+                                </div>
+                            </TableCell>
+
+                            <!-- Jabatan -->
+                            <TableCell>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-medium" :class="member.jabatan ? 'text-foreground' : 'text-muted-foreground'">
+                                        {{ member.jabatan || '—' }}
+                                    </span>
+                                    <button 
+                                        @click="openEditJabatan(member)" 
+                                        class="text-muted-foreground hover:text-amber-500 transition-colors p-0.5 shrink-0"
+                                        title="Edit Jabatan"
+                                    >
+                                        <Pencil class="h-3.5 w-3.5" />
+                                    </button>
                                 </div>
                             </TableCell>
 
@@ -689,6 +744,10 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                                 {{ viewTarget?.no_wa || '—' }}
                             </a>
                         </div>
+                        <div v-if="viewTarget?.jabatan">
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Jabatan</p>
+                            <p class="font-semibold mt-0.5 text-amber-600 dark:text-amber-400">{{ viewTarget.jabatan }}</p>
+                        </div>
                         <div v-if="viewTarget?.penalty_reason" class="col-span-2">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Alasan Penalty</p>
                             <p class="font-semibold mt-0.5 text-red-600 dark:text-red-400">{{ viewTarget.penalty_reason }}</p>
@@ -794,6 +853,12 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                     <div>
                         <label class="el">Profesi</label>
                         <input v-model="editForm.profesi" class="ei"/>
+                    </div>
+                    <!-- Jabatan -->
+                    <div>
+                        <label class="el">Jabatan</label>
+                        <input v-model="editForm.jabatan" placeholder="Contoh: Officer, Checkpoint Master..." class="ei"/>
+                        <p v-if="editErrors.jabatan" class="ee">{{ editErrors.jabatan }}</p>
                     </div>
                     <!-- No Kartu -->
                     <div>
@@ -986,6 +1051,49 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
                         {{ isEditingPenalty ? 'Menyimpan...' : 'Simpan' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ═══ EDIT JABATAN DIALOG ═══ -->
+        <Dialog :open="!!editJabatanTarget" @update:open="(v) => { if (!v) closeEditJabatan() }">
+            <DialogContent class="max-w-sm rounded-2xl">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-amber-600">
+                        <Pencil class="h-4 w-4" /> Edit Jabatan
+                    </DialogTitle>
+                    <DialogDescription class="text-xs">
+                        Ubah jabatan untuk <span class="font-semibold text-foreground">{{ editJabatanTarget?.nama_lengkap }}</span>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <!-- Error banner -->
+                <div v-if="Object.keys(editJabatanErrors).length" class="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 space-y-1">
+                    <p class="font-semibold">Terdapat kesalahan:</p>
+                    <p v-for="(err, k) in editJabatanErrors" :key="k">• {{ err }}</p>
+                </div>
+
+                <div class="py-3">
+                    <label class="el">Jabatan</label>
+                    <input
+                        v-model="editJabatanForm.jabatan"
+                        placeholder="Contoh: Officer, Checkpoint Master..."
+                        class="ei"
+                        :class="editJabatanErrors.jabatan?'border-red-400':''"
+                        @keyup.enter="submitEditJabatan"
+                    />
+                    <p v-if="editJabatanErrors.jabatan" class="ee">{{ editJabatanErrors.jabatan }}</p>
+                </div>
+
+                <DialogFooter class="flex gap-2">
+                    <Button variant="outline" class="flex-1" @click="closeEditJabatan" :disabled="isEditingJabatan">Batal</Button>
+                    <Button class="flex-1 bg-amber-500 hover:bg-amber-600 text-white" :disabled="isEditingJabatan" @click="submitEditJabatan">
+                        <svg v-if="isEditingJabatan" class="mr-1.5 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        {{ isEditingJabatan ? 'Menyimpan...' : 'Simpan' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

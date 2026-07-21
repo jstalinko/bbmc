@@ -12,6 +12,7 @@ import {
 
 interface CandidateResult {
     calon_id: number;
+    no_urut?: number | null;
     calon_name: string;
     calon_foto: string | null;
     total_vote: number;
@@ -74,9 +75,9 @@ const getCandidatePhoto = (foto: string | null) => {
             <div class="absolute inset-0 bg-[linear-gradient(rgba(220,38,38,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(220,38,38,0.012)_1px,transparent_1px)] bg-[size:32px_32px]"></div>
         </div>
 
-        <!-- Header -->
-        <header class="relative z-10 w-full border-b border-red-100 bg-white/60 backdrop-blur-md px-4 py-4 sm:px-6 lg:px-8">
-            <div class="mx-auto flex max-w-7xl items-center justify-between">
+        <!-- Header / Nav -->
+        <header class="relative z-10 w-full border-b border-red-100/60 bg-white/80 backdrop-blur-md py-4 sm:py-6">
+            <div class="mx-auto flex w-full max-w-full px-4 sm:px-8 lg:px-12 items-center justify-between">
                 <Link :href="route('election.portal')" class="flex items-center gap-2 group text-zinc-600 hover:text-red-600 transition-colors text-xs font-bold uppercase tracking-wider">
                     <ArrowLeft class="h-4 w-4" />
                     <span>Portal</span>
@@ -94,7 +95,7 @@ const getCandidatePhoto = (foto: string | null) => {
         </header>
 
         <!-- Main Body -->
-        <main class="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 py-10 sm:px-6 lg:px-8">
+        <main class="relative z-10 mx-auto flex w-full max-w-full flex-col px-4 py-10 sm:px-8 lg:px-12">
             
             <!-- Hero Title Segment -->
             <div class="mb-10 text-center">
@@ -137,7 +138,7 @@ const getCandidatePhoto = (foto: string | null) => {
                         </div>
 
                         <div>
-                            <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Pemilih Layak</span>
+                            <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Pemilih</span>
                             <div class="text-3xl sm:text-4xl font-black text-red-600 mt-1 font-mono tracking-tight">
                                 {{ totalVoters || 0 }} <span class="text-xs sm:text-sm font-bold text-zinc-400 uppercase font-sans">Anggota</span>
                             </div>
@@ -170,7 +171,7 @@ const getCandidatePhoto = (foto: string | null) => {
                 <div class="mt-5 pt-4 border-t border-zinc-100/80 flex items-center gap-2 text-[11px] text-zinc-500 font-medium relative z-10">
                     <Info class="h-4 w-4 text-red-500 shrink-0" />
                     <span>
-                        <strong>Persyaratan Hak Pilih:</strong> Anggota berstatus <strong>LIFE MEMBER (≥ 10 Tahun)</strong> &amp; <strong>SS DIPONEGORO</strong> dengan status <strong>CLEAN / NO PENALTY</strong>.
+                        <strong>Persyaratan Hak Pilih:</strong> Seluruh Anggota BBMC Indonesia dengan status <strong>CLEAN / NO PENALTY</strong>.
                     </span>
                 </div>
             </div>
@@ -197,51 +198,56 @@ const getCandidatePhoto = (foto: string | null) => {
                     </p>
                 </div>
 
-                <!-- Candidate Results Grid (2 Columns on Mobile, 3 on Desktop) -->
-                <div v-else class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+                <!-- Candidate Results Inline Horizontal (Fit all on mobile without scroll) -->
+                <div v-else class="flex flex-row flex-nowrap items-stretch justify-center gap-2 sm:gap-8 w-full pb-6 px-1">
                     <div 
                         v-for="candidate in results" 
                         :key="candidate.calon_id" 
-                        class="group flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-red-100/80 bg-white p-3.5 sm:p-6 hover:border-red-500/80 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden shadow-xl shadow-red-100/30"
+                        class="group flex flex-col justify-between rounded-xl sm:rounded-3xl border border-red-100/80 bg-white p-2.5 sm:p-8 hover:border-red-500/80 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden shadow-xl shadow-red-100/30 min-w-0 flex-1 sm:min-w-[340px] max-w-2xl"
                     >
                         <!-- Top: Profile Photo & Name -->
                         <div class="flex flex-col items-center text-center">
-                            <div class="h-20 w-20 sm:h-28 sm:w-28 shrink-0 rounded-full border-2 sm:border-4 border-white shadow-md sm:shadow-lg overflow-hidden bg-zinc-100 flex items-center justify-center relative ring-2 sm:ring-4 ring-red-500/15 group-hover:ring-red-500/30 transition-all duration-300">
+                            <div class="h-14 w-14 sm:h-28 sm:w-28 shrink-0 rounded-full border-2 sm:border-4 border-white shadow-md sm:shadow-lg overflow-hidden bg-zinc-100 flex items-center justify-center relative ring-2 sm:ring-4 ring-red-500/15 group-hover:ring-red-500/30 transition-all duration-300">
                                 <img 
                                     v-if="getCandidatePhoto(candidate.calon_foto)" 
                                     :src="getCandidatePhoto(candidate.calon_foto)" 
                                     class="h-full w-full object-cover" 
                                     alt="Foto Calon" 
                                 />
-                                <div v-else class="h-full w-full flex items-center justify-center text-2xl sm:text-4xl font-black text-red-600 bg-red-50 font-oswald">
+                                <div v-else class="h-full w-full flex items-center justify-center text-xl sm:text-4xl font-black text-red-600 bg-red-50 font-oswald">
                                     {{ candidate.calon_name.charAt(0) }}
                                 </div>
                             </div>
 
-                            <span class="mt-2.5 sm:mt-4 inline-block rounded-full bg-red-50 px-2 sm:px-3 py-0.5 font-mono text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-red-600 border border-red-100">
-                                Calon El Presidente
-                            </span>
+                            <div class="mt-1.5 sm:mt-4 flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap">
+                                <span class="inline-block rounded-full bg-red-50 px-1.5 sm:px-3 py-0.5 font-mono text-[7px] sm:text-[10px] font-bold uppercase tracking-wider text-red-600 border border-red-100">
+                                    Calon
+                                </span>
+                                <span v-if="candidate.no_urut" class="inline-block rounded-full bg-amber-500 text-white px-1.5 sm:px-3 py-0.5 font-mono text-[7px] sm:text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                                    No. #{{ candidate.no_urut }}
+                                </span>
+                            </div>
 
-                            <h4 class="font-oswald text-sm sm:text-xl font-bold text-zinc-950 uppercase tracking-wide group-hover:text-red-600 transition-colors mt-1.5 sm:mt-2 line-clamp-2 min-h-[2.5rem] sm:min-h-[3.5rem] flex items-center justify-center leading-tight sm:leading-normal">
+                            <h4 class="font-oswald text-xs sm:text-xl font-bold text-zinc-950 uppercase tracking-wide group-hover:text-red-600 transition-colors mt-1 sm:mt-2 line-clamp-2 min-h-[2rem] sm:min-h-[3.5rem] flex items-center justify-center leading-tight sm:leading-normal break-words">
                                 {{ candidate.calon_name }}
                             </h4>
                         </div>
 
                         <!-- Bottom: Vote Percentage, Count & Progress Bar -->
-                        <div class="mt-3 sm:mt-6 pt-3 sm:pt-5 border-t border-zinc-100 space-y-2 sm:space-y-3">
-                            <div class="flex items-baseline justify-between text-zinc-600">
-                                <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">Perolehan</span>
-                                <span class="font-mono text-[11px] sm:text-sm font-bold text-zinc-800">{{ candidate.total_vote }} Suara</span>
+                        <div class="mt-2 sm:mt-6 pt-2 sm:pt-5 border-t border-zinc-100 space-y-1.5 sm:space-y-3">
+                            <div class="flex flex-col sm:flex-row items-center sm:items-baseline justify-between text-zinc-600 gap-0.5 sm:gap-0">
+                                <span class="text-[8px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">Perolehan</span>
+                                <span class="font-mono text-[9px] sm:text-sm font-bold text-zinc-800">{{ candidate.total_vote }} Suara</span>
                             </div>
 
-                            <div class="text-center py-0.5 sm:py-1">
-                                <div class="text-2xl sm:text-4xl font-black text-red-600 font-mono leading-none tracking-tight">
+                            <div class="text-center py-0 sm:py-1">
+                                <div class="text-lg sm:text-4xl font-black text-red-600 font-mono leading-none tracking-tight">
                                     {{ candidate.percentage }}%
                                 </div>
                             </div>
 
                             <!-- Animated Progress Bar -->
-                            <div class="relative w-full h-2 sm:h-3 rounded-full bg-zinc-100 overflow-hidden border border-zinc-200/80">
+                            <div class="relative w-full h-1.5 sm:h-3 rounded-full bg-zinc-100 overflow-hidden border border-zinc-200/80">
                                 <div 
                                     class="h-full rounded-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-700 ease-out relative"
                                     :style="{ width: candidate.percentage + '%' }"
@@ -258,7 +264,7 @@ const getCandidatePhoto = (foto: string | null) => {
 
         <!-- Footer -->
         <footer class="relative z-10 w-full border-t border-red-100 bg-white py-8">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="mx-auto w-full max-w-full px-4 sm:px-8 lg:px-12">
                 <div class="flex flex-col items-center text-center">
                     <span class="font-bebas text-xs sm:text-sm tracking-[0.25em] text-zinc-400 select-none">Bikers Brotherhood MC Indonesia</span>
                     <span class="font-bebas text-lg sm:text-xl tracking-[0.15em] text-red-600 font-bold mt-2">

@@ -113,6 +113,10 @@
                 <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Profesi</div>
                 <div class="text-sm font-semibold text-gray-800">{{ member.profesi }}</div>
               </div>
+              <div class="px-5 py-3.5" v-if="member.jabatan">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Jabatan</div>
+                <div class="text-sm font-semibold text-amber-600">{{ member.jabatan }}</div>
+              </div>
               <div class="px-5 py-3.5" v-else-if="member.terdaftar_sejak">
                 <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Terdaftar Sejak</div>
                 <div class="text-sm font-semibold text-gray-800">{{ member.terdaftar_sejak }}</div>
@@ -212,6 +216,7 @@ const props = defineProps<{
     no_wa: string
     email?: string
     profesi?: string
+    jabatan?: string
     foto?: string
     no_kartu?: string
     status_keanggotaan: string

@@ -37,6 +37,7 @@ class MemberController extends Controller
             'no_wa'             => 'required|string|max:20|unique:members,no_wa',
             'email'             => 'nullable|email|max:255',
             'profesi'           => 'nullable|string|max:255',
+            'jabatan'           => 'nullable|string|max:255',
             'foto'              => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'no_kartu'          => 'required|digits:4|numeric|max:1500|unique:members,no_kartu',
             'status_keanggotaan'=> 'required|in:SS DIPONEGORO,LIFE MEMBER,HONORARY,VIRGIN,PROSPECT',
@@ -108,7 +109,8 @@ class MemberController extends Controller
                   ->orWhere('no_wa', 'like', "%{$search}%")
                   ->orWhere('chapter', 'like', "%{$search}%")
                   ->orWhere('status_keanggotaan', 'like', "%{$search}%")
-                  ->orWhere('checkpoint', 'like', "%{$search}%");
+                  ->orWhere('checkpoint', 'like', "%{$search}%")
+                  ->orWhere('jabatan', 'like', "%{$search}%");
             });
         }
 
@@ -125,7 +127,7 @@ class MemberController extends Controller
                   ->where('terdaftar_sejak', '>=', $cutoffYear);
         }
 
-        $allowedSorts = ['no_kartu', 'chapter', 'checkpoint', 'terdaftar_sejak', 'created_at', 'penalty'];
+        $allowedSorts = ['no_kartu', 'chapter', 'checkpoint', 'terdaftar_sejak', 'created_at', 'penalty', 'jabatan'];
         $sortBy = $request->input('sort_by');
         $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
@@ -224,6 +226,7 @@ class MemberController extends Controller
                 'No. WA',
                 'Email',
                 'Profesi',
+                'Jabatan',
                 'Status Keanggotaan',
                 'Chapter',
                 'Checkpoint',
@@ -246,6 +249,7 @@ class MemberController extends Controller
                     $m->no_wa,
                     $m->email ?? '—',
                     $m->profesi ?? '—',
+                    $m->jabatan ?? '—',
                     $m->status_keanggotaan,
                     $m->chapter,
                     $m->checkpoint ?? '—',
@@ -341,6 +345,7 @@ class MemberController extends Controller
             'no_wa'              => 'required|string|max:20|unique:members,no_wa,' . $member->id,
             'email'              => 'nullable|email|max:255',
             'profesi'            => 'nullable|string|max:255',
+            'jabatan'            => 'nullable|string|max:255',
             'foto'               => 'nullable|image|mimes:jpg,jpeg,png,webp,heic,heif,gif,bmp,HEIC,HEIF,GIF,BMP|max:5120',
             'no_kartu'           => 'nullable|digits:4|unique:members,no_kartu,' . $member->id,
             'status_keanggotaan' => 'required|in:SS DIPONEGORO,LIFE MEMBER,HONORARY,VIRGIN,PROSPECT',
@@ -401,6 +406,19 @@ class MemberController extends Controller
         $member->update($validated);
 
         return back()->with('success', 'Status penalty anggota berhasil diperbarui.');
+    }
+
+    public function updateJabatan(Request $request, Member $member)
+    {
+        $validated = $request->validate([
+            'jabatan' => 'nullable|string|max:255',
+        ], [
+            'jabatan.max' => 'Jabatan maksimal 255 karakter.',
+        ]);
+
+        $member->update($validated);
+
+        return back()->with('success', 'Jabatan anggota berhasil diperbarui.');
     }
 
     public function destroy(Member $member)

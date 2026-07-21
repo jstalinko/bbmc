@@ -63,6 +63,10 @@ const hasAlreadyNominated = computed(() => {
     return Boolean(props.userNomination || hasSubmittedThisSession.value);
 });
 
+const isElPresidente = computed(() => {
+    return electionMember.value && electionMember.value.jabatan && electionMember.value.jabatan.trim().toLowerCase() === 'el presidente';
+});
+
 // Autocomplete States for Self-Nomination
 const selfCardQuery = ref('');
 const selfMemberDetails = ref<any>(null);
@@ -325,6 +329,7 @@ const handleMemberSubmit = () => {
 
 const selectForm = (type: 'self' | 'member') => {
     if (hasAlreadyNominated.value) return;
+    if (type === 'self' && isElPresidente.value) return;
     activeForm.value = type;
     if (electionMember.value && electionMember.value.no_kartu) {
         if (type === 'self' && !selfCardQuery.value) {
@@ -414,39 +419,7 @@ const closePhotoModal = () => {
                     <span class="font-bebas text-base sm:text-lg tracking-wider text-red-600">BBMC ELECTION 2026</span>
                 </div>
 
-                <div class="flex items-center gap-2 sm:gap-4">
-                    <div v-if="electionMember" class="flex items-center gap-2 sm:gap-3">
-                        <div class="hidden md:flex flex-col items-end text-right">
-                            <span class="text-xs font-bold text-zinc-800 uppercase leading-none">{{ electionMember.nama_lengkap }}</span>
-                            <span class="text-[10px] text-zinc-500 font-semibold mt-1">KTA: {{ electionMember.no_kartu }} | {{ electionMember.chapter }}</span>
-                        </div>
-                        <div class="h-8 w-8 rounded-full border border-red-200 overflow-hidden bg-zinc-100 flex items-center justify-center shrink-0">
-                            <img v-if="electionMember.foto" :src="'/storage/' + electionMember.foto" class="h-full w-full object-cover" />
-                            <UserCheck v-else class="h-4 w-4 text-red-500" />
-                        </div>
-                        <Link 
-                            :href="route('election.dashboard')"
-                            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider transition-all border border-red-200"
-                        >
-                            <span class="hidden sm:inline">Dashboard Suara</span>
-                            <span class="sm:hidden">Dashboard</span>
-                        </Link>
-                        <button 
-                            @click="handleLogout" 
-                            title="Log Keluar"
-                            class="p-2 rounded-xl hover:bg-red-50 text-zinc-500 hover:text-red-600 transition-all"
-                        >
-                            <LogOut class="h-4.5 w-4.5" />
-                        </button>
-                    </div>
-                    <Link 
-                        v-else 
-                        :href="route('election.login')" 
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-all"
-                    >
-                        <span>Login</span>
-                    </Link>
-                </div>
+                <div class="w-16 hidden sm:block"></div>
             </div>
         </header>
 
@@ -529,7 +502,7 @@ const closePhotoModal = () => {
                 <!-- Action 1: Ajukan Diri Sebagai El Presidente -->
                 <div 
                     class="group flex flex-col justify-between rounded-2xl border p-5 sm:p-6 transition-all duration-300 bg-white shadow-xl shadow-red-100/40"
-                    :class="!settings.ajukan_diri || hasAlreadyNominated ? 'opacity-65 border-zinc-200' : (activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400 hover:shadow-2xl hover:-translate-y-0.5')"
+                    :class="!settings.ajukan_diri || hasAlreadyNominated || isElPresidente ? 'opacity-65 border-zinc-200' : (activeForm === 'self' ? 'border-red-600 ring-2 ring-red-100' : 'border-red-100 hover:border-red-400 hover:shadow-2xl hover:-translate-y-0.5')"
                 >
                     <div>
                         <div class="flex items-center justify-between">
@@ -552,6 +525,9 @@ const closePhotoModal = () => {
                     </div>
                     <div v-else-if="hasAlreadyNominated" class="mt-6 w-full text-center py-2.5 sm:py-3 bg-red-100/60 text-red-600 text-xs font-bold uppercase rounded-xl border border-red-200 cursor-not-allowed">
                         Hak Pengajuan Telah Digunakan
+                    </div>
+                    <div v-else-if="isElPresidente" class="mt-6 w-full text-center py-2.5 sm:py-3 bg-zinc-100 text-zinc-500 text-xs font-bold uppercase rounded-xl border border-zinc-200 cursor-not-allowed">
+                        Jabatan El Presidente Tidak Bisa Mengajukan Diri
                     </div>
                     <button 
                         v-else
@@ -775,6 +751,9 @@ const closePhotoModal = () => {
                                 <span v-if="selfMemberDetails.checkpoint" class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
                                     Checkpoint: {{ selfMemberDetails.checkpoint }}
                                 </span>
+                                <span v-if="selfMemberDetails.region" class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
+                                    Region: {{ selfMemberDetails.region }}
+                                </span>
                                 <span class="rounded-lg bg-red-100/80 px-2.5 py-1 text-xs font-bold text-red-700 border border-red-200">
                                     Status: {{ selfMemberDetails.status_keanggotaan }}
                                 </span>
@@ -836,7 +815,7 @@ const closePhotoModal = () => {
                             <div>
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100/80 px-1.5 py-0.5 rounded border border-green-200">Pengusul Terverifikasi &amp; Layak</span>
                                 <h5 class="font-oswald text-sm font-bold text-zinc-900 uppercase mt-1">{{ nominatorMemberDetails.nama_lengkap }} <span class="text-xs font-mono text-zinc-500 font-normal">({{ nominatorMemberDetails.no_kartu }})</span></h5>
-                                <p class="text-[10px] text-zinc-600 font-medium">Chapter: {{ nominatorMemberDetails.chapter }} | Status: {{ nominatorMemberDetails.status_keanggotaan }}</p>
+                                <p class="text-[10px] text-zinc-600 font-medium">Chapter: {{ nominatorMemberDetails.chapter }}<template v-if="nominatorMemberDetails.region"> | Region: {{ nominatorMemberDetails.region }}</template> | Status: {{ nominatorMemberDetails.status_keanggotaan }}</p>
                             </div>
                         </div>
                     </div>
@@ -887,7 +866,7 @@ const closePhotoModal = () => {
                                             {{ m.nama_lengkap }}
                                             <span v-if="m.nama_panggilan" class="text-xs text-zinc-500 font-normal">({{ m.nama_panggilan }})</span>
                                         </span>
-                                        <span class="block text-[10px] text-zinc-500 mt-0.5">KTA: {{ m.no_kartu }} | Chapter: {{ m.chapter }}<template v-if="m.checkpoint"> | Checkpoint: {{ m.checkpoint }}</template> | Status: {{ m.status_keanggotaan }}</span>
+                                        <span class="block text-[10px] text-zinc-500 mt-0.5">KTA: {{ m.no_kartu }} | Chapter: {{ m.chapter }}<template v-if="m.checkpoint"> | Checkpoint: {{ m.checkpoint }}</template><template v-if="m.region"> | Region: {{ m.region }}</template> | Status: {{ m.status_keanggotaan }}</span>
                                     </div>
                                 </button>
                             </div>
@@ -940,6 +919,9 @@ const closePhotoModal = () => {
                                     </span>
                                     <span v-if="candidateMemberDetails.checkpoint" class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
                                         Checkpoint: {{ candidateMemberDetails.checkpoint }}
+                                    </span>
+                                    <span v-if="candidateMemberDetails.region" class="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 border border-zinc-200">
+                                        Region: {{ candidateMemberDetails.region }}
                                     </span>
                                     <span class="rounded-lg bg-red-100/80 px-2.5 py-1 text-xs font-bold text-red-700 border border-red-200">
                                         Status: {{ candidateMemberDetails.status_keanggotaan }}

@@ -52,11 +52,12 @@ class Polling extends Model
 
     public function resultVotes()
     {
-        $calons = Calon::with('member')->where('status', 'ditetapkan')->get()->unique('member_id')->values();
+        $calons = Calon::with('member')->where('status', 'ditetapkan')->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC, id ASC')->get()->unique('member_id')->values();
         $result = [];
         foreach ($calons as $calon) {
             $result[] = [
                 'calon_id' => $calon->id,
+                'no_urut' => $calon->no_urut,
                 'calon_name' => $calon->member ? $calon->member->nama_lengkap : 'Unknown',
                 'calon_foto' => $calon->foto_calon,
                 'total_vote' => $this->totalVoteByMember($calon->member_id),
@@ -91,21 +92,12 @@ class Polling extends Model
 
         $intervalSeconds = (int) env('POLLING_THROTTLE_INTERVAL', 10); // jeda detik per penambahan suara
 
-        $totalVoters = \Illuminate\Support\Facades\Cache::remember('polling_total_eligible_voters', 60, function () {
-            $currentYear = intval(date('Y'));
-            $cutoffYear = $currentYear - 10;
-            return \App\Models\Member::where(function($sq) {
-                $sq->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
-                   ->orWhereRaw('UPPER(status_keanggotaan) = ?', ['SS DIPONEGORO']);
-            })
-            ->where(function($pq) {
+        $totalVoters = \Illuminate\Support\Facades\Cache::remember('polling_total_voters_clean', 60, function () {
+            return \App\Models\Member::where(function($pq) {
                 $pq->whereNull('penalty')
                    ->orWhere('penalty', '')
                    ->orWhere('penalty', 'clean');
-            })
-            ->whereNotNull('terdaftar_sejak')
-            ->where('terdaftar_sejak', '<=', $cutoffYear)
-            ->count();
+            })->count();
         });
 
         if (!$throttleEnabled || $realTotalVotes <= 0) {
@@ -211,6 +203,7 @@ class Polling extends Model
             $cvote = $state['candidate_votes'][$cid] ?? 0;
             $formattedResults[] = [
                 'calon_id' => $cid,
+                'no_urut' => $cand['no_urut'] ?? null,
                 'calon_name' => $cand['calon_name'],
                 'calon_foto' => $cand['calon_foto'],
                 'total_vote' => $cvote,

@@ -267,7 +267,7 @@ class ElectionController extends Controller
         $memberId = $request->session()->get('election_member_id');
         $existingVote = Polling::where('member_id', $memberId)->first();
 
-        $candidates = Calon::with('member')->where('status', 'ditetapkan')->get()->unique('member_id')->values();
+        $candidates = Calon::with('member')->where('status', 'ditetapkan')->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC, id ASC')->get()->unique('member_id')->values();
         return Inertia::render('Election/dashboard', [
             'candidates' => $candidates,
             'hasVoted' => !is_null($existingVote),
@@ -394,7 +394,12 @@ class ElectionController extends Controller
                   ->orWhere('nama_panggilan', 'like', "%{$q}%")
                   ->orWhere('no_kartu', 'like', "%{$q}%")
                   ->orWhere('chapter', 'like', "%{$q}%")
-                  ->orWhere('checkpoint', 'like', "%{$q}%");
+                  ->orWhere('checkpoint', 'like', "%{$q}%")
+                  ->orWhere('region', 'like', "%{$q}%");
+        })
+        ->where(function($jq) {
+            $jq->whereNull('jabatan')
+               ->orWhereRaw("LOWER(TRIM(jabatan)) != 'el presidente'");
         })
         ->where(function($sq) {
             $sq->whereRaw('UPPER(status_keanggotaan) = ?', ['LIFE MEMBER'])
@@ -451,6 +456,13 @@ class ElectionController extends Controller
         }
 
         if ($role === 'candidate') {
+            if (strtolower(trim($member->jabatan ?? '')) === 'el presidente') {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Anggota dengan jabatan El Presidente tidak dapat mengajukan diri maupun diajukan sebagai calon presiden."
+                ]);
+            }
+
             $status = strtoupper($member->status_keanggotaan);
             if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
                 return response()->json([
@@ -519,6 +531,12 @@ class ElectionController extends Controller
         }
 
         if ($request->type === 'self') {
+            if (strtolower(trim($member->jabatan ?? '')) === 'el presidente') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anggota dengan jabatan El Presidente tidak dapat mengajukan diri.'
+                ], 403);
+            }
             $status = strtoupper($member->status_keanggotaan);
             if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
                 return response()->json([
@@ -601,6 +619,10 @@ class ElectionController extends Controller
         if ($member->penalty && $member->penalty !== 'clean') {
             $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
             return back()->withErrors(['no_kartu' => "Anda tidak dapat mengajukan diri karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
+        }
+
+        if (strtolower(trim($member->jabatan ?? '')) === 'el presidente') {
+            return back()->withErrors(['no_kartu' => 'Anggota dengan jabatan El Presidente tidak dapat mengajukan diri.']);
         }
 
         $status = strtoupper($member->status_keanggotaan);
@@ -726,6 +748,10 @@ class ElectionController extends Controller
         if ($candidate->penalty && $candidate->penalty !== 'clean') {
             $reasonMsg = $candidate->penalty_reason ? " Alasan: {$candidate->penalty_reason}" : "";
             return back()->withErrors(['candidate_name' => "Anggota yang diajukan ('{$candidate->nama_lengkap}') tidak dapat dicalonkan karena sedang dalam masa penalty (" . strtoupper($candidate->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
+        }
+
+        if (strtolower(trim($candidate->jabatan ?? '')) === 'el presidente') {
+            return back()->withErrors(['candidate_name' => "Anggota yang diajukan ('{$candidate->nama_lengkap}') memiliki jabatan El Presidente sehingga tidak dapat dicalonkan."]);
         }
 
         $candidateStatus = strtoupper($candidate->status_keanggotaan);

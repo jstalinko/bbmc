@@ -8,6 +8,7 @@ class Calon extends Model
 {
     protected $fillable = [
         'member_id',
+        'no_urut',
         'no_kartu',
         'chapter',
         'visi',

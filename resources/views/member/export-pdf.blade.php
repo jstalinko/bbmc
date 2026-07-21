@@ -89,6 +89,7 @@
                 <th>Nama Lengkap</th>
                 <th style="width: 110px;">No. WA</th>
                 <th style="width: 120px;">Status</th>
+                <th style="width: 110px;">Jabatan</th>
                 <th style="width: 120px;">Chapter</th>
                 <th style="width: 110px;">Checkpoint</th>
                 <th style="width: 60px;">Terdaftar</th>
@@ -116,13 +117,14 @@
                         @endphp
                         <span class="badge {{ $badgeClass }}">{{ $member->status_keanggotaan }}</span>
                     </td>
+                    <td>{{ $member->jabatan ?? '—' }}</td>
                     <td>{{ $member->chapter }}</td>
                     <td>{{ $member->checkpoint ?? '—' }}</td>
                     <td>{{ $member->terdaftar_sejak ?? '—' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 20px; color: #666666;">Tidak ada data anggota</td>
+                    <td colspan="9" style="text-align: center; padding: 20px; color: #666666;">Tidak ada data anggota</td>
                 </tr>
             @endforelse
         </tbody>
