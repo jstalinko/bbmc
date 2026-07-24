@@ -19,4 +19,9 @@ class Otp extends Model
         'is_verified' => 'boolean',
         'expires_at' => 'datetime',
     ];
+
+    public function member()
+    {
+        return $this->belongsTo(Member::class);
+    }
 }

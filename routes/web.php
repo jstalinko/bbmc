@@ -52,6 +52,9 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::get('/whatsapp', [\App\Http\Controllers\WhatsappController::class, 'index'])->name('whatsapp.index');
     Route::post('/whatsapp/send', [\App\Http\Controllers\WhatsappController::class, 'send'])->name('whatsapp.send');
     Route::get('/whatsapp/status/{batchId}', [\App\Http\Controllers\WhatsappController::class, 'status'])->name('whatsapp.status');
+
+    Route::get('/otp-logs', [\App\Http\Controllers\OtpLogController::class, 'index'])->name('otp_logs.index');
+    Route::post('/otp-logs/{otp}/resend', [\App\Http\Controllers\OtpLogController::class, 'resend'])->name('otp_logs.resend');
 });
 
 require __DIR__ . '/settings.php';

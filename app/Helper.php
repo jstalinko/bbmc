@@ -22,11 +22,23 @@ Class Helper{
         $path = storage_path('app/private/pemilihan-setting.json');
         if (file_exists($path)) {
             $settings = json_decode(file_get_contents($path), true);
-            if (!empty($settings['piwapi_api_secret_key'])) {
-                $secret = $settings['piwapi_api_secret_key'];
-            }
-            if (!empty($settings['piwapi_account_id'])) {
-                $account = $settings['piwapi_account_id'];
+            
+            $piwapiList = $settings['piwapi'] ?? [];
+            if (!empty($piwapiList) && is_array($piwapiList)) {
+                $randomAccount = $piwapiList[array_rand($piwapiList)];
+                if (!empty($randomAccount['secret_key'])) {
+                    $secret = $randomAccount['secret_key'];
+                }
+                if (!empty($randomAccount['account_id'])) {
+                    $account = $randomAccount['account_id'];
+                }
+            } else {
+                if (!empty($settings['piwapi_api_secret_key'])) {
+                    $secret = $settings['piwapi_api_secret_key'];
+                }
+                if (!empty($settings['piwapi_account_id'])) {
+                    $account = $settings['piwapi_account_id'];
+                }
             }
         }
         $recipient = self::cleanPhone($recipient);

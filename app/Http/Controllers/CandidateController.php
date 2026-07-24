@@ -29,8 +29,15 @@ class CandidateController extends Controller
         $groupedIds = $subQuery->groupBy('member_id')->pluck('max_id');
 
         $query = Calon::with('member')
+            ->select('calons.*')
+            ->addSelect(['total_nominations_count' => \DB::table('calons as c')
+                ->selectRaw('count(*)')
+                ->whereColumn('c.member_id', 'calons.member_id')
+            ])
             ->whereIn('id', $groupedIds)
-            ->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC, created_at DESC');
+            ->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC')
+            ->orderBy('total_nominations_count', 'desc')
+            ->orderBy('created_at', 'desc');
 
         $candidates = $query->paginate(10)->withQueryString();
 

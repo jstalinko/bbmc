@@ -15,8 +15,7 @@ const props = defineProps<{
         ajukan_anggota: boolean;
         tanggal_mulai: string | null;
         tanggal_selesai: string | null;
-        piwapi_api_secret_key: string | null;
-        piwapi_account_id: string | null;
+        piwapi: Array<{secret_key: string, account_id: string}>;
     };
 }>();
 
@@ -37,8 +36,9 @@ const form = useForm({
     ajukan_anggota: !!props.settings.ajukan_anggota,
     tanggal_mulai: props.settings.tanggal_mulai ? props.settings.tanggal_mulai.substring(0, 16) : '',
     tanggal_selesai: props.settings.tanggal_selesai ? props.settings.tanggal_selesai.substring(0, 16) : '',
-    piwapi_api_secret_key: props.settings.piwapi_api_secret_key || '',
-    piwapi_account_id: props.settings.piwapi_account_id || '',
+    piwapi: props.settings.piwapi && props.settings.piwapi.length > 0 
+        ? props.settings.piwapi 
+        : [{secret_key: '', account_id: ''}],
 });
 
 const submitSettings = () => {
@@ -143,18 +143,29 @@ const submitSettings = () => {
 
                     <!-- Section C: Kredensial WhatsApp (PIWAPI) -->
                     <div class="space-y-4">
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b pb-2">
-                            Kredensial WhatsApp (PIWAPI)
-                        </h2>
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                                Kredensial WhatsApp (PIWAPI)
+                            </h2>
+                            <Button type="button" variant="outline" size="sm" @click="form.piwapi.push({secret_key: '', account_id: ''})" class="h-8 text-xs font-semibold gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                                Tambah Akun
+                            </Button>
+                        </div>
 
-                        <div class="grid gap-6 sm:grid-cols-2 mt-4">
+                        <div v-for="(item, index) in form.piwapi" :key="index" class="grid gap-6 sm:grid-cols-12 mt-4 items-start p-4 pt-8 rounded-lg border bg-muted/30 relative">
+                            <!-- Delete Button -->
+                            <button type="button" v-if="form.piwapi.length > 1" @click="form.piwapi.splice(index, 1)" class="absolute top-2 right-2 text-destructive hover:bg-destructive/10 p-1.5 rounded-md transition-colors" title="Hapus Kredensial">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+                            </button>
+
                             <!-- API Secret Key -->
-                            <div class="grid gap-2">
-                                <Label for="piwapi_api_secret_key" class="font-medium text-sm">PIWAPI API Secret Key</Label>
+                            <div class="grid gap-2 sm:col-span-6">
+                                <Label :for="'piwapi_secret_key_' + index" class="font-medium text-sm">PIWAPI API Secret Key</Label>
                                 <Input
-                                    id="piwapi_api_secret_key"
+                                    :id="'piwapi_secret_key_' + index"
                                     type="text"
-                                    v-model="form.piwapi_api_secret_key"
+                                    v-model="item.secret_key"
                                     placeholder="Masukkan API Secret Key"
                                     class="w-full"
                                 />
@@ -162,12 +173,12 @@ const submitSettings = () => {
                             </div>
 
                             <!-- Account ID -->
-                            <div class="grid gap-2">
-                                <Label for="piwapi_account_id" class="font-medium text-sm">PIWAPI Account ID</Label>
+                            <div class="grid gap-2 sm:col-span-6">
+                                <Label :for="'piwapi_account_id_' + index" class="font-medium text-sm">PIWAPI Account ID</Label>
                                 <Input
-                                    id="piwapi_account_id"
+                                    :id="'piwapi_account_id_' + index"
                                     type="text"
-                                    v-model="form.piwapi_account_id"
+                                    v-model="item.account_id"
                                     placeholder="Masukkan Account ID"
                                     class="w-full"
                                 />
