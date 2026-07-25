@@ -42,7 +42,7 @@ class ElectionController extends Controller
             'ajukan_anggota' => $settings['ajukan_anggota'] ?? true,
             'tanggal_mulai' => $settings['tanggal_mulai'] ?? null,
             'tanggal_selesai' => $settings['tanggal_selesai'] ?? null,
-            'piwapi' => $piwapi,
+            'piwapi' => \App\Helper::encryptForFrontend($piwapi),
         ];
     }
 
@@ -493,7 +493,7 @@ class ElectionController extends Controller
         
         return response()->json([
             'success' => true,
-            'member' => $member
+            'payload' => \App\Helper::encryptForFrontend($member)
         ]);
     }
 

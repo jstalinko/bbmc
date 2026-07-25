@@ -437,7 +437,7 @@ class MemberController extends Controller
         if (!$member) {
             return redirect('/member/register')->with('error', 'Member tidak ditemukan.');
         }
-        return Inertia::render('Member/show-public', ['member' => $member]);
+        return Inertia::render('Member/show-public', ['payload' => \App\Helper::encryptForFrontend($member)]);
     }
 
     public function validateCard(Request $request)

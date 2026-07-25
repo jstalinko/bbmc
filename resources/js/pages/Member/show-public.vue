@@ -203,29 +203,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { decryptPayload } from '@/lib/crypto'
 
 const props = defineProps<{
-  member: {
-    nama_lengkap: string
-    nama_panggilan: string
-    tempat_lahir: string
-    tanggal_lahir: string
-    jenis_kelamin: string
-    gol_darah: string
-    alamat: string
-    no_wa: string
-    email?: string
-    profesi?: string
-    jabatan?: string
-    foto?: string
-    no_kartu?: string
-    status_keanggotaan: string
-    chapter: string
-    checkpoint?: string
-    region?: string
-    terdaftar_sejak?: string
-  }
+  payload: string
 }>()
+
+const member = decryptPayload(props.payload) || {}
 
 const statusClass = computed(() => {
   const map: Record<string, string> = {

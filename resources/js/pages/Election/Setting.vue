@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Settings2, Save, Calendar, Check, Info } from 'lucide-vue-next';
 import { TransitionRoot } from '@headlessui/vue';
+import { decryptPayload } from '@/lib/crypto';
 
 const props = defineProps<{
     settings: {
@@ -15,7 +16,7 @@ const props = defineProps<{
         ajukan_anggota: boolean;
         tanggal_mulai: string | null;
         tanggal_selesai: string | null;
-        piwapi: Array<{secret_key: string, account_id: string}>;
+        piwapi: string | Array<{secret_key: string, account_id: string}>;
     };
 }>();
 
@@ -31,13 +32,17 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 // Initialize form using passed settings
+const decryptedPiwapi = typeof props.settings.piwapi === 'string' 
+    ? decryptPayload(props.settings.piwapi) 
+    : props.settings.piwapi;
+
 const form = useForm({
     ajukan_diri: !!props.settings.ajukan_diri,
     ajukan_anggota: !!props.settings.ajukan_anggota,
     tanggal_mulai: props.settings.tanggal_mulai ? props.settings.tanggal_mulai.substring(0, 16) : '',
     tanggal_selesai: props.settings.tanggal_selesai ? props.settings.tanggal_selesai.substring(0, 16) : '',
-    piwapi: props.settings.piwapi && props.settings.piwapi.length > 0 
-        ? props.settings.piwapi 
+    piwapi: decryptedPiwapi && Array.isArray(decryptedPiwapi) && decryptedPiwapi.length > 0 
+        ? decryptedPiwapi 
         : [{secret_key: '', account_id: ''}],
 });
 

@@ -66,4 +66,14 @@ Class Helper{
         }
     }
 
+    public static function encryptForFrontend($data)
+    {
+        $key = env('VITE_APP_ENCRYPTION_KEY', 'bbmc_secret_key_2026_xyz!');
+        // ensure key is 32 bytes (256 bits)
+        $key = substr(hash('sha256', $key, true), 0, 32);
+        $iv = random_bytes(16);
+        
+        $encrypted = openssl_encrypt(json_encode($data), 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+        return base64_encode($iv . $encrypted);
+    }
 }
