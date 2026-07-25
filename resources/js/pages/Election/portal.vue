@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { decryptPayload } from '@/lib/crypto';
+import { decryptPayload, encryptPayload } from '@/lib/crypto';
 import { 
     ShieldCheck, 
     UserCheck, 
@@ -134,7 +134,7 @@ watch(selfCardQuery, async (newVal) => {
     if (newVal.length >= 2) {
         isSelfSearching.value = true;
         try {
-            const response = await fetch(`/election/member-info/${newVal}?role=candidate`);
+            const response = await fetch(`/election/member-info/${encodeURIComponent(encryptPayload(newVal))}?role=candidate`);
             const data = await response.json();
             if (data.success) {
                 selfMemberDetails.value = decryptPayload(data.payload);
@@ -206,7 +206,7 @@ watch(nominatorCardQuery, async (newVal) => {
     if (newVal.length >= 2) {
         isNominatorSearching.value = true;
         try {
-            const response = await fetch(`/election/member-info/${newVal}?role=nominator`);
+            const response = await fetch(`/election/member-info/${encodeURIComponent(encryptPayload(newVal))}?role=nominator`);
             const data = await response.json();
             if (data.success) {
                 nominatorMemberDetails.value = decryptPayload(data.payload);

@@ -76,4 +76,23 @@ Class Helper{
         $encrypted = openssl_encrypt(json_encode($data), 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
         return base64_encode($iv . $encrypted);
     }
+
+    public static function decryptFromFrontend($encryptedBase64)
+    {
+        $key = env('VITE_APP_ENCRYPTION_KEY', 'bbmc_secret_key_2026_xyz!');
+        $key = substr(hash('sha256', $key, true), 0, 32);
+        
+        $data = base64_decode($encryptedBase64);
+        if ($data === false || strlen($data) < 16) {
+            return null;
+        }
+        
+        $iv = substr($data, 0, 16);
+        $encrypted = substr($data, 16);
+        
+        $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+        
+        $jsonDecoded = json_decode($decrypted, true);
+        return (json_last_error() === JSON_ERROR_NONE) ? $jsonDecoded : $decrypted;
+    }
 }

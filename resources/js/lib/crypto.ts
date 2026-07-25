@@ -35,3 +35,29 @@ export function decryptPayload(encryptedBase64: string): any {
         return null;
     }
 }
+
+export function encryptPayload(data: any): string {
+    try {
+        const keyStr = import.meta.env.VITE_APP_ENCRYPTION_KEY || 'bbmc_secret_key_2026_xyz!';
+        const key = CryptoJS.SHA256(keyStr);
+        
+        // Generate random 16 bytes IV
+        const iv = CryptoJS.lib.WordArray.random(16);
+        
+        const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
+        
+        const encrypted = CryptoJS.AES.encrypt(jsonStr, key, {
+            iv: iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        });
+        
+        // Combine IV and Ciphertext
+        const combined = iv.clone().concat(encrypted.ciphertext);
+        
+        return CryptoJS.enc.Base64.stringify(combined);
+    } catch (e) {
+        console.error("Encryption failed", e);
+        return "";
+    }
+}

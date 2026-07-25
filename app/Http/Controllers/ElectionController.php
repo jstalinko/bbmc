@@ -432,6 +432,11 @@ class ElectionController extends Controller
     {
         $role = $request->query('role', 'candidate');
         
+        $decryptedNocard = \App\Helper::decryptFromFrontend($nocard);
+        if ($decryptedNocard) {
+            $nocard = $decryptedNocard;
+        }
+
         // Pad KTA to 4 digits (e.g. 23 -> 0023)
         $nocard = str_pad($nocard, 4, '0', STR_PAD_LEFT);
         $member = Member::where('no_kartu', $nocard)->first();
