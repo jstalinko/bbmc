@@ -161,16 +161,16 @@ class ElectionController extends Controller
             ], 400);
         }
 
-        // Cooldown request ulang setiap 1 menit
+        // Cooldown request ulang setiap 5 menit
         $recentOtp = Otp::where('member_id', $member->id)
             ->where('is_verified', false)
-            ->where('created_at', '>', now()->subMinute())
+            ->where('created_at', '>', now()->subMinutes(5))
             ->first();
 
         if ($recentOtp) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda baru saja meminta kode OTP. Mohon tunggu 1 menit sebelum meminta kembali.'
+                'message' => 'Anda baru saja meminta kode OTP. Mohon tunggu 5 menit sebelum meminta kembali.'
             ], 429);
         }
 
@@ -573,16 +573,16 @@ class ElectionController extends Controller
             ], 400);
         }
 
-        // Cooldown request ulang setiap 1 menit
+        // Cooldown request ulang setiap 5 menit
         $recentOtp = Otp::where('member_id', $member->id)
             ->where('is_verified', false)
-            ->where('created_at', '>', now()->subMinute())
+            ->where('created_at', '>', now()->subMinutes(5))
             ->first();
 
         if ($recentOtp) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda baru saja meminta kode OTP. Mohon tunggu 1 menit sebelum meminta kembali.'
+                'message' => 'Anda baru saja meminta kode OTP. Mohon tunggu 5 menit sebelum meminta kembali.'
             ], 429);
         }
 

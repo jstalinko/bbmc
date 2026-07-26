@@ -53,6 +53,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::post('/whatsapp/send', [\App\Http\Controllers\WhatsappController::class, 'send'])->name('whatsapp.send');
     Route::get('/whatsapp/status/{batchId}', [\App\Http\Controllers\WhatsappController::class, 'status'])->name('whatsapp.status');
 
+    Route::get('/otp-logs/export/pdf', [\App\Http\Controllers\OtpLogController::class, 'exportPdf'])->name('otp_logs.export.pdf');
+    Route::get('/otp-logs/export/csv', [\App\Http\Controllers\OtpLogController::class, 'exportCsv'])->name('otp_logs.export.csv');
     Route::get('/otp-logs', [\App\Http\Controllers\OtpLogController::class, 'index'])->name('otp_logs.index');
     Route::post('/otp-logs/{otp}/resend', [\App\Http\Controllers\OtpLogController::class, 'resend'])->name('otp_logs.resend');
 });

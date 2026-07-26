@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import {
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-    Search, RefreshCw, X, ShieldAlert, ShieldCheck, Copy, Eye, EyeOff
+    Search, RefreshCw, X, ShieldAlert, ShieldCheck, Copy, Eye, EyeOff, FileText, Download
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -24,11 +24,13 @@ const breadcrumbs = [
 ];
 
 const search = ref(props.filters?.search ?? '');
+const status = ref(props.filters?.status ?? 'all');
 let searchTimer: any;
-watch(search, (val) => {
+
+watch([search, status], ([newSearch, newStatus]) => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
-        router.get('/dashboard/otp-logs', { search: val }, { preserveState: true, replace: true });
+        router.get('/dashboard/otp-logs', { search: newSearch, status: newStatus }, { preserveState: true, replace: true });
     }, 400);
 });
 function clearSearch() { search.value = ''; }
@@ -82,7 +84,7 @@ function copyOtp(code: string) {
             </div>
 
             <!-- Header -->
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 class="flex items-center gap-2 text-xl font-bold">
                         <ShieldAlert class="h-5 w-5 text-amber-500" />
@@ -92,6 +94,20 @@ function copyOtp(code: string) {
                         Memantau riwayat pengiriman OTP kepada anggota untuk login dan pencalonan.
                     </p>
                 </div>
+                <div class="flex items-center gap-2">
+                    <a :href="`/dashboard/otp-logs/export/csv?search=${search}&status=${status}`" target="_blank">
+                        <Button variant="outline" size="sm" class="h-9 gap-2">
+                            <Download class="h-4 w-4" />
+                            CSV
+                        </Button>
+                    </a>
+                    <a :href="`/dashboard/otp-logs/export/pdf?search=${search}&status=${status}`" target="_blank">
+                        <Button variant="outline" size="sm" class="h-9 gap-2">
+                            <FileText class="h-4 w-4" />
+                            PDF
+                        </Button>
+                    </a>
+                </div>
             </div>
 
             <!-- Card Table -->
@@ -99,17 +115,27 @@ function copyOtp(code: string) {
                 
                 <!-- Toolbar -->
                 <div class="flex flex-col gap-3 border-b bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="relative w-full sm:w-72">
-                        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        <Input
-                            v-model="search"
-                            placeholder="Cari no kartu, nama, hp..."
-                            class="pl-9 pr-8 text-sm focus-visible:ring-amber-500"
-                        />
-                        <button v-if="search" @click="clearSearch"
-                            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                            <X class="h-3.5 w-3.5" />
-                        </button>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                            <Input
+                                v-model="search"
+                                placeholder="Cari no kartu, nama, hp..."
+                                class="pl-9 pr-8 text-sm focus-visible:ring-amber-500"
+                            />
+                            <button v-if="search" @click="clearSearch"
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                <X class="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                        <select
+                            v-model="status"
+                            class="flex h-9 w-full sm:w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
+                        >
+                            <option value="all">Semua Status</option>
+                            <option value="verified">Terverifikasi</option>
+                            <option value="unverified">Menunggu</option>
+                        </select>
                     </div>
                     <p class="text-xs text-muted-foreground whitespace-nowrap">
                         Menampilkan {{ otps.from ?? 0 }}–{{ otps.to ?? 0 }} dari {{ otps.total }} data
