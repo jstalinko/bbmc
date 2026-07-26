@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import {
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-    Search, RefreshCw, X, ShieldAlert, ShieldCheck, Copy, Eye, EyeOff, FileText, Download
+    Search, RefreshCw, X, ShieldAlert, ShieldCheck, Copy, Eye, EyeOff, FileText, Download, MessageCircle
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -64,6 +64,15 @@ function toggleOtp(id: number) {
 function copyOtp(code: string) {
     navigator.clipboard.writeText(code);
     alert('Kode OTP berhasil disalin: ' + code);
+}
+
+function getManualResendLink(otp: any) {
+    let phone = String(otp.phone).replace(/[^0-9]/g, '');
+    if (phone.startsWith('0')) {
+        phone = '62' + phone.substring(1);
+    }
+    const message = `*BBMC ELECTION 2026*\n\nKode OTP Anda adalah: *${otp.otp}*\n\nJANGAN BERIKAN KODE INI KEPADA SIAPAPUN.`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 </script>
 
@@ -222,16 +231,29 @@ function copyOtp(code: string) {
                             </TableCell>
 
                             <TableCell class="text-center">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    class="h-8 text-xs font-semibold flex items-center gap-1 hover:bg-amber-500 hover:text-white border-amber-200 text-amber-700 mx-auto"
-                                    @click="resendOtp(otp)"
-                                    :disabled="isResending[otp.id]"
-                                >
-                                    <RefreshCw class="h-3.5 w-3.5" :class="isResending[otp.id] ? 'animate-spin' : ''" />
-                                    {{ isResending[otp.id] ? 'Kirim...' : 'Resend' }}
-                                </Button>
+                                <div class="flex flex-col gap-1.5 items-center justify-center">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        class="h-8 text-xs font-semibold flex items-center gap-1 w-full max-w-[120px] hover:bg-amber-500 hover:text-white border-amber-200 text-amber-700"
+                                        @click="resendOtp(otp)"
+                                        :disabled="isResending[otp.id]"
+                                    >
+                                        <RefreshCw class="h-3.5 w-3.5" :class="isResending[otp.id] ? 'animate-spin' : ''" />
+                                        {{ isResending[otp.id] ? 'Kirim...' : 'Resend Auto' }}
+                                    </Button>
+
+                                    <a :href="getManualResendLink(otp)" target="_blank" class="w-full max-w-[120px]">
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            class="h-8 text-xs font-semibold flex items-center justify-center gap-1 w-full bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/30 transition-colors"
+                                        >
+                                            <MessageCircle class="h-3.5 w-3.5" />
+                                            Manual
+                                        </Button>
+                                    </a>
+                                </div>
                             </TableCell>
                         </TableRow>
                     </TableBody>
