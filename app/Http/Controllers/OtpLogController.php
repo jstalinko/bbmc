@@ -122,7 +122,7 @@ class OtpLogController extends Controller
 
     public function resend(Request $request, Otp $otp)
     {
-        $message = "*BBMC ELECTION 2026*\n\nKode OTP Anda adalah: *{$otp->otp}*\n\nJANGAN BERIKAN KODE INI KEPADA SIAPAPUN.";
+        $message = \App\Helper::getRandomOtpMessage($otp->otp, 'umum');
         
         $result = \App\Helper::sendWhatsapp($otp->phone, $message);
         

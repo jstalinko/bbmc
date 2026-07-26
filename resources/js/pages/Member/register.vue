@@ -160,15 +160,21 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="field-label">No. WhatsApp <span class="text-red-500">*</span></label>
-                  <input
-                    :value="form.no_wa"
-                    @input="handleNoWaInput"
-                    type="tel"
-                    placeholder="628xxxxxxxxxx"
-                    inputmode="numeric"
-                    :class="['field-input font-mono', form.errors.no_wa ? 'border-red-400 bg-red-50' : '']"
-                  />
-                  <p class="text-gray-400 text-[10px] mt-1">Format otomatis: <span class="font-mono font-semibold">628</span>xxxxxxxxxx</p>
+                  <div class="flex">
+                    <select v-model="countryCode" @change="updateNoWaPrefix" class="field-input w-32 rounded-r-none border-r-0 focus:ring-0 focus:z-10 bg-gray-50 text-xs px-2">
+                      <option value="62">+62 (ID)</option>
+                      <option value="1">+1 (US)</option>
+                    </select>
+                    <input
+                      :value="form.no_wa"
+                      @input="handleNoWaInput"
+                      type="tel"
+                      :placeholder="countryCode === '62' ? '628xxxxxxxxxx' : '1xxxxxxxxxx'"
+                      inputmode="numeric"
+                      :class="['field-input font-mono rounded-l-none', form.errors.no_wa ? 'border-red-400 bg-red-50' : '']"
+                    />
+                  </div>
+                  <p class="text-gray-400 text-[10px] mt-1">Format otomatis: <span class="font-mono font-semibold">{{ countryCode }}</span>xxxxxxxxxx</p>
                   <p v-if="form.errors.no_wa" class="field-error">{{ form.errors.no_wa }}</p>
                 </div>
                 <div>
@@ -383,6 +389,7 @@ const fotoPreview = ref<string | null>(null)
 const fotoSize = ref('')
 const fotoInput = ref<HTMLInputElement | null>(null)
 const showErrors = ref(false)
+const countryCode = ref('62')
 
 // ── Daftar chapter beserta checkpoint-nya ──
 const chapterList = [
@@ -597,21 +604,44 @@ function clearFoto() {
   if (fotoInput.value) fotoInput.value.value = ''
 }
 
-// ── Format No. WhatsApp → 628xx ──
+// ── Format No. WhatsApp ──
 function handleNoWaInput(e: Event) {
   const input = e.target as HTMLInputElement
-  // Buang semua karakter bukan digit
   let digits = input.value.replace(/\D/g, '')
-  // Ganti awalan 0 → 62 (misal 08xx → 628xx)
-  if (digits.startsWith('0')) {
-    digits = '62' + digits.slice(1)
-  }
-  // Pastikan selalu diawali 62
-  if (digits.length > 0 && !digits.startsWith('62')) {
-    digits = '62' + digits
+  
+  if (countryCode.value === '62') {
+    if (digits.startsWith('0')) {
+      digits = '62' + digits.slice(1)
+    }
+    if (digits.length > 0 && !digits.startsWith('62')) {
+      digits = '62' + digits
+    }
+  } else if (countryCode.value === '1') {
+    if (digits.length > 0 && !digits.startsWith('1')) {
+      digits = '1' + digits
+    }
   }
   form.no_wa = digits
   input.value = digits
+}
+
+function updateNoWaPrefix() {
+  if (form.no_wa) {
+    let digits = form.no_wa.replace(/\D/g, '')
+    if (countryCode.value === '62' && digits.startsWith('1')) {
+      digits = digits.slice(1)
+    } else if (countryCode.value === '1' && digits.startsWith('62')) {
+      digits = digits.slice(2)
+    }
+    
+    if (countryCode.value === '62') {
+      if (digits.startsWith('0')) digits = digits.slice(1)
+      digits = '62' + digits
+    } else if (countryCode.value === '1') {
+      digits = '1' + digits
+    }
+    form.no_wa = digits
+  }
 }
 
 function nextStep() {

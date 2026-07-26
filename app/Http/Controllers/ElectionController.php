@@ -161,6 +161,17 @@ class ElectionController extends Controller
             ], 400);
         }
 
+        // Cek maksimal 3x request per hari
+        $todayOtpCount = Otp::where('member_id', $member->id)
+            ->whereDate('created_at', now()->toDateString())
+            ->count();
+        if ($todayOtpCount >= 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda telah mencapai batas maksimal 3 kali permintaan OTP untuk hari ini.'
+            ], 429);
+        }
+
         // Cooldown request ulang setiap 5 menit
         $recentOtp = Otp::where('member_id', $member->id)
             ->where('is_verified', false)
@@ -184,7 +195,7 @@ class ElectionController extends Controller
             'is_verified' => false,
         ]);
 
-        $message = "*BBMC ELECTION 2026*\n\nKode OTP Anda untuk proses login portal adalah: *$otpCode*\n\nBerlaku selama 5 menit. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN.";
+        $message = \App\Helper::getRandomOtpMessage($otpCode, 'login');
         
         \App\Helper::sendWhatsapp($member->no_wa, $message);
 
@@ -573,6 +584,17 @@ class ElectionController extends Controller
             ], 400);
         }
 
+        // Cek maksimal 3x request per hari
+        $todayOtpCount = Otp::where('member_id', $member->id)
+            ->whereDate('created_at', now()->toDateString())
+            ->count();
+        if ($todayOtpCount >= 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda telah mencapai batas maksimal 3 kali permintaan OTP untuk hari ini.'
+            ], 429);
+        }
+
         // Cooldown request ulang setiap 5 menit
         $recentOtp = Otp::where('member_id', $member->id)
             ->where('is_verified', false)
@@ -596,7 +618,7 @@ class ElectionController extends Controller
             'is_verified' => false,
         ]);
 
-        $message = "*BBMC ELECTION 2026*\n\nKode OTP Anda untuk proses pengajuan pencalonan adalah: *$otpCode*\n\nBerlaku selama 5 menit. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN.";
+        $message = \App\Helper::getRandomOtpMessage($otpCode, 'nomination');
         
         \App\Helper::sendWhatsapp($member->no_wa, $message);
 

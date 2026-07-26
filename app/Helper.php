@@ -5,10 +5,15 @@ Class Helper{
 
     public static function cleanPhone($phone)
     {
+        $phone = preg_replace('/^\+/', '', $phone);
         $phone = preg_replace('/\D/', '', $phone);
+
+        if (str_starts_with($phone, '1')) {
+            return $phone;
+        }
+
         $phone = preg_replace('/^08/', '628', $phone);
 
-        // Pastikan jika depannya masih 0, diubah ke 62 (opsional tergantung input)
         if (str_starts_with($phone, '0')) {
             $phone = '62' . substr($phone, 1);
         }
@@ -94,5 +99,24 @@ Class Helper{
         
         $jsonDecoded = json_decode($decrypted, true);
         return (json_last_error() === JSON_ERROR_NONE) ? $jsonDecoded : $decrypted;
+    }
+
+    public static function getRandomOtpMessage($otpCode, $type = 'umum')
+    {
+        $konteks = "proses ini";
+        if ($type === 'login') {
+            $konteks = "proses login portal";
+        } elseif ($type === 'nomination') {
+            $konteks = "proses pengajuan pencalonan";
+        }
+
+        $templates = [
+            "*BBMC ELECTION 2026*\n\nKode OTP Anda untuk $konteks adalah: *$otpCode*\n\nBerlaku selama 5 menit. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN.",
+            "*BBMC ELECTION 2026*\n\nIni adalah kode rahasia OTP Anda untuk $konteks: *$otpCode*\n\nKode ini hangus dalam 5 menit. Harap simpan dan jangan bagikan ke orang lain.",
+            "*BBMC ELECTION 2026*\n\nPerhatian! Kode OTP $konteks Anda: *$otpCode*\n\nWaktu berlaku 5 menit. Mohon tidak memberitahukan kode ini pada siapapun demi keamanan.",
+            "*BBMC ELECTION 2026*\n\nSilakan gunakan kode OTP berikut untuk $konteks: *$otpCode*\n\nMasa aktif kode ini hanya 5 menit. Tolong rahasiakan dari siapapun.",
+            "*BBMC ELECTION 2026*\n\nBerikut kode OTP Anda ($konteks): *$otpCode*\n\nValid untuk 5 menit ke depan. Jaga kerahasiaan kode ini dengan tidak membagikannya."
+        ];
+        return $templates[array_rand($templates)];
     }
 }
