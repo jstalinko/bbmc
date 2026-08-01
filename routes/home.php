@@ -26,7 +26,11 @@ Route::group(['prefix' => '/election'] , function(){
     Route::get('/login' , [ElectionController::class, 'login'])->name('election.login');
     Route::post('/login', [ElectionController::class, 'loginPost'])->name('election.login_post');
 
+    Route::get('/queue', [ElectionController::class, 'queue'])->name('election.queue');
+    Route::get('/queue-status', [ElectionController::class, 'queueStatus'])->name('election.queue_status');
+
     Route::group(['middleware' => [\App\Http\Middleware\ElectionAuth::class]], function() {
+        Route::post('/ping', [ElectionController::class, 'ping'])->name('election.ping');
         Route::get('/dashboard', [ElectionController::class, 'dashboard'])->name('election.dashboard');
         Route::post('/vote', [ElectionController::class, 'vote'])->name('election.vote');
         Route::post('/logout', [ElectionController::class, 'logout'])->name('election.logout');

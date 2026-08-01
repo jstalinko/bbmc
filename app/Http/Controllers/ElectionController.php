@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\Calon;
 use App\Models\Otp;
 use App\Models\Polling;
+use App\Models\ElectionQueue;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -42,6 +43,7 @@ class ElectionController extends Controller
             'ajukan_anggota' => $settings['ajukan_anggota'] ?? true,
             'tanggal_mulai' => $settings['tanggal_mulai'] ?? null,
             'tanggal_selesai' => $settings['tanggal_selesai'] ?? null,
+            'max_active_users' => $settings['max_active_users'] ?? 0,
             'piwapi' => \App\Helper::encryptForFrontend($piwapi),
         ];
     }
@@ -256,6 +258,34 @@ class ElectionController extends Controller
         
         $otpRecord->update(['is_verified' => true]);
         
+        $settings = $this->getSettings();
+        $maxUsers = (int) ($settings['max_active_users'] ?? 0);
+
+        if ($maxUsers > 0) {
+            // Prune inactive users
+            ElectionQueue::where('status', 'active')
+                ->where('last_activity', '<', now()->subMinutes(5))
+                ->delete();
+
+            $activeCount = ElectionQueue::where('status', 'active')->count();
+
+            if ($activeCount >= $maxUsers) {
+                // Queue is full
+                ElectionQueue::updateOrCreate(
+                    ['member_id' => $member->id],
+                    ['status' => 'waiting', 'last_activity' => now()]
+                );
+                $request->session()->put('election_queue_member_id', $member->id);
+                return redirect()->route('election.queue');
+            } else {
+                // Slot available
+                ElectionQueue::updateOrCreate(
+                    ['member_id' => $member->id],
+                    ['status' => 'active', 'last_activity' => now()]
+                );
+            }
+        }
+        
         // Save election member ID to session
         $request->session()->put('election_member_id', $member->id);
         
@@ -270,6 +300,10 @@ class ElectionController extends Controller
      */
     public function logout(Request $request)
     {
+        $memberId = $request->session()->get('election_member_id');
+        if ($memberId) {
+            ElectionQueue::where('member_id', $memberId)->delete();
+        }
         $request->session()->forget('election_member_id');
         return redirect()->route('election.login')->with([
             'success' => true,
@@ -312,6 +346,9 @@ class ElectionController extends Controller
         ]);
 
         // Auto logout: Clear the session!
+        if ($memberId) {
+            ElectionQueue::where('member_id', $memberId)->delete();
+        }
         $request->session()->forget('election_member_id');
 
         // Redirect to live polling with a flash message!
@@ -858,6 +895,7 @@ class ElectionController extends Controller
             'ajukan_anggota' => 'required|boolean',
             'tanggal_mulai' => 'nullable|string',
             'tanggal_selesai' => 'nullable|string',
+            'max_active_users' => 'nullable|numeric',
             'piwapi' => 'nullable|array',
             'piwapi.*.secret_key' => 'nullable|string',
             'piwapi.*.account_id' => 'nullable|string',
@@ -865,6 +903,7 @@ class ElectionController extends Controller
 
         $validated['ajukan_diri'] = (bool)$validated['ajukan_diri'];
         $validated['ajukan_anggota'] = (bool)$validated['ajukan_anggota'];
+        $validated['max_active_users'] = (int)($validated['max_active_users'] ?? 0);
 
         $path = storage_path('app/private/pemilihan-setting.json');
         $directory = dirname($path);
@@ -875,5 +914,120 @@ class ElectionController extends Controller
         file_put_contents($path, json_encode($validated, JSON_PRETTY_PRINT));
 
         return back()->with('success', 'Pengaturan pemilihan berhasil diperbarui.');
+    }
+
+    /**
+     * Render the Queue waiting list page.
+     */
+    public function queue(Request $request)
+    {
+        if (!$request->session()->has('election_queue_member_id')) {
+            return redirect()->route('election.login');
+        }
+        return Inertia::render('Election/queue');
+    }
+
+    /**
+     * Queue Status API.
+     * Called periodically by the queue page.
+     */
+    public function queueStatus(Request $request)
+    {
+        $queueMemberId = $request->session()->get('election_queue_member_id');
+        if (!$queueMemberId) {
+            return response()->json(['status' => 'unauthorized'], 401);
+        }
+
+        $settings = $this->getSettings();
+        $maxUsers = (int) ($settings['max_active_users'] ?? 0);
+
+        if ($maxUsers <= 0) {
+            // Queue disabled, just let them in
+            $request->session()->put('election_member_id', $queueMemberId);
+            $request->session()->forget('election_queue_member_id');
+            return response()->json([
+                'status' => 'active',
+                'redirect' => route('election.dashboard')
+            ]);
+        }
+
+        // 1. Prune inactive sessions (>5 mins)
+        ElectionQueue::where('status', 'active')
+            ->where('last_activity', '<', now()->subMinutes(5))
+            ->delete();
+
+        // 2. Prune inactive waiting users (maybe they left the page >2 mins)
+        ElectionQueue::where('status', 'waiting')
+            ->where('last_activity', '<', now()->subMinutes(2))
+            ->delete();
+
+        $myQueue = ElectionQueue::where('member_id', $queueMemberId)->first();
+
+        // If for some reason they don't exist anymore, we return error or make them login again
+        if (!$myQueue) {
+            return response()->json(['status' => 'expired']);
+        }
+
+        // If they are already marked active
+        if ($myQueue->status === 'active') {
+            $myQueue->update(['last_activity' => now()]);
+            $request->session()->put('election_member_id', $queueMemberId);
+            $request->session()->forget('election_queue_member_id');
+            return response()->json([
+                'status' => 'active',
+                'redirect' => route('election.dashboard')
+            ]);
+        }
+
+        // If they are waiting, update their activity
+        $myQueue->update(['last_activity' => now()]);
+
+        // Promote waiting users if there are slots
+        $activeCount = ElectionQueue::where('status', 'active')->count();
+        $availableSlots = $maxUsers - $activeCount;
+
+        if ($availableSlots > 0) {
+            $nextInLine = ElectionQueue::where('status', 'waiting')
+                ->orderBy('created_at', 'asc')
+                ->take($availableSlots)
+                ->get();
+            
+            foreach ($nextInLine as $queueItem) {
+                $queueItem->update(['status' => 'active', 'last_activity' => now()]);
+                if ($queueItem->id === $myQueue->id) {
+                    $request->session()->put('election_member_id', $queueMemberId);
+                    $request->session()->forget('election_queue_member_id');
+                    return response()->json([
+                        'status' => 'active',
+                        'redirect' => route('election.dashboard')
+                    ]);
+                }
+            }
+        }
+
+        // Calculate position
+        $position = ElectionQueue::where('status', 'waiting')
+            ->where('created_at', '<', $myQueue->created_at)
+            ->count() + 1;
+
+        return response()->json([
+            'status' => 'waiting',
+            'position' => $position
+        ]);
+    }
+
+    /**
+     * Ping API.
+     * Called periodically by the dashboard to keep the session active.
+     */
+    public function ping(Request $request)
+    {
+        $memberId = $request->session()->get('election_member_id');
+        if ($memberId) {
+            ElectionQueue::where('member_id', $memberId)
+                ->where('status', 'active')
+                ->update(['last_activity' => now()]);
+        }
+        return response()->json(['success' => true]);
     }
 }

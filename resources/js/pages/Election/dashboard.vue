@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import { 
     ShieldCheck, 
@@ -59,6 +59,26 @@ const getCandidatePhoto = (c: any) => {
     if (c.member?.foto) return `/storage/${c.member.foto}`;
     return null;
 };
+
+// Queue Keep Alive Ping
+let pingInterval: number;
+
+onMounted(() => {
+    // Ping every 60 seconds to keep the active slot in election queue
+    pingInterval = window.setInterval(() => {
+        fetch('/election/ping', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+            }
+        }).catch(() => {});
+    }, 60000);
+});
+
+onUnmounted(() => {
+    clearInterval(pingInterval);
+});
 </script>
 
 

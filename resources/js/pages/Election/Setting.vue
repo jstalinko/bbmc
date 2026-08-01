@@ -16,6 +16,7 @@ const props = defineProps<{
         ajukan_anggota: boolean;
         tanggal_mulai: string | null;
         tanggal_selesai: string | null;
+        max_active_users: number;
         piwapi: string | Array<{secret_key: string, account_id: string}>;
     };
 }>();
@@ -41,6 +42,7 @@ const form = useForm({
     ajukan_anggota: !!props.settings.ajukan_anggota,
     tanggal_mulai: props.settings.tanggal_mulai ? props.settings.tanggal_mulai.substring(0, 16) : '',
     tanggal_selesai: props.settings.tanggal_selesai ? props.settings.tanggal_selesai.substring(0, 16) : '',
+    max_active_users: props.settings.max_active_users ?? 0,
     piwapi: decryptedPiwapi && Array.isArray(decryptedPiwapi) && decryptedPiwapi.length > 0 
         ? decryptedPiwapi 
         : [{secret_key: '', account_id: ''}],
@@ -142,6 +144,21 @@ const submitSettings = () => {
                                     class="w-full"
                                 />
                                 <p class="text-[11px] text-muted-foreground">Portal login akan otomatis ditutup setelah waktu ini berlalu.</p>
+                            </div>
+                        </div>
+
+                        <!-- Max Active Users (Queue System) -->
+                        <div class="grid gap-6 sm:grid-cols-2 mt-4">
+                            <div class="grid gap-2">
+                                <Label for="max_active_users" class="font-medium text-sm">Maksimal User Aktif (Antrean Login)</Label>
+                                <Input
+                                    id="max_active_users"
+                                    type="number"
+                                    min="0"
+                                    v-model="form.max_active_users"
+                                    class="w-full"
+                                />
+                                <p class="text-[11px] text-muted-foreground">Isi dengan `0` untuk menonaktifkan fitur antrean login.</p>
                             </div>
                         </div>
                     </div>
