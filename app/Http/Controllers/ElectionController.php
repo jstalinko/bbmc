@@ -546,6 +546,7 @@ class ElectionController extends Controller
         
         return response()->json([
             'success' => true,
+            'member' => $member,
             'payload' => \App\Helper::encryptForFrontend($member)
         ]);
     }
@@ -899,6 +900,8 @@ class ElectionController extends Controller
             'piwapi' => 'nullable|array',
             'piwapi.*.secret_key' => 'nullable|string',
             'piwapi.*.account_id' => 'nullable|string',
+            'piwapi_api_secret_key' => 'nullable|string',
+            'piwapi_account_id' => 'nullable|string',
         ]);
 
         $validated['ajukan_diri'] = (bool)$validated['ajukan_diri'];

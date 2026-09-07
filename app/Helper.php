@@ -20,10 +20,41 @@ Class Helper{
         return $phone;
     }
     
-    public static function sendWhatsapp($recipient , $message)
+    public static function sendWhatsapp($recipient, $message, $options = [])
     {
-        $secret = env('PIWAPI_API_SECRET_KEY');
-        $account = env('PIWAPI_ACCOUNT_ID');
+        $recipient = self::cleanPhone($recipient);
+        if (empty($recipient) || empty($message)) {
+            return [
+                "success" => false,
+                "message" => "Recipient or message is empty, skipping send."
+            ];
+        }
+
+        $service = config('services.whatsapp.service', env('WHATSAPP_SERVICE', 'piwapi'));
+
+        $path = storage_path('app/private/pemilihan-setting.json');
+        if (file_exists($path)) {
+            $settings = json_decode(file_get_contents($path), true);
+            if (!empty($settings['whatsapp_service'])) {
+                $service = $settings['whatsapp_service'];
+            } elseif (!empty($settings['piwapi_api_secret_key']) || !empty($settings['piwapi'])) {
+                $service = 'piwapi';
+            }
+        }
+
+        $service = strtolower(trim($service));
+
+        if ($service === 'bion' || $service === 'bion.id' || $service === 'bion_id') {
+            return self::sendWhatsappViaBion($recipient, $message, $options);
+        }
+
+        return self::sendWhatsappViaPiwapi($recipient, $message);
+    }
+
+    public static function sendWhatsappViaPiwapi($recipient, $message)
+    {
+        $secret = config('services.whatsapp.piwapi.api_secret_key', env('PIWAPI_API_SECRET_KEY'));
+        $account = config('services.whatsapp.piwapi.account_id', env('PIWAPI_ACCOUNT_ID'));
         $path = storage_path('app/private/pemilihan-setting.json');
         if (file_exists($path)) {
             $settings = json_decode(file_get_contents($path), true);
@@ -46,13 +77,6 @@ Class Helper{
                 }
             }
         }
-        $recipient = self::cleanPhone($recipient);
-        if (empty($recipient) || empty($message)) {
-            return [
-                "success" => false,
-                "message" => "Recipient or message is empty, skipping send."
-            ];
-        }
 
         $url = "https://piwapi.com/api/send/whatsapp";
         $postFields = [
@@ -68,6 +92,140 @@ Class Helper{
             return $response->json();
         } catch (\Exception $e) {
             return ["success" => false, "error" => $e->getMessage()];
+        }
+    }
+
+    public static function sendWhatsappViaBion($recipient, $message, $options = [])
+    {
+        $apiUrl = config('services.whatsapp.bion.api_url', env('BION_API_URL', 'https://crmapis2.bion.id/api/meta'));
+        $version = config('services.whatsapp.bion.api_version', env('BION_API_VERSION', 'v19.0'));
+        $phoneNumberId = config('services.whatsapp.bion.phone_number_id', env('BION_PHONE_NUMBER_ID', '115952861601111'));
+        $accessToken = config('services.whatsapp.bion.access_token', env('BION_ACCESS_TOKEN', ''));
+        $templateName = config('services.whatsapp.bion.auth_template_name', env('BION_AUTH_TEMPLATE_NAME', 'otp_bikers_mc'));
+        $language = config('services.whatsapp.bion.template_language', env('BION_TEMPLATE_LANGUAGE', 'en_US'));
+
+        $path = storage_path('app/private/pemilihan-setting.json');
+        if (file_exists($path)) {
+            $settings = json_decode(file_get_contents($path), true);
+            if (!empty($settings['bion_api_url'])) $apiUrl = $settings['bion_api_url'];
+            if (!empty($settings['bion_api_version'])) $version = $settings['bion_api_version'];
+            if (!empty($settings['bion_phone_number_id'])) $phoneNumberId = $settings['bion_phone_number_id'];
+            if (!empty($settings['bion_access_token'])) $accessToken = $settings['bion_access_token'];
+            if (!empty($settings['bion_auth_template_name'])) $templateName = $settings['bion_auth_template_name'];
+            if (!empty($settings['bion_template_language'])) $language = $settings['bion_template_language'];
+        }
+
+        // Allow options to be a direct scalar OTP (e.g. 123456 or "123456")
+        if (is_numeric($options) || is_string($options)) {
+            $options = ['otp' => (string) $options];
+        }
+
+        if (!empty($options['template_name'])) {
+            $templateName = $options['template_name'];
+        }
+        if (!empty($options['language'])) {
+            $language = $options['language'];
+        }
+
+        $otp = $options['otp'] ?? $options['otp_code'] ?? null;
+        if (!$otp && is_string($message) && preg_match('/\b([0-9]{6})\b/', $message, $matches)) {
+            $otp = $matches[1];
+        } elseif (!$otp && is_string($message) && preg_match('/\b([0-9]{4,8})\b/', $message, $matches)) {
+            $otp = $matches[1];
+        }
+        if (!$otp && is_numeric($message)) {
+            $otp = (string) $message;
+        }
+
+        $url = rtrim($apiUrl, '/') . '/' . trim($version, '/') . '/' . trim($phoneNumberId, '/') . '/messages';
+
+        if (($options['type'] ?? null) === 'text') {
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $recipient,
+                'type' => 'text',
+                'text' => [
+                    'body' => $message,
+                ],
+            ];
+        } else {
+            // Template: otp_bikers_mc#en_US with {{BODY_VARIABLE_1}} (message) and {{BUTTON_VARIABLE}} (otp)
+            $bodyText = $options['body'] ?? $message;
+            $buttonOtp = (string) ($otp ?? $message);
+
+            $components = $options['components'] ?? [
+                [
+                    'type' => 'body',
+                    'parameters' => [
+                        [
+                            'type' => 'text',
+                            'text' => (string) $bodyText,
+                        ],
+                    ],
+                ],
+                [
+                    'type' => 'button',
+                    'sub_type' => 'url',
+                    'index' => 0,
+                    'parameters' => [
+                        [
+                            'type' => 'text',
+                            'text' => $buttonOtp,
+                        ],
+                    ],
+                ],
+            ];
+
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $recipient,
+                'type' => 'template',
+                'template' => [
+                    'language' => [
+                        'policy' => 'deterministic',
+                        'code' => $language,
+                    ],
+                    'name' => $templateName,
+                    'components' => $components,
+                ],
+            ];
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $accessToken,
+                'Content-Type' => 'application/json',
+            ])->post($url, $payload);
+
+            $data = $response->json();
+            if ($response->successful() && !isset($data['error'])) {
+                return array_merge([
+                    'success' => true,
+                    'status' => $response->status(),
+                ], is_array($data) ? $data : ['data' => $data]);
+            }
+
+            $errorMessage = 'Failed to send WhatsApp message via Bion.';
+            if (isset($data['error'])) {
+                $errorMessage = is_array($data['error']) ? ($data['error']['message'] ?? json_encode($data['error'])) : (string)$data['error'];
+            } elseif (isset($data['message']) && is_string($data['message'])) {
+                $errorMessage = $data['message'];
+            }
+
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'error' => $errorMessage,
+                'response' => $data,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'status' => 500,
+                'error' => $e->getMessage(),
+            ];
         }
     }
 

@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'service' => env('WHATSAPP_SERVICE', 'piwapi'),
+        'piwapi' => [
+            'api_secret_key' => env('PIWAPI_API_SECRET_KEY'),
+            'account_id' => env('PIWAPI_ACCOUNT_ID'),
+        ],
+        'bion' => [
+            'api_url' => env('BION_API_URL', 'https://crmapis2.bion.id/api/meta'),
+            'api_version' => env('BION_API_VERSION', 'v19.0'),
+            'waba_id' => env('BION_WABA_ID', '112227011977777'),
+            'phone_number_id' => env('BION_PHONE_NUMBER_ID', '115952861601111'),
+            'access_token' => env('BION_ACCESS_TOKEN'),
+            'auth_template_name' => env('BION_AUTH_TEMPLATE_NAME', 'otp_bikers_mc'),
+            'template_language' => env('BION_TEMPLATE_LANGUAGE', 'en_US'),
+            'auth_button_type' => env('BION_AUTH_BUTTON_TYPE', 'url'),
+        ],
+    ],
+
 ];
