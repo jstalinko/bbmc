@@ -11,7 +11,7 @@ Artisan::command('test:send-wa {recipient} {message=Hello brother 123456 is your
     echo "Sending type: " . config('services.whatsapp.service') . PHP_EOL;
     $options = [];
     if ($otp = $this->option('otp')) {
-        $options['otp'] = $otp;
+        $options['otp_code'] = $otp;
     }
     if ($type = $this->option('type')) {
         $options['type'] = $type;

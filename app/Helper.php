@@ -37,8 +37,6 @@ Class Helper{
             $settings = json_decode(file_get_contents($path), true);
             if (!empty($settings['whatsapp_service'])) {
                 $service = $settings['whatsapp_service'];
-            } elseif (!empty($settings['piwapi_api_secret_key']) || !empty($settings['piwapi'])) {
-                $service = 'piwapi';
             }
         }
 
@@ -101,8 +99,9 @@ Class Helper{
         $version = config('services.whatsapp.bion.api_version', env('BION_API_VERSION', 'v19.0'));
         $phoneNumberId = config('services.whatsapp.bion.phone_number_id', env('BION_PHONE_NUMBER_ID', '115952861601111'));
         $accessToken = config('services.whatsapp.bion.access_token', env('BION_ACCESS_TOKEN', ''));
-        $templateName = config('services.whatsapp.bion.auth_template_name', env('BION_AUTH_TEMPLATE_NAME', 'otp_bikers_mc'));
-        $language = config('services.whatsapp.bion.template_language', env('BION_TEMPLATE_LANGUAGE', 'en_US'));
+        $templateName = config('services.whatsapp.bion.auth_template_name', env('BION_AUTH_TEMPLATE_NAME', 'authentication_template'));
+        $language = config('services.whatsapp.bion.template_language', env('BION_TEMPLATE_LANGUAGE', 'en'));
+        $buttonType = config('services.whatsapp.bion.auth_button_type', env('BION_AUTH_BUTTON_TYPE', 'url'));
 
         $path = storage_path('app/private/pemilihan-setting.json');
         if (file_exists($path)) {
@@ -113,11 +112,11 @@ Class Helper{
             if (!empty($settings['bion_access_token'])) $accessToken = $settings['bion_access_token'];
             if (!empty($settings['bion_auth_template_name'])) $templateName = $settings['bion_auth_template_name'];
             if (!empty($settings['bion_template_language'])) $language = $settings['bion_template_language'];
+            if (!empty($settings['bion_auth_button_type'])) $buttonType = $settings['bion_auth_button_type'];
         }
 
-        // Allow options to be a direct scalar OTP (e.g. 123456 or "123456")
-        if (is_numeric($options) || is_string($options)) {
-            $options = ['otp' => (string) $options];
+        if (is_string($options)) {
+            $options = ['otp_code' => $options];
         }
 
         if (!empty($options['template_name'])) {
@@ -126,56 +125,48 @@ Class Helper{
         if (!empty($options['language'])) {
             $language = $options['language'];
         }
-
-        $otp = $options['otp'] ?? $options['otp_code'] ?? null;
-        if (!$otp && is_string($message) && preg_match('/\b([0-9]{6})\b/', $message, $matches)) {
-            $otp = $matches[1];
-        } elseif (!$otp && is_string($message) && preg_match('/\b([0-9]{4,8})\b/', $message, $matches)) {
-            $otp = $matches[1];
-        }
-        if (!$otp && is_numeric($message)) {
-            $otp = (string) $message;
+        if (!empty($options['button_type'])) {
+            $buttonType = $options['button_type'];
         }
 
         $url = rtrim($apiUrl, '/') . '/' . trim($version, '/') . '/' . trim($phoneNumberId, '/') . '/messages';
 
-        if (($options['type'] ?? null) === 'text') {
-            $payload = [
-                'messaging_product' => 'whatsapp',
-                'recipient_type' => 'individual',
-                'to' => $recipient,
-                'type' => 'text',
-                'text' => [
-                    'body' => $message,
-                ],
-            ];
-        } else {
-            // Template: otp_bikers_mc#en_US with {{BODY_VARIABLE_1}} (message) and {{BUTTON_VARIABLE}} (otp)
-            $bodyText = $options['body'] ?? $message;
-            $buttonOtp = (string) ($otp ?? $message);
+        $otpCode = $options['otp_code'] ?? null;
+        if (!$otpCode && is_string($message) && preg_match('/\b([0-9]{6})\b/', $message, $matches)) {
+            $otpCode = $matches[1];
+        }
 
-            $components = $options['components'] ?? [
-                [
-                    'type' => 'body',
-                    'parameters' => [
-                        [
-                            'type' => 'text',
-                            'text' => (string) $bodyText,
+        $mode = $options['type'] ?? (($otpCode !== null || !empty($options['template_name'])) ? 'template' : 'text');
+
+        if ($mode === 'template') {
+            if (isset($options['components'])) {
+                $components = $options['components'];
+            } else {
+                $components = [
+                    [
+                        'type' => 'body',
+                        'parameters' => [
+                            [
+                                'type' => 'text',
+                                'text' => $otpCode ?? 'Member',
+                            ],
                         ],
                     ],
-                ],
-                [
-                    'type' => 'button',
-                    'sub_type' => 'url',
-                    'index' => 0,
-                    'parameters' => [
-                        [
-                            'type' => 'text',
-                            'text' => $buttonOtp,
+                ];
+                if ($otpCode) {
+                    $components[] = [
+                        'type' => 'button',
+                        'sub_type' => $buttonType,
+                        'index' => 0,
+                        'parameters' => [
+                            [
+                                'type' => 'text',
+                                'text' => (string) $otpCode,
+                            ],
                         ],
-                    ],
-                ],
-            ];
+                    ];
+                }
+            }
 
             $payload = [
                 'messaging_product' => 'whatsapp',
@@ -191,6 +182,16 @@ Class Helper{
                     'components' => $components,
                 ],
             ];
+        } else {
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $recipient,
+                'type' => 'text',
+                'text' => [
+                    'body' => $message,
+                ],
+            ];
         }
 
         try {
@@ -200,24 +201,18 @@ Class Helper{
             ])->post($url, $payload);
 
             $data = $response->json();
-            if ($response->successful() && !isset($data['error'])) {
+
+            if ($response->successful() && (isset($data['messages']) || isset($data['contacts']))) {
                 return array_merge([
                     'success' => true,
-                    'status' => $response->status(),
+                    'status' => 200,
                 ], is_array($data) ? $data : ['data' => $data]);
-            }
-
-            $errorMessage = 'Failed to send WhatsApp message via Bion.';
-            if (isset($data['error'])) {
-                $errorMessage = is_array($data['error']) ? ($data['error']['message'] ?? json_encode($data['error'])) : (string)$data['error'];
-            } elseif (isset($data['message']) && is_string($data['message'])) {
-                $errorMessage = $data['message'];
             }
 
             return [
                 'success' => false,
                 'status' => $response->status(),
-                'error' => $errorMessage,
+                'error' => $data['error']['message'] ?? $data['message'] ?? 'Failed to send WhatsApp message via Bion.',
                 'response' => $data,
             ];
         } catch (\Exception $e) {
