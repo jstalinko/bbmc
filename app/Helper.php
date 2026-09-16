@@ -22,7 +22,7 @@ Class Helper{
     
     public static function getWhatsappService()
     {
-        $service = config('services.whatsapp.service', env('WHATSAPP_SERVICE', 'piwapi'));
+        $service = config('services.whatsapp.service', env('WHATSAPP_SERVICE', 'bion.id'));
 
         $path = storage_path('app/private/pemilihan-setting.json');
         if (file_exists($path)) {
