@@ -20,16 +20,8 @@ Class Helper{
         return $phone;
     }
     
-    public static function sendWhatsapp($recipient, $message, $options = [])
+    public static function getWhatsappService()
     {
-        $recipient = self::cleanPhone($recipient);
-        if (empty($recipient) || empty($message)) {
-            return [
-                "success" => false,
-                "message" => "Recipient or message is empty, skipping send."
-            ];
-        }
-
         $service = config('services.whatsapp.service', env('WHATSAPP_SERVICE', 'piwapi'));
 
         $path = storage_path('app/private/pemilihan-setting.json');
@@ -37,12 +29,51 @@ Class Helper{
             $settings = json_decode(file_get_contents($path), true);
             if (!empty($settings['whatsapp_service'])) {
                 $service = $settings['whatsapp_service'];
+            } elseif (!empty($settings['piwapi_api_secret_key']) || !empty($settings['piwapi'])) {
+                $service = 'piwapi';
             }
         }
 
-        $service = strtolower(trim($service));
+        return strtolower(trim($service));
+    }
 
-        if ($service === 'bion' || $service === 'bion.id' || $service === 'bion_id') {
+    public static function isBionService($service = null)
+    {
+        if ($service === null) {
+            $service = self::getWhatsappService();
+        }
+        $service = strtolower(trim($service));
+        return in_array($service, ['bion', 'bion.id', 'bion_id']);
+    }
+
+    public static function getBionTemplateName()
+    {
+        $templateName = config('services.whatsapp.bion.auth_template_name', env('BION_AUTH_TEMPLATE_NAME', 'otp_bikers_mc'));
+
+        $path = storage_path('app/private/pemilihan-setting.json');
+        if (file_exists($path)) {
+            $settings = json_decode(file_get_contents($path), true);
+            if (!empty($settings['bion_auth_template_name'])) {
+                $templateName = $settings['bion_auth_template_name'];
+            }
+        }
+
+        return $templateName;
+    }
+
+    public static function sendWhatsapp($recipient, $message, $options = [])
+    {
+        $recipient = self::cleanPhone($recipient);
+        if (empty($recipient) || (empty($message) && empty($options['template_name']) && empty($options['type']))) {
+            return [
+                "success" => false,
+                "message" => "Recipient or message is empty, skipping send."
+            ];
+        }
+
+        $service = self::getWhatsappService();
+
+        if (self::isBionService($service)) {
             return self::sendWhatsappViaBion($recipient, $message, $options);
         }
 
@@ -117,6 +148,8 @@ Class Helper{
 
         if (is_string($options)) {
             $options = ['otp_code' => $options];
+        } elseif (is_numeric($options)) {
+            $options = ['otp_code' => (string) $options];
         }
 
         if (!empty($options['template_name'])) {
@@ -131,7 +164,7 @@ Class Helper{
 
         $url = rtrim($apiUrl, '/') . '/' . trim($version, '/') . '/' . trim($phoneNumberId, '/') . '/messages';
 
-        $otpCode = $options['otp_code'] ?? null;
+        $otpCode = $options['otp_code'] ?? ($options['otp'] ?? null);
         if (!$otpCode && is_string($message) && preg_match('/\b([0-9]{6})\b/', $message, $matches)) {
             $otpCode = $matches[1];
         }
@@ -142,29 +175,56 @@ Class Helper{
             if (isset($options['components'])) {
                 $components = $options['components'];
             } else {
-                $components = [
-                    [
-                        'type' => 'body',
-                        'parameters' => [
-                            [
-                                'type' => 'text',
-                                'text' => $otpCode ?? 'Member',
+                if ($templateName === 'otp_bikers_mc') {
+                    $bodyText = $options['body'] ?? ($options['recipient_name'] ?? $message);
+                    $buttonOtp = (string) ($otpCode ?? ($options['recipient_name'] ?? 'Member'));
+                    $components = [
+                        [
+                            'type' => 'body',
+                            'parameters' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => (string) $bodyText,
+                                ],
                             ],
                         ],
-                    ],
-                ];
-                if ($otpCode) {
-                    $components[] = [
-                        'type' => 'button',
-                        'sub_type' => $buttonType,
-                        'index' => 0,
-                        'parameters' => [
-                            [
-                                'type' => 'text',
-                                'text' => (string) $otpCode,
+                        [
+                            'type' => 'button',
+                            'sub_type' => $buttonType,
+                            'index' => 0,
+                            'parameters' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => $buttonOtp,
+                                ],
                             ],
                         ],
                     ];
+                } else {
+                    $components = [
+                        [
+                            'type' => 'body',
+                            'parameters' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => $otpCode ?? ($options['recipient_name'] ?? 'Member'),
+                                ],
+                            ],
+                        ],
+                    ];
+                    if ($otpCode) {
+                        $components[] = [
+                            'type' => 'button',
+                            'sub_type' => $buttonType,
+                            'index' => 0,
+                            'parameters' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => (string) $otpCode,
+                                ],
+                            ],
+                        ];
+                    }
                 }
             }
 
@@ -202,7 +262,7 @@ Class Helper{
 
             $data = $response->json();
 
-            if ($response->successful() && (isset($data['messages']) || isset($data['contacts']))) {
+            if ($response->successful() && (isset($data['messages']) || isset($data['contacts']) || isset($data['message']))) {
                 return array_merge([
                     'success' => true,
                     'status' => 200,

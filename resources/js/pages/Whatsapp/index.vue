@@ -5,7 +5,8 @@ import { Head } from '@inertiajs/vue3';
 import { ref, computed, nextTick, onBeforeUnmount } from 'vue';
 import { 
   Users, MessageSquare, Plus, Check, ChevronsUpDown, X, 
-  Send, Sparkles, RefreshCw, AlertCircle, CheckCircle2, XCircle, Info 
+  Send, Sparkles, RefreshCw, AlertCircle, CheckCircle2, XCircle, Info,
+  FileText, CheckCheck 
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,9 +39,24 @@ interface BlastStats {
   progress: number;
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   members: Member[];
-}>();
+  whatsapp_service?: string;
+  is_bion?: boolean;
+  template_name?: string | null;
+}>(), {
+  whatsapp_service: 'piwapi',
+  is_bion: false,
+  template_name: null,
+});
+
+const isBion = computed(() => {
+  if (props.is_bion !== undefined && props.is_bion !== null) {
+    return props.is_bion;
+  }
+  const svc = (props.whatsapp_service || '').toLowerCase().trim();
+  return svc === 'bion' || svc === 'bion.id' || svc === 'bion_id';
+});
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
@@ -103,6 +119,11 @@ function selectFiltered() {
   });
 }
 
+// Select all members
+function selectAllMembers() {
+  selectedMemberIds.value = props.members.map(m => m.id);
+}
+
 // Clear selection
 function clearSelection() {
   selectedMemberIds.value = [];
@@ -146,7 +167,7 @@ async function submitBlast() {
     errorMessage.value = 'Silakan pilih minimal satu anggota penerima.';
     return;
   }
-  if (!messageText.value.trim()) {
+  if (!isBion.value && !messageText.value.trim()) {
     errorMessage.value = 'Pesan blast tidak boleh kosong.';
     return;
   }
@@ -163,10 +184,14 @@ async function submitBlast() {
   }
 
   try {
-    const res = await axios.post('/dashboard/whatsapp/send', {
+    const payload: { member_ids: number[]; message?: string } = {
       member_ids: selectedMemberIds.value,
-      message: messageText.value,
-    });
+    };
+    if (!isBion.value) {
+      payload.message = messageText.value;
+    }
+
+    const res = await axios.post('/dashboard/whatsapp/send', payload);
 
     currentBatchId.value = res.data.batch_id;
     blastStats.value = res.data.stats;
@@ -242,14 +267,34 @@ function formatResponse(respStr: string | null) {
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="flex flex-col gap-6 p-4 sm:p-6 max-w-7xl mx-auto w-full">
       <!-- Header -->
-      <div class="flex flex-col gap-1">
-        <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <MessageSquare class="h-6 w-6 text-red-500" />
-          WhatsApp Blast
-        </h1>
-        <p class="text-sm text-muted-foreground">
-          Kirim pesan WhatsApp massal ke anggota terdaftar secara dinamis dan efisien.
-        </p>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex flex-col gap-1">
+          <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <MessageSquare class="h-6 w-6 text-red-500" />
+            WhatsApp Blast
+          </h1>
+          <p class="text-sm text-muted-foreground">
+            Kirim pesan WhatsApp massal ke anggota terdaftar secara dinamis dan efisien.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <Badge 
+            v-if="isBion"
+            variant="outline"
+            class="px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400 gap-1.5"
+          >
+            <span class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+            WhatsApp Service: Bion.id (Template Mode)
+          </Badge>
+          <Badge 
+            v-else
+            variant="outline"
+            class="px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400 gap-1.5"
+          >
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            WhatsApp Service: Piwapi (Custom Message)
+          </Badge>
+        </div>
       </div>
 
       <!-- Main Layout -->
@@ -260,12 +305,40 @@ function formatResponse(respStr: string | null) {
           
           <!-- Member Selection Card -->
           <div class="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
-            <div>
-              <h2 class="text-base font-bold flex items-center gap-2">
-                <Users class="h-5 w-5 text-red-500" />
-                Pilih Penerima
-              </h2>
-              <p class="text-xs text-muted-foreground">Cari dan pilih anggota yang akan menerima pesan.</p>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <h2 class="text-base font-bold flex items-center gap-2">
+                  <Users class="h-5 w-5 text-red-500" />
+                  Pilih Penerima
+                </h2>
+                <p class="text-xs text-muted-foreground">
+                  {{ isBion ? 'Pilih semua atau sebagian anggota yang akan dikirimi template WhatsApp.' : 'Cari dan pilih anggota yang akan menerima pesan.' }}
+                </p>
+              </div>
+
+              <!-- Quick Select Buttons -->
+              <div class="flex items-center gap-1.5 shrink-0">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  @click="selectAllMembers"
+                  class="h-7 text-xs font-medium gap-1 px-2.5 hover:border-red-500/50 hover:text-red-500"
+                >
+                  <CheckCheck class="h-3.5 w-3.5 text-red-500" />
+                  Pilih Semua ({{ members.length }})
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  v-if="selectedMemberIds.length > 0"
+                  @click="clearSelection" 
+                  class="h-7 text-xs text-muted-foreground hover:text-foreground px-2"
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
 
             <!-- Custom Multi-select Dropdown Search -->
@@ -279,7 +352,7 @@ function formatResponse(respStr: string | null) {
                     Pilih Anggota...
                   </span>
                   <span v-else class="font-semibold text-xs text-red-600 dark:text-red-400">
-                    {{ selectedMemberIds.length }} Anggota Terpilih
+                    {{ selectedMemberIds.length }} dari {{ members.length }} Anggota Terpilih
                   </span>
                 </div>
                 <ChevronsUpDown class="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -375,8 +448,64 @@ function formatResponse(respStr: string | null) {
             </div>
           </div>
 
-          <!-- Message Editor Card -->
-          <div class="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
+          <!-- Bion Mode: Template Information & Direct Send (No textarea message) -->
+          <div v-if="isBion" class="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
+            <div>
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <FileText class="h-5 w-5 text-blue-500" />
+                Pengiriman Template WhatsApp
+              </h2>
+              <p class="text-xs text-muted-foreground">
+                Layanan Bion.id menggunakan template resmi WhatsApp Cloud API. Pesan kustom tidak digunakan.
+              </p>
+            </div>
+
+            <!-- Template Info Alert Box -->
+            <div class="flex items-start gap-3 p-4 rounded-xl border bg-blue-50/60 dark:bg-blue-950/20 border-blue-200/80 dark:border-blue-900/50">
+              <Info class="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div class="flex flex-col gap-1 text-xs">
+                <div class="font-semibold text-blue-950 dark:text-blue-200 flex items-center gap-2">
+                  <span>Nama Template:</span>
+                  <code class="font-mono bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded text-[11px] font-bold">
+                    {{ template_name || 'otp_bikers_mc' }}
+                  </code>
+                </div>
+                <p class="text-blue-800/80 dark:text-blue-300/80 leading-relaxed mt-0.5">
+                  Setiap penerima terpilih akan dikirimi pesan menggunakan template resmi yang telah disetujui oleh WhatsApp/Meta.
+                </p>
+              </div>
+            </div>
+
+            <!-- Error Banner -->
+            <div 
+              v-if="errorMessage" 
+              class="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-600 dark:text-red-400"
+            >
+              <AlertCircle class="h-4 w-4 shrink-0" />
+              <span>{{ errorMessage }}</span>
+            </div>
+
+            <!-- Submit Button for Bion Template -->
+            <Button 
+              @click="submitBlast"
+              :disabled="isSubmitting || selectedMemberIds.length === 0"
+              class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold h-10 gap-2 shadow-sm shrink-0"
+            >
+              <Send class="h-4 w-4" />
+              <template v-if="isSubmitting">
+                Mengirim Template...
+              </template>
+              <template v-else-if="selectedMemberIds.length <= 2">
+                Kirim Template ke {{ selectedMemberIds.length }} Anggota
+              </template>
+              <template v-else>
+                Kirim Massal Template via Antrean ({{ selectedMemberIds.length }} Anggota)
+              </template>
+            </Button>
+          </div>
+
+          <!-- Piwapi Mode: Message Editor Card with Textarea (Only when NOT Bion) -->
+          <div v-if="!isBion" class="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
             <div>
               <h2 class="text-base font-bold flex items-center gap-2">
                 <Sparkles class="h-5 w-5 text-red-500" />
@@ -425,7 +554,7 @@ function formatResponse(respStr: string | null) {
               <span>{{ errorMessage }}</span>
             </div>
 
-            <!-- Submit Button -->
+            <!-- Submit Button for Piwapi -->
             <Button 
               @click="submitBlast"
               :disabled="isSubmitting || selectedMemberIds.length === 0"

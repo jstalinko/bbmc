@@ -36,7 +36,20 @@ class SendWhatsappJob implements ShouldQueue
 
         $log->update(['status' => 'sending']);
 
-        $response = Helper::sendWhatsapp($log->recipient_phone, $log->message);
+        $options = [];
+        if (Helper::isBionService()) {
+            $templateName = Helper::getBionTemplateName();
+            if (str_starts_with($log->message, 'Template:')) {
+                $templateName = trim(substr($log->message, strlen('Template:')));
+            }
+            $options = [
+                'type' => 'template',
+                'template_name' => $templateName,
+                'recipient_name' => $log->recipient_name,
+            ];
+        }
+
+        $response = Helper::sendWhatsapp($log->recipient_phone, $log->message, $options);
 
         $success = false;
         if (is_array($response)) {
@@ -44,7 +57,8 @@ class SendWhatsappJob implements ShouldQueue
                 (isset($response['success']) && $response['success'] === true) ||
                 (isset($response['status']) && in_array($response['status'], [200, '200', 'success'])) ||
                 isset($response['message_id']) ||
-                isset($response['data']['messageId'])
+                isset($response['data']['messageId']) ||
+                isset($response['message']['queue_id'])
             ) {
                 $success = true;
             }

@@ -23,7 +23,8 @@ test('authenticated users can access whatsapp blast page', function () {
     $response->assertStatus(200);
 });
 
-test('it validates request parameters when sending', function () {
+test('it validates request parameters when sending with piwapi', function () {
+    config(['services.whatsapp.service' => 'piwapi']);
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -34,6 +35,61 @@ test('it validates request parameters when sending', function () {
 
     $response->assertStatus(422)
              ->assertJsonValidationErrors(['member_ids', 'message']);
+});
+
+test('it passes whatsapp_service and is_bion props to inertia view', function () {
+    config(['services.whatsapp.service' => 'bion.id']);
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->get('/dashboard/whatsapp');
+    $response->assertStatus(200);
+    $response->assertInertia(fn ($page) => 
+        $page->component('Whatsapp/index', false)
+             ->has('whatsapp_service')
+             ->where('is_bion', true)
+    );
+});
+
+test('it does not require message when whatsapp service is bion.id', function () {
+    config(['services.whatsapp.service' => 'bion.id']);
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $member = Member::create([
+        'nama_lengkap' => 'Asep Bion',
+        'nama_panggilan' => 'Asep',
+        'tempat_lahir' => 'Bandung',
+        'tanggal_lahir' => '12/03/1990',
+        'jenis_kelamin' => 'L',
+        'gol_darah' => 'O',
+        'alamat' => 'Jl. Sudirman',
+        'no_wa' => '628123456789',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'chapter' => 'Bandung'
+    ]);
+
+    Http::fake([
+        'https://crmapis2.bion.id/*' => Http::response([
+            'messaging_product' => 'whatsapp',
+            'contacts' => [['input' => '628123456789', 'wa_id' => '628123456789']],
+            'messages' => [['id' => 'wamid.123456']]
+        ], 200),
+    ]);
+
+    $response = $this->postJson('/dashboard/whatsapp/send', [
+        'member_ids' => [$member->id],
+        // message is omitted / not sent
+    ]);
+
+    $response->assertStatus(200)
+             ->assertJsonPath('queued', false)
+             ->assertJsonPath('stats.progress', 100);
+
+    $this->assertDatabaseHas('whatsapp_logs', [
+        'recipient_name' => 'Asep Bion',
+        'status' => 'success',
+    ]);
 });
 
 test('it sends message synchronously when recipients count is 2 or less', function () {

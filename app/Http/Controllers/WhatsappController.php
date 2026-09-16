@@ -18,8 +18,15 @@ class WhatsappController extends Controller
     public function index()
     {
         $members = Member::select('id', 'nama_lengkap', 'nama_panggilan', 'no_wa', 'email', 'no_kartu')->get();
+        $whatsappService = Helper::getWhatsappService();
+        $isBion = Helper::isBionService($whatsappService);
+        $templateName = $isBion ? Helper::getBionTemplateName() : null;
+
         return Inertia::render('Whatsapp/index', [
             'members' => $members,
+            'whatsapp_service' => $whatsappService,
+            'is_bion' => $isBion,
+            'template_name' => $templateName,
         ]);
     }
 
@@ -28,21 +35,35 @@ class WhatsappController extends Controller
      */
     public function send(Request $request)
     {
-        $request->validate([
+        $whatsappService = Helper::getWhatsappService();
+        $isBion = Helper::isBionService($whatsappService);
+
+        $rules = [
             'member_ids' => 'required|array|min:1',
             'member_ids.*' => 'exists:members,id',
-            'message' => 'required|string',
-        ]);
+        ];
+
+        if ($isBion) {
+            $rules['message'] = 'nullable|string';
+        } else {
+            $rules['message'] = 'required|string';
+        }
+
+        $request->validate($rules);
 
         $memberIds = $request->input('member_ids');
         $messageTemplate = $request->input('message');
         $members = Member::whereIn('id', $memberIds)->get();
 
         $batchId = 'blast_' . Str::random(10);
+        $templateName = Helper::getBionTemplateName();
         $logs = [];
 
         foreach ($members as $member) {
-            $personalizedMessage = $this->replacePlaceholders($messageTemplate, $member);
+            $personalizedMessage = $messageTemplate ? $this->replacePlaceholders($messageTemplate, $member) : '';
+            if ($isBion && empty($personalizedMessage)) {
+                $personalizedMessage = "Template: {$templateName}";
+            }
             
             $log = WhatsappLog::create([
                 'batch_id' => $batchId,
@@ -61,7 +82,15 @@ class WhatsappController extends Controller
             // Process synchronously
             foreach ($logs as $log) {
                 $log->update(['status' => 'sending']);
-                $response = Helper::sendWhatsapp($log->recipient_phone, $log->message);
+                $options = [];
+                if ($isBion) {
+                    $options = [
+                        'type' => 'template',
+                        'template_name' => $templateName,
+                        'recipient_name' => $log->recipient_name,
+                    ];
+                }
+                $response = Helper::sendWhatsapp($log->recipient_phone, $log->message, $options);
 
                 $success = false;
                 if (is_array($response)) {
@@ -69,7 +98,8 @@ class WhatsappController extends Controller
                         (isset($response['success']) && $response['success'] === true) ||
                         (isset($response['status']) && in_array($response['status'], [200, '200', 'success'])) ||
                         isset($response['message_id']) ||
-                        isset($response['data']['messageId'])
+                        isset($response['data']['messageId']) ||
+                        isset($response['message']['queue_id'])
                     ) {
                         $success = true;
                     }
