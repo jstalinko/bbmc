@@ -283,8 +283,8 @@ function formatResponse(respStr: string | null) {
             variant="outline"
             class="px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400 gap-1.5"
           >
-            <span class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-            WhatsApp Service: Bion.id (Template Mode)
+            <span class="h-2 w-2 rounded-full bg-blue-500"></span>
+            WhatsApp Service: Bion.id (Cloud API)
           </Badge>
           <Badge 
             v-else
@@ -292,7 +292,7 @@ function formatResponse(respStr: string | null) {
             class="px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400 gap-1.5"
           >
             <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-            WhatsApp Service: Piwapi (Custom Message)
+            WhatsApp Service: Piwapi
           </Badge>
         </div>
       </div>
@@ -312,7 +312,7 @@ function formatResponse(respStr: string | null) {
                   Pilih Penerima
                 </h2>
                 <p class="text-xs text-muted-foreground">
-                  {{ isBion ? 'Pilih semua atau sebagian anggota yang akan dikirimi template WhatsApp.' : 'Cari dan pilih anggota yang akan menerima pesan.' }}
+                  Cari dan pilih anggota yang akan menerima pesan WhatsApp.
                 </p>
               </div>
 
@@ -448,7 +448,7 @@ function formatResponse(respStr: string | null) {
             </div>
           </div>
 
-          <!-- Bion Mode: Template Information & Direct Send (No textarea message) -->
+          <!-- Bion Mode: Template Information & Direct Send (No message required) -->
           <div v-if="isBion" class="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
             <div>
               <h2 class="text-base font-bold flex items-center gap-2">
@@ -456,7 +456,7 @@ function formatResponse(respStr: string | null) {
                 Pengiriman Template WhatsApp
               </h2>
               <p class="text-xs text-muted-foreground">
-                Layanan Bion.id menggunakan template resmi WhatsApp Cloud API. Pesan kustom tidak digunakan.
+                Layanan Bion.id berbasis template resmi WhatsApp Cloud API. Pengiriman pesan menggunakan template resmi.
               </p>
             </div>
 
@@ -471,7 +471,7 @@ function formatResponse(respStr: string | null) {
                   </code>
                 </div>
                 <p class="text-blue-800/80 dark:text-blue-300/80 leading-relaxed mt-0.5">
-                  Setiap penerima terpilih akan dikirimi pesan menggunakan template resmi yang telah disetujui oleh WhatsApp/Meta.
+                  Setiap penerima terpilih akan dikirimi pesan menggunakan template resmi WhatsApp.
                 </p>
               </div>
             </div>
@@ -504,8 +504,8 @@ function formatResponse(respStr: string | null) {
             </Button>
           </div>
 
-          <!-- Piwapi Mode: Message Editor Card with Textarea (Only when NOT Bion) -->
-          <div v-if="!isBion" class="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
+          <!-- Piwapi Mode: Message Editor Card with Textarea -->
+          <div v-else class="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
             <div>
               <h2 class="text-base font-bold flex items-center gap-2">
                 <Sparkles class="h-5 w-5 text-red-500" />
@@ -521,6 +521,7 @@ function formatResponse(respStr: string | null) {
                 <button
                   v-for="item in placeholders"
                   :key="item.value"
+                  type="button"
                   @click="insertPlaceholder(item.value)"
                   class="inline-flex items-center gap-0.5 border border-dashed hover:border-red-500/40 hover:bg-red-500/5 px-2 py-1 rounded-lg text-xs font-mono transition-colors"
                 >

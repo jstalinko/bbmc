@@ -36,26 +36,29 @@ class SendWhatsappJob implements ShouldQueue
 
         $log->update(['status' => 'sending']);
 
+        $message = $log->message;
         $options = [];
+
         if (Helper::isBionService()) {
-            $templateName = Helper::getBionTemplateName();
-            if (str_starts_with($log->message, 'Template:')) {
-                $templateName = trim(substr($log->message, strlen('Template:')));
-            }
+            $otp = (string) rand(100000, 999999);
             $options = [
-                'type' => 'template',
-                'template_name' => $templateName,
-                'recipient_name' => $log->recipient_name,
+                'otp_code' => $otp,
             ];
+
+            if (empty($message) || str_starts_with($message, 'Template:')) {
+                $message = Helper::getRandomOtpMessage($otp, 'login');
+            }
         }
 
-        $response = Helper::sendWhatsapp($log->recipient_phone, $log->message, $options);
+        $response = Helper::sendWhatsapp($log->recipient_phone, $message, $options);
 
         $success = false;
         if (is_array($response)) {
-            if (
-                (isset($response['success']) && $response['success'] === true) ||
-                (isset($response['status']) && in_array($response['status'], [200, '200', 'success'])) ||
+            if (isset($response['success'])) {
+                $success = (bool) $response['success'];
+            } elseif (isset($response['status']) && in_array($response['status'], [200, '200', 'success'])) {
+                $success = true;
+            } elseif (
                 isset($response['message_id']) ||
                 isset($response['data']['messageId']) ||
                 isset($response['message']['queue_id'])

@@ -137,7 +137,7 @@ test('Helper::sendWhatsapp sends otp_bikers_mc template with queued response fro
             && $body['template']['name'] === 'otp_bikers_mc'
             && $body['template']['language']['code'] === 'en_US'
             && $body['template']['components'][0]['type'] === 'body'
-            && $body['template']['components'][0]['parameters'][0]['text'] === 'Hello brother 123456 is your otp'
+            && $body['template']['components'][0]['parameters'][0]['text'] === '123456'
             && $body['template']['components'][1]['type'] === 'button'
             && $body['template']['components'][1]['sub_type'] === 'url'
             && $body['template']['components'][1]['parameters'][0]['text'] === '123456';

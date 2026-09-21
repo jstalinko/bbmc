@@ -48,6 +48,7 @@ return [
             'phone_number_id' => env('BION_PHONE_NUMBER_ID', '115952861601111'),
             'access_token' => env('BION_ACCESS_TOKEN'),
             'auth_template_name' => env('BION_AUTH_TEMPLATE_NAME', 'otp_bikers_mc'),
+            'blast_template_name' => env('BION_BLAST_TEMPLATE_NAME', null),
             'template_language' => env('BION_TEMPLATE_LANGUAGE', 'en_US'),
             'auth_button_type' => env('BION_AUTH_BUTTON_TYPE', 'url'),
         ],

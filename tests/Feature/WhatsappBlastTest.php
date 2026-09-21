@@ -255,3 +255,56 @@ test('it returns status updates of a batch', function () {
              ->assertJsonPath('stats.failed', 1)
              ->assertJsonPath('stats.progress', 100);
 });
+
+test('it sends template message via bion matching console testing options', function () {
+    config(['services.whatsapp.service' => 'bion.id']);
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $member = Member::create([
+        'nama_lengkap' => 'Alin Koko',
+        'nama_panggilan' => 'Alin',
+        'tempat_lahir' => 'Bandung',
+        'tanggal_lahir' => '12/03/1990',
+        'jenis_kelamin' => 'L',
+        'gol_darah' => 'O',
+        'alamat' => 'Jl. Sudirman',
+        'no_wa' => '6287857580910',
+        'no_kartu' => '0777',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'chapter' => 'Bandung'
+    ]);
+
+    Http::fake([
+        'https://crmapis2.bion.id/*' => Http::response([
+            'messaging_product' => 'whatsapp',
+            'contacts' => [['input' => '6287857580910', 'wa_id' => '6287857580910']],
+            'messages' => [['id' => 'wamid.blast123']]
+        ], 200),
+    ]);
+
+    $response = $this->postJson('/dashboard/whatsapp/send', [
+        'member_ids' => [$member->id],
+    ]);
+
+    $response->assertStatus(200)
+             ->assertJsonPath('queued', false)
+             ->assertJsonPath('stats.progress', 100);
+
+    Http::assertSent(function ($request) {
+        $body = $request->data();
+        return $request->url() === 'https://crmapis2.bion.id/api/meta/v19.0/115952861601111/messages'
+            && $body['type'] === 'template'
+            && $body['template']['name'] === 'otp_bikers_mc'
+            && isset($body['template']['components'][0]['parameters'][0]['text'])
+            && preg_match('/^[0-9]{6}$/', $body['template']['components'][0]['parameters'][0]['text'])
+            && isset($body['template']['components'][1]['parameters'][0]['text'])
+            && preg_match('/^[0-9]{6}$/', $body['template']['components'][1]['parameters'][0]['text']);
+    });
+
+    $this->assertDatabaseHas('whatsapp_logs', [
+        'recipient_name' => 'Alin Koko',
+        'recipient_phone' => '6287857580910',
+        'status' => 'success',
+    ]);
+});
