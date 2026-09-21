@@ -49,7 +49,11 @@ class WhatsappController extends Controller
             $rules['message'] = 'required|string';
         }
 
-        $request->validate($rules);
+        $request->validate($rules, [
+            'member_ids.required' => 'Silakan pilih minimal satu anggota penerima.',
+            'member_ids.min' => 'Silakan pilih minimal satu anggota penerima.',
+            'message.required' => 'Pesan blast wajib diisi untuk layanan ' . strtoupper($whatsappService) . '.',
+        ]);
 
         $memberIds = $request->input('member_ids');
         $messageTemplate = $request->input('message');

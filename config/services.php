@@ -36,7 +36,7 @@ return [
     ],
 
     'whatsapp' => [
-        'service' => env('WHATSAPP_SERVICE', 'piwapi'),
+        'service' => env('WHATSAPP_SERVICE'),
         'piwapi' => [
             'api_secret_key' => env('PIWAPI_API_SECRET_KEY'),
             'account_id' => env('PIWAPI_ACCOUNT_ID'),

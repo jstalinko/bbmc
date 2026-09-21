@@ -52,6 +52,7 @@ test('Helper::sendWhatsapp retrieves credentials from pemilihan-setting.json', f
 
     // Write mock credentials to selection settings file
     file_put_contents($this->settingPath, json_encode([
+        'whatsapp_service' => 'piwapi',
         'ajukan_diri' => true,
         'ajukan_anggota' => true,
         'tanggal_mulai' => null,

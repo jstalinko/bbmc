@@ -23,19 +23,19 @@ Class Helper{
     
     public static function getWhatsappService()
     {
-        $service = config('services.whatsapp.service', env('WHATSAPP_SERVICE', 'bion.id'));
+        $service = config('services.whatsapp.service', env('WHATSAPP_SERVICE'));
 
         $path = storage_path('app/private/pemilihan-setting.json');
         if (file_exists($path)) {
             $settings = json_decode(file_get_contents($path), true);
             if (!empty($settings['whatsapp_service'])) {
                 $service = $settings['whatsapp_service'];
-            } elseif (!empty($settings['piwapi_api_secret_key']) || !empty($settings['piwapi'])) {
+            } elseif (empty($service) && (!empty($settings['piwapi_api_secret_key']) || !empty($settings['piwapi']))) {
                 $service = 'piwapi';
             }
         }
 
-        return strtolower(trim($service));
+        return strtolower(trim($service ?: 'bion.id'));
     }
 
     public static function isBionService($service = null)
