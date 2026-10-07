@@ -28,5 +28,15 @@ class Member extends Model
         'terdaftar_sejak',
         'penalty',
         'penalty_reason',
+        'offline_voter',
     ];
+
+    protected $casts = [
+        'offline_voter' => 'boolean',
+    ];
+
+    public function pollings()
+    {
+        return $this->hasMany(Polling::class, 'member_id');
+    }
 }

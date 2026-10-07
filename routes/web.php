@@ -57,6 +57,18 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::get('/otp-logs/export/csv', [\App\Http\Controllers\OtpLogController::class, 'exportCsv'])->name('otp_logs.export.csv');
     Route::get('/otp-logs', [\App\Http\Controllers\OtpLogController::class, 'index'])->name('otp_logs.index');
     Route::post('/otp-logs/{otp}/resend', [\App\Http\Controllers\OtpLogController::class, 'resend'])->name('otp_logs.resend');
+
+    Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('election.offline');
+    Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('election.offline.toggle');
+    Route::post('/pemilihan-offline/{member}/mark', [\App\Http\Controllers\OfflineElectionController::class, 'mark'])->name('election.offline.mark');
+    Route::post('/pemilihan-offline/{member}/unmark', [\App\Http\Controllers\OfflineElectionController::class, 'unmark'])->name('election.offline.unmark');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('offline.index');
+    Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('offline.toggle');
+    Route::post('/pemilihan-offline/{member}/mark', [\App\Http\Controllers\OfflineElectionController::class, 'mark'])->name('offline.mark');
+    Route::post('/pemilihan-offline/{member}/unmark', [\App\Http\Controllers\OfflineElectionController::class, 'unmark'])->name('offline.unmark');
 });
 
 require __DIR__ . '/settings.php';

@@ -29,6 +29,7 @@ const step = ref<'nocard' | 'otp'>('nocard');
 const isSendingOtp = ref(false);
 const otpSentMessage = ref('');
 const searchError = ref('');
+const offlineAlert = ref<string | null>(null);
 const penaltyAlert = ref<{
     status?: string;
     reason?: string;
@@ -44,12 +45,14 @@ const handleSendOtp = async () => {
     if (!noKartu.value || noKartu.value.length < 2) {
         searchError.value = 'Masukkan nomor KTA yang valid.';
         penaltyAlert.value = null;
+        offlineAlert.value = null;
         return;
     }
     
     isSendingOtp.value = true;
     searchError.value = '';
     penaltyAlert.value = null;
+    offlineAlert.value = null;
     
     try {
         const response = await fetch('/api/send-login-otp', {
@@ -65,7 +68,9 @@ const handleSendOtp = async () => {
             otpSentMessage.value = data.message;
             step.value = 'otp';
         } else {
-            if (data.penalty) {
+            if (data.offline_voter) {
+                offlineAlert.value = data.message;
+            } else if (data.penalty) {
                 penaltyAlert.value = {
                     status: data.penalty_status,
                     reason: data.penalty_reason,
@@ -175,6 +180,31 @@ const goBackToNocard = () => {
                                 />
                             </div>
                             
+                            <!-- Offline Voter Alert Banner -->
+                            <div
+                                v-if="offlineAlert"
+                                class="mt-4 rounded-xl border-2 border-red-500 bg-gradient-to-br from-red-50 via-rose-50 to-red-50 p-4 shadow-md overflow-hidden relative animate-in fade-in zoom-in duration-200"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="p-2 rounded-xl bg-red-600 text-white shrink-0 shadow-sm mt-0.5">
+                                        <AlertCircle class="h-5 w-5" />
+                                    </div>
+                                    <div class="space-y-1.5 flex-1">
+                                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                                            <span class="text-xs font-black uppercase tracking-wider text-red-900">
+                                                Akses Login Ditolak (Pemilih Offline)
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-700 text-white shadow-sm">
+                                                OFFLINE VOTER
+                                            </span>
+                                        </div>
+                                        <p class="text-xs font-medium text-zinc-800 leading-relaxed">
+                                            {{ offlineAlert }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Penalty Alert Banner -->
                             <div
                                 v-if="penaltyAlert"

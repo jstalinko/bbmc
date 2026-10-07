@@ -97,6 +97,13 @@ class ElectionController extends Controller
         }
 
         if ($request->session()->has('election_member_id')) {
+            $currentMember = Member::find($request->session()->get('election_member_id'));
+            if ($currentMember && $currentMember->offline_voter) {
+                $request->session()->forget('election_member_id');
+                return redirect()->route('election.login')->withErrors([
+                    'no_kartu' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.'
+                ]);
+            }
             return redirect()->route('election.dashboard');
         }
         return Inertia::render('Election/login');
@@ -127,6 +134,14 @@ class ElectionController extends Controller
                 'success' => false,
                 'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
             ], 404);
+        }
+
+        if ($member->offline_voter) {
+            return response()->json([
+                'success' => false,
+                'offline_voter' => true,
+                'message' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.'
+            ], 403);
         }
 
         if ($member->penalty && $member->penalty !== 'clean') {
@@ -227,6 +242,10 @@ class ElectionController extends Controller
         
         if (!$member) {
             return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
+        }
+
+        if ($member->offline_voter) {
+            return back()->withErrors(['no_kartu' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.']);
         }
 
         if ($member->penalty && $member->penalty !== 'clean') {
@@ -334,6 +353,14 @@ class ElectionController extends Controller
         ]);
 
         $memberId = $request->session()->get('election_member_id');
+        $member = Member::find($memberId);
+        if (!$member || $member->offline_voter) {
+            if ($memberId) {
+                ElectionQueue::where('member_id', $memberId)->delete();
+            }
+            $request->session()->forget('election_member_id');
+            return redirect()->route('election.login')->withErrors(['no_kartu' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.']);
+        }
 
         $alreadyVoted = Polling::where('member_id', $memberId)->exists();
         if ($alreadyVoted) {
