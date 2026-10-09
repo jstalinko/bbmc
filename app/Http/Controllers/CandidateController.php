@@ -63,24 +63,63 @@ class CandidateController extends Controller
             return $candidate;
         });
 
+        $assignedNoUruts = Calon::where('status', 'ditetapkan')
+            ->whereNotNull('no_urut')
+            ->pluck('no_urut')
+            ->unique()
+            ->sort()
+            ->values();
+
         return Inertia::render('Candidate/Index', [
             'candidates' => $candidates,
+            'assignedNoUruts' => $assignedNoUruts,
             'filters' => ['search' => $request->input('search', '')],
         ]);
     }
 
     public function updateStatus(Request $request, Calon $calon)
     {
-        $validated = $request->validate([
+        $targetStatus = $request->input('status') ?? $calon->status;
+
+        $rules = [
             'status' => 'nullable|in:mengajukan,diajukan,ditetapkan,ditolak',
-            'no_urut' => 'nullable|integer',
+        ];
+
+        if ($targetStatus === 'ditetapkan') {
+            $rules['no_urut'] = [
+                'required',
+                'integer',
+                'min:1',
+                function ($attribute, $value, $fail) use ($calon) {
+                    $exists = Calon::where('status', 'ditetapkan')
+                        ->where('member_id', '!=', $calon->member_id)
+                        ->where('no_urut', $value)
+                        ->exists();
+                    if ($exists) {
+                        $fail("Nomor urut {$value} sudah digunakan oleh calon lain yang telah ditetapkan.");
+                    }
+                },
+            ];
+        } else {
+            $rules['no_urut'] = 'nullable|integer|min:1';
+        }
+
+        $validated = $request->validate($rules, [
+            'no_urut.required' => 'Nomor urut wajib diisi ketika calon ditetapkan.',
+            'no_urut.integer' => 'Nomor urut harus berupa angka.',
+            'no_urut.min' => 'Nomor urut minimal adalah 1.',
         ]);
 
         $updateData = [];
         if (!empty($validated['status'])) {
             $updateData['status'] = $validated['status'];
         }
-        if ($request->has('no_urut')) {
+
+        if ($targetStatus === 'ditetapkan') {
+            $updateData['no_urut'] = (int) $validated['no_urut'];
+        } elseif ($targetStatus === 'ditolak') {
+            $updateData['no_urut'] = null;
+        } elseif ($request->has('no_urut')) {
             $updateData['no_urut'] = $validated['no_urut'] !== '' && $validated['no_urut'] !== null ? (int)$validated['no_urut'] : null;
         }
 
