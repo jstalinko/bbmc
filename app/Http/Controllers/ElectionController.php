@@ -38,14 +38,26 @@ class ElectionController extends Controller
             ];
         }
 
+        $kodeAksesPengurus = $settings['kode_akses_pengurus'] ?? [];
+
         return [
             'ajukan_diri' => $settings['ajukan_diri'] ?? true,
             'ajukan_anggota' => $settings['ajukan_anggota'] ?? true,
             'tanggal_mulai' => $settings['tanggal_mulai'] ?? null,
             'tanggal_selesai' => $settings['tanggal_selesai'] ?? null,
             'max_active_users' => $settings['max_active_users'] ?? 0,
+            'kode_akses_pengurus' => \App\Helper::encryptForFrontend($kodeAksesPengurus),
             'piwapi' => \App\Helper::encryptForFrontend($piwapi),
         ];
+    }
+
+    public static function getRawSettings(): array
+    {
+        $path = storage_path('app/private/pemilihan-setting.json');
+        if (!file_exists($path)) {
+            return [];
+        }
+        return json_decode(file_get_contents($path), true) ?: [];
     }
 
     /**
@@ -924,6 +936,9 @@ class ElectionController extends Controller
             'tanggal_mulai' => 'nullable|string',
             'tanggal_selesai' => 'nullable|string',
             'max_active_users' => 'nullable|numeric',
+            'kode_akses_pengurus' => 'nullable|array',
+            'kode_akses_pengurus.*.kode_akses' => 'nullable|string',
+            'kode_akses_pengurus.*.nama_pengurus' => 'nullable|string',
             'piwapi' => 'nullable|array',
             'piwapi.*.secret_key' => 'nullable|string',
             'piwapi.*.account_id' => 'nullable|string',
@@ -935,13 +950,24 @@ class ElectionController extends Controller
         $validated['ajukan_anggota'] = (bool)$validated['ajukan_anggota'];
         $validated['max_active_users'] = (int)($validated['max_active_users'] ?? 0);
 
+        if (isset($validated['kode_akses_pengurus']) && is_array($validated['kode_akses_pengurus'])) {
+            $validated['kode_akses_pengurus'] = array_values(array_filter($validated['kode_akses_pengurus'], function ($item) {
+                return !empty(trim($item['kode_akses'] ?? '')) || !empty(trim($item['nama_pengurus'] ?? ''));
+            }));
+        } else {
+            $validated['kode_akses_pengurus'] = [];
+        }
+
         $path = storage_path('app/private/pemilihan-setting.json');
         $directory = dirname($path);
         if (!is_dir($directory)) {
             mkdir($directory, 0755, true);
         }
 
-        file_put_contents($path, json_encode($validated, JSON_PRETTY_PRINT));
+        $existing = file_exists($path) ? json_decode(file_get_contents($path), true) : [];
+        $data = array_merge($existing ?: [], $validated);
+
+        file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT));
 
         return back()->with('success', 'Pengaturan pemilihan berhasil diperbarui.');
     }

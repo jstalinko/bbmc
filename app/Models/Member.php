@@ -39,4 +39,14 @@ class Member extends Model
     {
         return $this->hasMany(Polling::class, 'member_id');
     }
+
+    public function offlineLogs()
+    {
+        return $this->hasMany(OfflineLog::class, 'member_id');
+    }
+
+    public function offlineLog()
+    {
+        return $this->hasOne(OfflineLog::class, 'member_id')->latestOfMany();
+    }
 }

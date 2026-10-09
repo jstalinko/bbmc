@@ -67,46 +67,87 @@ test('admin can access /pemilihan-offline and /dashboard/pemilihan-offline', fun
     $response2->assertStatus(200);
 });
 
-test('admin can search members on /pemilihan-offline by name and no_kartu', function () {
+test('admin can search offline logs on /pemilihan-offline by name and no_kartu', function () {
     $admin = User::factory()->create();
-    createOfflineTestMember(['nama_lengkap' => 'Cecep Motor', 'no_kartu' => '0050']);
-    createOfflineTestMember(['nama_lengkap' => 'Doni Rider', 'no_kartu' => '0060']);
+    $m1 = createOfflineTestMember(['nama_lengkap' => 'Cecep Motor', 'no_kartu' => '0050', 'offline_voter' => true]);
+    $m2 = createOfflineTestMember(['nama_lengkap' => 'Doni Rider', 'no_kartu' => '0060', 'offline_voter' => true]);
+
+    \App\Models\OfflineLog::create([
+        'nama_pengurus' => 'Panitia 1',
+        'kode_akses' => 'PAN-01',
+        'member_id' => $m1->id,
+        'no_antrian' => 1,
+        'voting_status' => \App\Models\OfflineLog::STATUS_ANTREAN,
+    ]);
+
+    \App\Models\OfflineLog::create([
+        'nama_pengurus' => 'Panitia 2',
+        'kode_akses' => 'PAN-02',
+        'member_id' => $m2->id,
+        'no_antrian' => 2,
+        'voting_status' => \App\Models\OfflineLog::STATUS_SUDAH_MEMILIH,
+    ]);
 
     $response = $this->actingAs($admin)->get('/pemilihan-offline?search=Cecep');
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => 
         $page->component('Election/Offline', false)
-             ->has('members.data', 1)
-             ->where('members.data.0.nama_lengkap', 'Cecep Motor')
+             ->has('logs.data', 1)
+             ->where('logs.data.0.member.nama_lengkap', 'Cecep Motor')
     );
 
     $responseKta = $this->actingAs($admin)->get('/pemilihan-offline?search=60');
     $responseKta->assertStatus(200);
     $responseKta->assertInertia(fn ($page) => 
         $page->component('Election/Offline', false)
-             ->has('members.data', 1)
-             ->where('members.data.0.nama_lengkap', 'Doni Rider')
+             ->has('logs.data', 1)
+             ->where('logs.data.0.member.nama_lengkap', 'Doni Rider')
     );
 });
 
-test('admin can mark a member as offline_voter', function () {
-    $admin = User::factory()->create();
-    $member = createOfflineTestMember(['no_kartu' => '0010', 'offline_voter' => false]);
-
-    $response = $this->actingAs($admin)->post("/pemilihan-offline/{$member->id}/mark");
-    $response->assertSessionHas('success');
-
-    $member->refresh();
-    expect($member->offline_voter)->toBeTrue();
-});
-
-test('admin can unmark an offline_voter member', function () {
+test('admin can update offline log on /pemilihan-offline', function () {
     $admin = User::factory()->create();
     $member = createOfflineTestMember(['no_kartu' => '0010', 'offline_voter' => true]);
 
-    $response = $this->actingAs($admin)->post("/pemilihan-offline/{$member->id}/unmark");
+    $log = \App\Models\OfflineLog::create([
+        'nama_pengurus' => 'Panitia Awal',
+        'kode_akses' => 'PAN-01',
+        'member_id' => $member->id,
+        'no_antrian' => 5,
+        'voting_status' => \App\Models\OfflineLog::STATUS_ANTREAN,
+    ]);
+
+    $response = $this->actingAs($admin)->put("/pemilihan-offline/{$log->id}", [
+        'no_antrian' => 10,
+        'no_tps' => 'TPS 2',
+        'nama_pengurus' => 'Panitia Edit',
+        'voting_status' => \App\Models\OfflineLog::STATUS_SUDAH_MEMILIH,
+    ]);
+
+    $response->assertSessionHas('success');
+    $log->refresh();
+    expect($log->no_antrian)->toBe(10);
+    expect($log->no_tps)->toBe('TPS 2');
+    expect($log->nama_pengurus)->toBe('Panitia Edit');
+    expect($log->voting_status)->toBe(\App\Models\OfflineLog::STATUS_SUDAH_MEMILIH);
+});
+
+test('admin can delete offline log on /pemilihan-offline and revert member offline_voter', function () {
+    $admin = User::factory()->create();
+    $member = createOfflineTestMember(['no_kartu' => '0010', 'offline_voter' => true]);
+
+    $log = \App\Models\OfflineLog::create([
+        'nama_pengurus' => 'Panitia Awal',
+        'kode_akses' => 'PAN-01',
+        'member_id' => $member->id,
+        'no_antrian' => 1,
+        'voting_status' => \App\Models\OfflineLog::STATUS_ANTREAN,
+    ]);
+
+    $response = $this->actingAs($admin)->delete("/pemilihan-offline/{$log->id}");
     $response->assertSessionHas('success');
 
+    expect(\App\Models\OfflineLog::find($log->id))->toBeNull();
     $member->refresh();
     expect($member->offline_voter)->toBeFalse();
 });

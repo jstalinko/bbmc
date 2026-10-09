@@ -59,6 +59,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::post('/otp-logs/{otp}/resend', [\App\Http\Controllers\OtpLogController::class, 'resend'])->name('otp_logs.resend');
 
     Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('election.offline');
+    Route::put('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'update'])->name('election.offline.update');
+    Route::delete('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'destroy'])->name('election.offline.destroy');
     Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('election.offline.toggle');
     Route::post('/pemilihan-offline/{member}/mark', [\App\Http\Controllers\OfflineElectionController::class, 'mark'])->name('election.offline.mark');
     Route::post('/pemilihan-offline/{member}/unmark', [\App\Http\Controllers\OfflineElectionController::class, 'unmark'])->name('election.offline.unmark');
@@ -66,6 +68,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('offline.index');
+    Route::put('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'update'])->name('offline.update');
+    Route::delete('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'destroy'])->name('offline.destroy');
     Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('offline.toggle');
     Route::post('/pemilihan-offline/{member}/mark', [\App\Http\Controllers\OfflineElectionController::class, 'mark'])->name('offline.mark');
     Route::post('/pemilihan-offline/{member}/unmark', [\App\Http\Controllers\OfflineElectionController::class, 'unmark'])->name('offline.unmark');

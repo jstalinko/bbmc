@@ -36,3 +36,11 @@ Route::group(['prefix' => '/election'] , function(){
         Route::post('/logout', [ElectionController::class, 'logout'])->name('election.logout');
     });
 });
+
+Route::group(['prefix' => '/offline'], function () {
+    Route::get('/verify', [\App\Http\Controllers\OfflineVerificationController::class, 'index'])->name('offline.verify');
+    Route::post('/login', [\App\Http\Controllers\OfflineVerificationController::class, 'login'])->name('offline.login');
+    Route::post('/logout', [\App\Http\Controllers\OfflineVerificationController::class, 'logout'])->name('offline.logout');
+    Route::post('/verify', [\App\Http\Controllers\OfflineVerificationController::class, 'verifyMember'])->name('offline.verify_member');
+    Route::post('/queue/{offlineLog}/status', [\App\Http\Controllers\OfflineVerificationController::class, 'updateStatus'])->name('offline.queue_status');
+});

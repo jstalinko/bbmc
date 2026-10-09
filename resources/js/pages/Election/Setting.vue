@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { Settings2, Save, Calendar, Check, Info } from 'lucide-vue-next';
+import { Settings2, Save, Calendar, Check, Info, KeyRound, Plus, Trash2 } from 'lucide-vue-next';
 import { TransitionRoot } from '@headlessui/vue';
 import { decryptPayload } from '@/lib/crypto';
 
@@ -17,6 +17,7 @@ const props = defineProps<{
         tanggal_mulai: string | null;
         tanggal_selesai: string | null;
         max_active_users: number;
+        kode_akses_pengurus?: string | Array<{kode_akses: string, nama_pengurus: string}>;
         piwapi: string | Array<{secret_key: string, account_id: string}>;
     };
 }>();
@@ -37,12 +38,19 @@ const decryptedPiwapi = typeof props.settings.piwapi === 'string'
     ? decryptPayload(props.settings.piwapi) 
     : props.settings.piwapi;
 
+const decryptedKodeAkses = typeof props.settings.kode_akses_pengurus === 'string'
+    ? decryptPayload(props.settings.kode_akses_pengurus)
+    : props.settings.kode_akses_pengurus;
+
 const form = useForm({
     ajukan_diri: !!props.settings.ajukan_diri,
     ajukan_anggota: !!props.settings.ajukan_anggota,
     tanggal_mulai: props.settings.tanggal_mulai ? props.settings.tanggal_mulai.substring(0, 16) : '',
     tanggal_selesai: props.settings.tanggal_selesai ? props.settings.tanggal_selesai.substring(0, 16) : '',
     max_active_users: props.settings.max_active_users ?? 0,
+    kode_akses_pengurus: decryptedKodeAkses && Array.isArray(decryptedKodeAkses) && decryptedKodeAkses.length > 0
+        ? decryptedKodeAkses
+        : [{kode_akses: '', nama_pengurus: ''}],
     piwapi: decryptedPiwapi && Array.isArray(decryptedPiwapi) && decryptedPiwapi.length > 0 
         ? decryptedPiwapi 
         : [{secret_key: '', account_id: ''}],
@@ -163,7 +171,57 @@ const submitSettings = () => {
                         </div>
                     </div>
 
-                    <!-- Section C: Kredensial WhatsApp (PIWAPI) -->
+                    <!-- Section C: Kode Akses Pengurus (Verifikasi Offline) -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <div>
+                                <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                    <KeyRound class="h-4 w-4" />
+                                    <span>Kode Akses Pengurus</span>
+                                </h2>
+                                <p class="text-xs text-muted-foreground mt-0.5">Kode akses dan nama pengurus yang bertugas melakukan verifikasi pemilih offline di /offline/verify.</p>
+                            </div>
+                            <Button type="button" variant="outline" size="sm" @click="form.kode_akses_pengurus.push({kode_akses: '', nama_pengurus: ''})" class="h-8 text-xs font-semibold gap-1">
+                                <Plus class="h-3.5 w-3.5" />
+                                Tambah Pengurus
+                            </Button>
+                        </div>
+
+                        <div v-for="(item, index) in form.kode_akses_pengurus" :key="'pengurus_' + index" class="grid gap-6 sm:grid-cols-12 mt-4 items-start p-4 pt-8 rounded-lg border bg-muted/30 relative">
+                            <!-- Delete Button -->
+                            <button type="button" v-if="form.kode_akses_pengurus.length > 1" @click="form.kode_akses_pengurus.splice(index, 1)" class="absolute top-2 right-2 text-destructive hover:bg-destructive/10 p-1.5 rounded-md transition-colors" title="Hapus Pengurus">
+                                <Trash2 class="h-4 w-4" />
+                            </button>
+
+                            <!-- Kode Akses -->
+                            <div class="grid gap-2 sm:col-span-6">
+                                <Label :for="'kode_akses_' + index" class="font-medium text-sm">Kode Akses</Label>
+                                <Input
+                                    :id="'kode_akses_' + index"
+                                    type="text"
+                                    v-model="item.kode_akses"
+                                    placeholder="Masukkan kode akses (cth: PENGURUS-01)"
+                                    class="w-full font-mono uppercase"
+                                />
+                                <p class="text-[11px] text-muted-foreground">Kunci akses rahasia pengurus untuk login di /offline/verify.</p>
+                            </div>
+
+                            <!-- Nama Pengurus -->
+                            <div class="grid gap-2 sm:col-span-6">
+                                <Label :for="'nama_pengurus_' + index" class="font-medium text-sm">Nama Pengurus</Label>
+                                <Input
+                                    :id="'nama_pengurus_' + index"
+                                    type="text"
+                                    v-model="item.nama_pengurus"
+                                    placeholder="Masukkan nama pengurus"
+                                    class="w-full"
+                                />
+                                <p class="text-[11px] text-muted-foreground">Nama pengurus yang akan dicatat pada log verifikasi offline.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section D: Kredensial WhatsApp (PIWAPI) -->
                     <div class="space-y-4">
                         <div class="flex items-center justify-between border-b pb-2">
                             <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground">

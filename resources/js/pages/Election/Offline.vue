@@ -2,51 +2,63 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
-    Table, TableBody, TableCell, TableEmpty,
+    Table, TableBody, TableCell,
     TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
     Dialog, DialogContent, DialogDescription,
     DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage, useForm } from '@inertiajs/vue3';
 import {
-    Search, RefreshCw, X, ShieldAlert, ShieldCheck, CheckCircle2,
-    XCircle, Vote, Users, AlertTriangle, ChevronLeft, ChevronRight,
-    ChevronsLeft, ChevronsRight, ArrowUpDown, Filter, UserX, Check
+    Search, RefreshCw, Vote, Users, AlertTriangle, ChevronLeft, ChevronRight,
+    ArrowUpDown, UserX, Check, ExternalLink, Pencil, Trash2, ShieldCheck,
+    Clock, CheckCircle2, XCircle, AlertCircle
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface Member {
     id: number;
     nama_lengkap: string;
-    nama_panggilan: string;
+    nama_panggilan?: string;
     no_kartu: string;
-    no_wa: string;
+    no_wa?: string;
     status_keanggotaan: string;
     chapter: string;
     checkpoint?: string;
     region?: string;
-    terdaftar_sejak?: string;
-    penalty?: string;
-    penalty_reason?: string;
-    offline_voter: boolean;
-    pollings_exists?: boolean;
     foto?: string;
+    pollings_exists?: boolean;
+}
+
+interface OfflineLogItem {
+    id: number;
+    nama_pengurus: string;
+    kode_akses: string;
+    member_id: number;
+    no_antrian: number;
+    no_tps?: string | null;
+    voting_status: 'antrean' | 'sudah_memilih' | 'tidak_memilih' | 'cancel_vote';
+    created_at: string;
+    updated_at: string;
+    member?: Member;
 }
 
 interface Stats {
     total_offline_voters: number;
-    total_online_voted: number;
-    total_eligible: number;
-    total_members: number;
+    total_antrean: number;
+    total_sudah_memilih: number;
+    total_tidak_memilih: number;
+    total_batal: number;
+    total_online_voted?: number;
 }
 
 const props = defineProps<{
-    members: {
-        data: Member[];
+    logs?: {
+        data: OfflineLogItem[];
         current_page: number;
         last_page: number;
         per_page: number;
@@ -55,14 +67,16 @@ const props = defineProps<{
         to: number;
         links: Array<{ url: string | null; label: string; active: boolean }>;
     };
+    members?: any;
     stats: Stats;
     filters: {
         search?: string;
-        status_offline?: string;
+        voting_status?: string;
         status_keanggotaan?: string;
         sort_by?: string;
         sort_dir?: string;
     };
+    status_labels?: Record<string, string>;
 }>();
 
 const page = usePage();
@@ -73,15 +87,31 @@ const breadcrumbs = [
     { title: 'Pemilihan Offline', href: '/pemilihan-offline' },
 ];
 
+const logData = computed(() => {
+    return props.logs?.data || [];
+});
+
+const paginationInfo = computed(() => {
+    return props.logs || {
+        current_page: 1,
+        last_page: 1,
+        per_page: 15,
+        total: 0,
+        from: 0,
+        to: 0,
+        links: [],
+    };
+});
+
 // ── Search & Filter State ───────────────────────────────────────────────────
 const search = ref(props.filters?.search ?? '');
-const statusOffline = ref(props.filters?.status_offline ?? 'all');
+const votingStatus = ref(props.filters?.voting_status ?? 'all');
 const statusKeanggotaan = ref(props.filters?.status_keanggotaan ?? 'all');
 const sortBy = ref(props.filters?.sort_by ?? '');
 const sortDir = ref(props.filters?.sort_dir ?? '');
 
 let searchTimer: any;
-watch([search, statusOffline, statusKeanggotaan], () => {
+watch([search, votingStatus, statusKeanggotaan], () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
         applyFilters({ page: 1 });
@@ -91,11 +121,11 @@ watch([search, statusOffline, statusKeanggotaan], () => {
 function applyFilters(overrides: Record<string, any> = {}) {
     router.get('/pemilihan-offline', {
         search: overrides.search !== undefined ? overrides.search : search.value,
-        status_offline: overrides.status_offline !== undefined ? overrides.status_offline : statusOffline.value,
+        voting_status: overrides.voting_status !== undefined ? overrides.voting_status : votingStatus.value,
         status_keanggotaan: overrides.status_keanggotaan !== undefined ? overrides.status_keanggotaan : statusKeanggotaan.value,
         sort_by: overrides.sort_by !== undefined ? overrides.sort_by : sortBy.value,
         sort_dir: overrides.sort_dir !== undefined ? overrides.sort_dir : sortDir.value,
-        page: overrides.page ?? props.members.current_page,
+        page: overrides.page ?? paginationInfo.value.current_page,
     }, {
         preserveState: true,
         preserveScroll: true,
@@ -105,11 +135,11 @@ function applyFilters(overrides: Record<string, any> = {}) {
 
 function clearFilters() {
     search.value = '';
-    statusOffline.value = 'all';
+    votingStatus.value = 'all';
     statusKeanggotaan.value = 'all';
     sortBy.value = '';
     sortDir.value = '';
-    applyFilters({ search: '', status_offline: 'all', status_keanggotaan: 'all', sort_by: '', sort_dir: '', page: 1 });
+    applyFilters({ search: '', voting_status: 'all', status_keanggotaan: 'all', sort_by: '', sort_dir: '', page: 1 });
 }
 
 function toggleSort(col: string) {
@@ -122,75 +152,119 @@ function toggleSort(col: string) {
     applyFilters({ page: 1 });
 }
 
-// ── Confirmation Modal State ────────────────────────────────────────────────
-const targetMember = ref<Member | null>(null);
-const modalAction = ref<'mark' | 'unmark'>('mark');
-const isProcessing = ref(false);
-
-function openMarkModal(member: Member) {
-    targetMember.value = member;
-    modalAction.value = 'mark';
+function formatKta(noKartu?: string) {
+    if (!noKartu) return '—';
+    return `BBMC 38 2026 ${String(noKartu).padStart(4, '0')}`;
 }
 
-function openUnmarkModal(member: Member) {
-    targetMember.value = member;
-    modalAction.value = 'unmark';
+// ── Edit Modal State & Form ──────────────────────────────────────────────────
+const isEditOpen = ref(false);
+const editingLog = ref<OfflineLogItem | null>(null);
+
+const editForm = useForm({
+    no_antrian: 1,
+    no_tps: '',
+    nama_pengurus: '',
+    voting_status: 'antrean',
+});
+
+function openEditModal(log: OfflineLogItem) {
+    editingLog.value = log;
+    editForm.no_antrian = log.no_antrian;
+    editForm.no_tps = log.no_tps || '';
+    editForm.nama_pengurus = log.nama_pengurus;
+    editForm.voting_status = log.voting_status;
+    editForm.clearErrors();
+    isEditOpen.value = true;
 }
 
-function closeModal() {
-    targetMember.value = null;
-    isProcessing.value = false;
-}
+function submitEdit() {
+    if (!editingLog.value) return;
 
-function confirmAction() {
-    if (!targetMember.value) return;
-
-    isProcessing.value = true;
-    const url = modalAction.value === 'mark'
-        ? `/pemilihan-offline/${targetMember.value.id}/mark`
-        : `/pemilihan-offline/${targetMember.value.id}/unmark`;
-
-    router.post(url, {}, {
+    editForm.put(`/pemilihan-offline/${editingLog.value.id}`, {
         preserveScroll: true,
-        onFinish: () => {
-            isProcessing.value = false;
-            closeModal();
+        onSuccess: () => {
+            isEditOpen.value = false;
+            editingLog.value = null;
         },
     });
 }
 
-// Helpers
-function formatKta(nocard: string) {
-    if (!nocard) return '—';
-    const padded = String(nocard).padStart(4, '0');
-    return `BBMC 38 2026 ${padded}`;
+// ── Delete Modal State ───────────────────────────────────────────────────────
+const isDeleteOpen = ref(false);
+const deletingLog = ref<OfflineLogItem | null>(null);
+const isDeleting = ref(false);
+
+function openDeleteModal(log: OfflineLogItem) {
+    deletingLog.value = log;
+    isDeleteOpen.value = true;
 }
 
-function isEligible(member: Member) {
-    const status = (member.status_keanggotaan || '').toUpperCase();
-    const isStatusOk = status === 'LIFE MEMBER' || status === 'SS DIPONEGORO';
-    const isPenaltyClean = !member.penalty || member.penalty === '' || member.penalty === 'clean';
-    return isStatusOk && isPenaltyClean;
+function confirmDelete() {
+    if (!deletingLog.value) return;
+
+    isDeleting.value = true;
+    router.delete(`/pemilihan-offline/${deletingLog.value.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            isDeleting.value = false;
+            isDeleteOpen.value = false;
+            deletingLog.value = null;
+        },
+    });
+}
+
+// Helper status badge classes
+function statusBadgeClass(status: string) {
+    if (status === 'antrean') return 'bg-amber-100 text-amber-800 border-amber-300';
+    if (status === 'sudah_memilih') return 'bg-green-100 text-green-800 border-green-300';
+    if (status === 'tidak_memilih') return 'bg-gray-100 text-gray-800 border-gray-300';
+    return 'bg-red-100 text-red-800 border-red-300';
+}
+
+function statusIcon(status: string) {
+    if (status === 'antrean') return '⏳';
+    if (status === 'sudah_memilih') return '✅';
+    if (status === 'tidak_memilih') return '⛔';
+    return '❌';
+}
+
+function statusLabel(status: string) {
+    if (status === 'antrean') return 'Dalam Antrean';
+    if (status === 'sudah_memilih') return 'Sudah Memilih';
+    if (status === 'tidak_memilih') return 'Tidak Memilih';
+    if (status === 'cancel_vote') return 'Batal Memilih';
+    return status;
+}
+
+function formatTime(iso: string) {
+    if (!iso) return '—';
+    try {
+        const d = new Date(iso);
+        return d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+    } catch {
+        return iso;
+    }
 }
 </script>
 
 <template>
-    <Head title="Pemilihan Offline - Admin Panel" />
+    <Head title="Pemilihan Offline" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-4 sm:p-6 max-w-7xl mx-auto w-full">
-            
-            <!-- Flash Message Alerts -->
-            <div 
-                v-if="flash.success" 
-                class="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400 shadow-sm animate-in fade-in"
+        <div class="space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+
+            <!-- Flash & Error Alerts -->
+            <div
+                v-if="flash.success"
+                class="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300 shadow-sm animate-in fade-in"
             >
                 <CheckCircle2 class="h-5 w-5 shrink-0 text-emerald-600" />
                 <span class="font-medium">{{ flash.success }}</span>
             </div>
 
-            <div 
-                v-if="page.props.errors && Object.keys(page.props.errors).length > 0" 
+            <div
+                v-if="page.props.errors && Object.keys(page.props.errors).length > 0"
                 class="flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 shadow-sm animate-in fade-in"
             >
                 <AlertTriangle class="h-5 w-5 shrink-0 text-red-600" />
@@ -202,135 +276,145 @@ function isEligible(member: Member) {
                 <div>
                     <h1 class="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
                         <Vote class="h-7 w-7 text-red-600" />
-                        <span>Pemilihan Offline</span>
+                        <span>Pemilihan Offline (Offline Logs)</span>
                     </h1>
                     <p class="text-xs sm:text-sm text-zinc-500 mt-1">
-                        Tandai anggota yang memilih secara langsung/offline. Anggota yang ditandai sebagai pemilih offline tidak dapat login untuk memilih online.
+                        Daftar anggota yang telah diverifikasi di log offline. Anda dapat mengedit status atau menghapus data pemilih offline.
+                    </p>
+                </div>
+
+                <!-- Info button: Adding voters is done via /offline/verify -->
+                <div class="flex items-center gap-2 shrink-0">
+                    <a
+                        href="/offline/verify"
+                        target="_blank"
+                        class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wide shadow-sm transition-all active:scale-95"
+                    >
+                        <ShieldCheck class="h-4 w-4" />
+                        <span>Verifikasi Pemilih (/offline/verify)</span>
+                        <ExternalLink class="h-3.5 w-3.5 opacity-80" />
+                    </a>
+                </div>
+            </div>
+
+            <!-- Notice Banner: Cannot Add Data Here -->
+            <div class="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-900 flex items-start gap-3">
+                <AlertCircle class="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div class="space-y-0.5">
+                    <p class="font-bold">Informasi Alur Pendaftaran Pemilih Offline:</p>
+                    <p class="text-blue-800 leading-relaxed">
+                        Data pemilih offline hanya dapat didaftarkan secara resmi oleh pengurus bertugas melalui form verifikasi kartu di rute <strong>/offline/verify</strong>. Pada halaman ini pengelola dapat memantau log, mengedit nomor antrean/status pemilihan, atau menghapus entri log.
                     </p>
                 </div>
             </div>
 
             <!-- Statistics Overview Cards -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="rounded-2xl border border-emerald-200/60 bg-emerald-50/50 p-4 dark:border-emerald-950 dark:bg-emerald-950/20 shadow-sm">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Total Pemilih Offline -->
+                <div class="rounded-2xl border border-red-200/60 bg-red-50/50 p-4 shadow-sm">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Pemilih Offline</span>
-                        <div class="p-2 rounded-xl bg-emerald-600 text-white shadow-sm">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-red-700">Total Log Offline</span>
+                        <div class="p-2 rounded-xl bg-red-600 text-white shadow-sm">
                             <Vote class="h-4 w-4" />
                         </div>
                     </div>
-                    <div class="mt-3 flex items-baseline gap-2">
-                        <span class="text-3xl font-extrabold text-emerald-900 dark:text-emerald-200">{{ stats.total_offline_voters }}</span>
-                        <span class="text-xs text-emerald-600 font-medium">Anggota</span>
+                    <div class="mt-3">
+                        <span class="text-2xl font-black text-red-950">{{ stats.total_offline_voters }}</span>
+                        <span class="text-xs text-red-600 ml-1">orang</span>
                     </div>
-                    <p class="text-[11px] text-emerald-700/80 mt-1">Ditandai memilih langsung di TPS/venue</p>
                 </div>
 
-                <div class="rounded-2xl border border-blue-200/60 bg-blue-50/50 p-4 dark:border-blue-950 dark:bg-blue-950/20 shadow-sm">
+                <!-- Dalam Antrean -->
+                <div class="rounded-2xl border border-amber-200/60 bg-amber-50/50 p-4 shadow-sm">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">Sudah Vote Online</span>
-                        <div class="p-2 rounded-xl bg-blue-600 text-white shadow-sm">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-amber-700">Dalam Antrean</span>
+                        <div class="p-2 rounded-xl bg-amber-500 text-white shadow-sm">
+                            <Clock class="h-4 w-4" />
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-black text-amber-950">{{ stats.total_antrean }}</span>
+                        <span class="text-xs text-amber-600 ml-1">menunggu</span>
+                    </div>
+                </div>
+
+                <!-- Sudah Memilih -->
+                <div class="rounded-2xl border border-emerald-200/60 bg-emerald-50/50 p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Sudah Memilih</span>
+                        <div class="p-2 rounded-xl bg-emerald-600 text-white shadow-sm">
                             <CheckCircle2 class="h-4 w-4" />
                         </div>
                     </div>
-                    <div class="mt-3 flex items-baseline gap-2">
-                        <span class="text-3xl font-extrabold text-blue-900 dark:text-blue-200">{{ stats.total_online_voted }}</span>
-                        <span class="text-xs text-blue-600 font-medium">Suara Masuk</span>
+                    <div class="mt-3">
+                        <span class="text-2xl font-black text-emerald-950">{{ stats.total_sudah_memilih }}</span>
+                        <span class="text-xs text-emerald-600 ml-1">suara masuk</span>
                     </div>
-                    <p class="text-[11px] text-blue-700/80 mt-1">Telah memberikan suara via web portal</p>
                 </div>
 
-                <div class="rounded-2xl border border-amber-200/60 bg-amber-50/50 p-4 dark:border-amber-950 dark:bg-amber-950/20 shadow-sm">
+                <!-- Tidak Memilih -->
+                <div class="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 p-4 shadow-sm">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">Hak Suara (Eligible)</span>
-                        <div class="p-2 rounded-xl bg-amber-600 text-white shadow-sm">
-                            <ShieldCheck class="h-4 w-4" />
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-600">Tidak Memilih</span>
+                        <div class="p-2 rounded-xl bg-zinc-500 text-white shadow-sm">
+                            <XCircle class="h-4 w-4" />
                         </div>
                     </div>
-                    <div class="mt-3 flex items-baseline gap-2">
-                        <span class="text-3xl font-extrabold text-amber-900 dark:text-amber-200">{{ stats.total_eligible }}</span>
-                        <span class="text-xs text-amber-600 font-medium">Hak Suara</span>
+                    <div class="mt-3">
+                        <span class="text-2xl font-black text-zinc-900">{{ stats.total_tidak_memilih }}</span>
+                        <span class="text-xs text-zinc-500 ml-1">absen</span>
                     </div>
-                    <p class="text-[11px] text-amber-700/80 mt-1">Life Member & SS Diponegoro (Clean)</p>
                 </div>
 
-                <div class="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm">
+                <!-- Batal Vote -->
+                <div class="rounded-2xl border border-purple-200/60 bg-purple-50/50 p-4 shadow-sm col-span-2 lg:col-span-1">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Total Anggota</span>
-                        <div class="p-2 rounded-xl bg-zinc-700 text-white shadow-sm">
-                            <Users class="h-4 w-4" />
+                        <span class="text-xs font-semibold uppercase tracking-wider text-purple-700">Batal Memilih</span>
+                        <div class="p-2 rounded-xl bg-purple-600 text-white shadow-sm">
+                            <AlertTriangle class="h-4 w-4" />
                         </div>
                     </div>
-                    <div class="mt-3 flex items-baseline gap-2">
-                        <span class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100">{{ stats.total_members }}</span>
-                        <span class="text-xs text-zinc-500 font-medium">Terdaftar</span>
+                    <div class="mt-3">
+                        <span class="text-2xl font-black text-purple-950">{{ stats.total_batal }}</span>
+                        <span class="text-xs text-purple-600 ml-1">batal</span>
                     </div>
-                    <p class="text-[11px] text-zinc-500 mt-1">Seluruh anggota di database BBMC</p>
                 </div>
             </div>
 
-            <!-- Search, Filter & Quick Toolbar -->
+            <!-- Filters & Search Toolbar -->
             <div class="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-                    
-                    <!-- Search Input -->
-                    <div class="relative flex-1">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <!-- Search input -->
+                    <div class="relative flex-1 max-w-md">
                         <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                         <Input
                             v-model="search"
                             type="text"
-                            placeholder="Cari berdasarkan Nama Lengkap, Panggilan, atau No. KTA (contoh: 0023)..."
-                            class="pl-10 pr-9 h-11 text-sm rounded-xl border-zinc-200 dark:border-zinc-700 focus-visible:ring-red-500"
+                            placeholder="Cari no antrean, KTA, nama, TPS, petugas..."
+                            class="pl-10 h-11 text-sm bg-zinc-50/50 dark:bg-zinc-800/50"
                         />
-                        <button
-                            v-if="search"
-                            type="button"
-                            @click="search = ''"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
-                        >
-                            <X class="h-4 w-4" />
-                        </button>
                     </div>
 
-                    <!-- Filter Dropdowns -->
+                    <!-- Filter dropdowns -->
                     <div class="flex flex-wrap items-center gap-2">
-                        <!-- Filter Offline Status -->
-                        <div class="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl text-xs font-medium">
-                            <button
-                                type="button"
-                                @click="statusOffline = 'all'"
-                                class="px-3 py-1.5 rounded-lg transition-colors"
-                                :class="statusOffline === 'all' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs font-bold' : 'text-zinc-500 hover:text-zinc-800'"
-                            >
-                                Semua
-                            </button>
-                            <button
-                                type="button"
-                                @click="statusOffline = 'offline'"
-                                class="px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                                :class="statusOffline === 'offline' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-zinc-500 hover:text-zinc-800'"
-                            >
-                                <span>Pemilih Offline</span>
-                                <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-700/60 text-white font-mono">
-                                    {{ stats.total_offline_voters }}
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                @click="statusOffline = 'not_offline'"
-                                class="px-3 py-1.5 rounded-lg transition-colors"
-                                :class="statusOffline === 'not_offline' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs font-bold' : 'text-zinc-500 hover:text-zinc-800'"
-                            >
-                                Belum Ditandai
-                            </button>
-                        </div>
+                        <!-- Status Pemilihan -->
+                        <select
+                            v-model="votingStatus"
+                            class="h-11 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                        >
+                            <option value="all">Semua Status Pemilihan</option>
+                            <option value="antrean">⏳ Dalam Antrean</option>
+                            <option value="sudah_memilih">✅ Sudah Memilih</option>
+                            <option value="tidak_memilih">⛔ Tidak Memilih</option>
+                            <option value="cancel_vote">❌ Batal Memilih</option>
+                        </select>
 
-                        <!-- Filter Status Keanggotaan -->
+                        <!-- Status Keanggotaan -->
                         <select
                             v-model="statusKeanggotaan"
-                            class="h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs font-semibold text-zinc-700 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-red-500"
+                            class="h-11 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                         >
-                            <option value="all">Semua Status Keanggotaan</option>
+                            <option value="all">Semua Keanggotaan</option>
                             <option value="LIFE MEMBER">LIFE MEMBER</option>
                             <option value="SS DIPONEGORO">SS DIPONEGORO</option>
                             <option value="HONORARY">HONORARY</option>
@@ -340,7 +424,7 @@ function isEligible(member: Member) {
 
                         <!-- Clear filter -->
                         <Button
-                            v-if="search || statusOffline !== 'all' || statusKeanggotaan !== 'all'"
+                            v-if="search || votingStatus !== 'all' || statusKeanggotaan !== 'all'"
                             variant="ghost"
                             size="sm"
                             @click="clearFilters"
@@ -350,238 +434,164 @@ function isEligible(member: Member) {
                             Reset
                         </Button>
                     </div>
-
                 </div>
             </div>
 
-            <!-- Members Table Card -->
+            <!-- Offline Logs Table Card -->
             <div class="rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
                 <div class="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow class="bg-zinc-50/75 dark:bg-zinc-800/50 hover:bg-zinc-50/75">
-                                <TableHead class="w-[180px] font-bold text-xs uppercase tracking-wider">
-                                    <button 
-                                        type="button" 
-                                        class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
-                                        @click="toggleSort('no_kartu')"
+                                <TableHead class="w-[120px] font-bold text-xs uppercase tracking-wider text-center">
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                                        @click="toggleSort('no_antrian')"
                                     >
-                                        <span>No. KTA</span>
+                                        <span>Antrean</span>
                                         <ArrowUpDown class="h-3.5 w-3.5" />
                                     </button>
                                 </TableHead>
                                 <TableHead class="font-bold text-xs uppercase tracking-wider">
-                                    <button 
-                                        type="button" 
-                                        class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
-                                        @click="toggleSort('nama_lengkap')"
-                                    >
-                                        <span>Nama Anggota</span>
-                                        <ArrowUpDown class="h-3.5 w-3.5" />
-                                    </button>
+                                    Anggota & No. KTA
                                 </TableHead>
                                 <TableHead class="font-bold text-xs uppercase tracking-wider">
-                                    Status Keanggotaan
-                                </TableHead>
-                                <TableHead class="font-bold text-xs uppercase tracking-wider">
-                                    Chapter / Wilayah
+                                    Chapter / Status
                                 </TableHead>
                                 <TableHead class="font-bold text-xs uppercase tracking-wider text-center">
-                                    Status Hak Suara
+                                    TPS
                                 </TableHead>
                                 <TableHead class="font-bold text-xs uppercase tracking-wider text-center">
                                     Status Pemilihan
                                 </TableHead>
-                                <TableHead class="w-[200px] text-right font-bold text-xs uppercase tracking-wider">
+                                <TableHead class="font-bold text-xs uppercase tracking-wider">
+                                    Petugas Verifikasi
+                                </TableHead>
+                                <TableHead class="w-[160px] text-right font-bold text-xs uppercase tracking-wider">
                                     Aksi
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
-                        
+
                         <TableBody>
-                            <TableRow v-if="members.data.length === 0">
+                            <TableRow v-if="logData.length === 0">
                                 <TableCell colspan="7" class="text-center py-12 text-zinc-500">
                                     <div class="flex flex-col items-center justify-center gap-2">
                                         <UserX class="h-8 w-8 text-zinc-300" />
-                                        <p class="font-medium text-sm">Tidak ada data anggota yang cocok dengan pencarian.</p>
-                                        <p class="text-xs text-zinc-400">Coba ubah kata kunci pencarian nama atau nomor KTA.</p>
+                                        <p class="font-medium text-sm">Belum ada data pemilih offline yang sesuai.</p>
+                                        <p class="text-xs text-zinc-400">
+                                            Pemilih offline diverifikasi oleh pengurus melalui portal /offline/verify.
+                                        </p>
                                     </div>
                                 </TableCell>
                             </TableRow>
 
-                            <TableRow 
-                                v-for="m in members.data" 
-                                :key="m.id"
+                            <TableRow
+                                v-for="log in logData"
+                                :key="log.id"
                                 class="transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40"
-                                :class="{'bg-emerald-50/40 dark:bg-emerald-950/10': m.offline_voter}"
                             >
-                                <!-- No. KTA -->
-                                <TableCell class="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                                    <span class="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                                        {{ m.no_kartu ? formatKta(m.no_kartu) : '—' }}
+                                <!-- No. Antrean -->
+                                <TableCell class="text-center">
+                                    <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-red-100 text-red-800 font-black text-sm border border-red-200">
+                                        #{{ log.no_antrian }}
                                     </span>
                                 </TableCell>
 
-                                <!-- Nama & Detail -->
+                                <!-- Anggota & KTA -->
                                 <TableCell>
                                     <div class="flex items-center gap-3">
                                         <div class="relative shrink-0">
                                             <img
-                                                v-if="m.foto"
-                                                :src="'/storage/' + m.foto"
-                                                :alt="m.nama_lengkap"
+                                                v-if="log.member?.foto"
+                                                :src="'/storage/' + log.member.foto"
+                                                :alt="log.member.nama_lengkap"
                                                 class="h-10 w-10 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
                                             />
                                             <div
                                                 v-else
                                                 class="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-bold text-zinc-500 text-xs uppercase"
                                             >
-                                                {{ (m.nama_lengkap || 'M').substring(0, 2) }}
+                                                {{ (log.member?.nama_lengkap || 'M').substring(0, 2) }}
                                             </div>
-                                            <!-- Indicator Dot -->
-                                            <span 
-                                                v-if="m.offline_voter" 
-                                                class="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"
-                                                title="Pemilih Offline"
-                                            />
                                         </div>
-                                        <div class="space-y-0.5">
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">{{ m.nama_lengkap }}</span>
-                                                <span v-if="m.nama_panggilan" class="text-xs text-zinc-500 italic">
-                                                    "{{ m.nama_panggilan }}"
-                                                </span>
+                                        <div>
+                                            <div class="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                                                {{ log.member ? log.member.nama_lengkap : 'Anggota #' + log.member_id }}
                                             </div>
-                                            <p class="text-xs text-zinc-500 font-mono">{{ m.no_wa || '—' }}</p>
+                                            <div class="font-mono text-xs font-bold text-red-600 mt-0.5">
+                                                {{ formatKta(log.member?.no_kartu) }}
+                                            </div>
                                         </div>
                                     </div>
                                 </TableCell>
 
-                                <!-- Status Keanggotaan -->
+                                <!-- Chapter / Keanggotaan -->
                                 <TableCell>
-                                    <div class="flex flex-col gap-1 items-start">
-                                        <Badge
-                                            v-if="m.status_keanggotaan === 'LIFE MEMBER'"
-                                            class="bg-amber-500/15 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-300 font-bold text-[10px]"
-                                            variant="outline"
-                                        >
-                                            ⭐ LIFE MEMBER
-                                        </Badge>
-                                        <Badge
-                                            v-else-if="m.status_keanggotaan === 'SS DIPONEGORO'"
-                                            class="bg-blue-500/15 text-blue-700 border-blue-300 dark:bg-blue-950/30 dark:text-blue-300 font-bold text-[10px]"
-                                            variant="outline"
-                                        >
-                                            🛡️ SS DIPONEGORO
-                                        </Badge>
-                                        <Badge
-                                            v-else
-                                            variant="secondary"
-                                            class="text-[10px] text-zinc-600"
-                                        >
-                                            {{ m.status_keanggotaan || '—' }}
-                                        </Badge>
-
-                                        <!-- Penalty Indicator -->
-                                        <span 
-                                            v-if="m.penalty && m.penalty !== 'clean'"
-                                            class="text-[10px] font-bold text-red-600 bg-red-50 dark:bg-red-950/40 px-1.5 py-0.5 rounded border border-red-200"
-                                        >
-                                            PENALTY: {{ m.penalty.toUpperCase() }}
-                                        </span>
+                                    <div class="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                        {{ log.member?.chapter || '—' }}
+                                    </div>
+                                    <div class="text-[11px] text-zinc-500">
+                                        {{ log.member?.status_keanggotaan || '—' }}
                                     </div>
                                 </TableCell>
 
-                                <!-- Chapter / Wilayah -->
-                                <TableCell class="text-xs text-zinc-600 dark:text-zinc-400">
-                                    <div class="font-medium text-zinc-800 dark:text-zinc-200">{{ m.chapter || '—' }}</div>
-                                    <div v-if="m.checkpoint" class="text-[11px] text-zinc-500">{{ m.checkpoint }}</div>
-                                </TableCell>
-
-                                <!-- Status Hak Suara -->
+                                <!-- TPS -->
                                 <TableCell class="text-center">
-                                    <div class="inline-flex flex-col items-center">
-                                        <span 
-                                            v-if="isEligible(m)"
-                                            class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-900"
-                                        >
-                                            <Check class="h-3 w-3 text-emerald-600" />
-                                            Berhak Memilih
-                                        </span>
-                                        <span 
-                                            v-else
-                                            class="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            Tidak Berhak
-                                        </span>
-                                    </div>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700">
+                                        {{ log.no_tps || '—' }}
+                                    </span>
                                 </TableCell>
 
-                                <!-- Status Pemilihan (Online vs Offline) -->
+                                <!-- Status Pemilihan -->
                                 <TableCell class="text-center">
-                                    <div class="inline-flex flex-col gap-1 items-center">
-                                        <!-- Status Offline -->
-                                        <div v-if="m.offline_voter">
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-xs">
-                                                <Vote class="h-3.5 w-3.5" />
-                                                PEMILIH OFFLINE
-                                            </span>
-                                        </div>
-                                        <div v-else>
-                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                                                Bukan Offline
-                                            </span>
-                                        </div>
+                                    <span
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border shadow-xs"
+                                        :class="statusBadgeClass(log.voting_status)"
+                                    >
+                                        <span>{{ statusIcon(log.voting_status) }}</span>
+                                        <span>{{ statusLabel(log.voting_status) }}</span>
+                                    </span>
+                                </TableCell>
 
-                                        <!-- Status Online -->
-                                        <div v-if="m.pollings_exists">
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded border border-blue-200">
-                                                <CheckCircle2 class="h-3 w-3 text-blue-600" />
-                                                Sudah Vote Online
-                                            </span>
-                                        </div>
+                                <!-- Petugas Verifikasi -->
+                                <TableCell>
+                                    <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                                        {{ log.nama_pengurus }}
+                                    </div>
+                                    <div class="text-[10px] text-zinc-400 font-mono">
+                                        {{ formatTime(log.created_at) }}
                                     </div>
                                 </TableCell>
 
-                                <!-- Actions -->
+                                <!-- Aksi (Edit & Hapus) -->
                                 <TableCell class="text-right">
-                                    <!-- Jika sudah offline voter: Tombol Batalkan -->
-                                    <div v-if="m.offline_voter" class="flex justify-end">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <!-- Edit Button -->
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            @click="openUnmarkModal(m)"
-                                            class="h-8 text-xs font-semibold border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/60 dark:hover:bg-red-950/40"
+                                            @click="openEditModal(log)"
+                                            class="h-8 px-2.5 text-xs font-semibold text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border-zinc-200"
+                                            title="Edit Data Pemilih Offline"
                                         >
-                                            <XCircle class="h-3.5 w-3.5 mr-1" />
-                                            Batalkan Offline
+                                            <Pencil class="h-3.5 w-3.5 mr-1 text-zinc-500" />
+                                            Edit
                                         </Button>
-                                    </div>
 
-                                    <!-- Jika belum offline voter: Cek apakah sudah vote online -->
-                                    <div v-else class="flex justify-end">
+                                        <!-- Delete Button -->
                                         <Button
-                                            v-if="m.pollings_exists"
                                             type="button"
-                                            variant="secondary"
+                                            variant="outline"
                                             size="sm"
-                                            disabled
-                                            class="h-8 text-xs font-medium opacity-60 cursor-not-allowed"
-                                            title="Anggota sudah memberikan suara secara online"
+                                            @click="openDeleteModal(log)"
+                                            class="h-8 px-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                                            title="Hapus Data Log Offline"
                                         >
-                                            Sudah Vote Online
-                                        </Button>
-                                        
-                                        <Button
-                                            v-else
-                                            type="button"
-                                            size="sm"
-                                            @click="openMarkModal(m)"
-                                            class="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                                        >
-                                            <Vote class="h-3.5 w-3.5 mr-1" />
-                                            Tandai Pemilih Offline
+                                            <Trash2 class="h-3.5 w-3.5 mr-1" />
+                                            Hapus
                                         </Button>
                                     </div>
                                 </TableCell>
@@ -590,156 +600,159 @@ function isEligible(member: Member) {
                     </Table>
                 </div>
 
-                <!-- Pagination Bar -->
-                <div 
-                    v-if="members.total > 0"
-                    class="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900"
+                <!-- Pagination Footer -->
+                <div
+                    v-if="paginationInfo.links && paginationInfo.links.length > 3"
+                    class="p-4 border-t border-zinc-200/80 bg-zinc-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600"
                 >
-                    <div class="text-xs text-zinc-500">
-                        Menampilkan <span class="font-bold text-zinc-800 dark:text-zinc-200">{{ members.from || 0 }}</span> - <span class="font-bold text-zinc-800 dark:text-zinc-200">{{ members.to || 0 }}</span> dari <span class="font-bold text-zinc-800 dark:text-zinc-200">{{ members.total }}</span> anggota
+                    <div>
+                        Menampilkan <strong>{{ paginationInfo.from || 0 }}</strong> - <strong>{{ paginationInfo.to || 0 }}</strong> dari <strong>{{ paginationInfo.total || 0 }}</strong> log
                     </div>
-
-                    <div class="flex items-center gap-1.5">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            class="h-8 w-8 p-0"
-                            :disabled="members.current_page <= 1"
-                            @click="applyFilters({ page: 1 })"
-                            title="Halaman Pertama"
-                        >
-                            <ChevronsLeft class="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            class="h-8 w-8 p-0"
-                            :disabled="members.current_page <= 1"
-                            @click="applyFilters({ page: members.current_page - 1 })"
-                            title="Sebelumnya"
-                        >
-                            <ChevronLeft class="h-4 w-4" />
-                        </Button>
-                        
-                        <span class="px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                            Hal. {{ members.current_page }} dari {{ members.last_page }}
-                        </span>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            class="h-8 w-8 p-0"
-                            :disabled="members.current_page >= members.last_page"
-                            @click="applyFilters({ page: members.current_page + 1 })"
-                            title="Selanjutnya"
-                        >
-                            <ChevronRight class="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            class="h-8 w-8 p-0"
-                            :disabled="members.current_page >= members.last_page"
-                            @click="applyFilters({ page: members.last_page })"
-                            title="Halaman Terakhir"
-                        >
-                            <ChevronsRight class="h-4 w-4" />
-                        </Button>
+                    <div class="flex items-center gap-1">
+                        <button
+                            v-for="(link, idx) in paginationInfo.links"
+                            :key="idx"
+                            @click="link.url && router.visit(link.url, { preserveScroll: true, preserveState: true })"
+                            :disabled="!link.url || link.active"
+                            v-html="link.label"
+                            class="px-2.5 py-1 rounded border transition-colors"
+                            :class="link.active ? 'bg-red-600 text-white font-bold border-red-600' : (!link.url ? 'opacity-40 cursor-not-allowed border-zinc-200' : 'bg-white hover:bg-zinc-100 text-zinc-700 border-zinc-200')"
+                        />
                     </div>
                 </div>
             </div>
 
-            <!-- Confirmation Dialog -->
-            <Dialog :open="!!targetMember" @update:open="(val) => !val && closeModal()">
-                <DialogContent class="sm:max-w-md">
-                    <DialogHeader>
-                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full mb-2" :class="modalAction === 'mark' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'">
-                            <Vote v-if="modalAction === 'mark'" class="h-6 w-6" />
-                            <AlertTriangle v-else class="h-6 w-6" />
-                        </div>
-                        <DialogTitle class="text-center text-lg font-bold">
-                            {{ modalAction === 'mark' ? 'Konfirmasi Tandai Pemilih Offline' : 'Batalkan Status Pemilih Offline' }}
-                        </DialogTitle>
-                        <DialogDescription class="text-center text-xs text-zinc-500 mt-1">
-                            Verifikasi data anggota sebelum melanjutkan aksi
-                        </DialogDescription>
-                    </DialogHeader>
+        </div>
 
-                    <div v-if="targetMember" class="space-y-4 py-2">
-                        <!-- Member Summary Card -->
-                        <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 p-4 space-y-2">
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-zinc-500">Nama Anggota:</span>
-                                <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ targetMember.nama_lengkap }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-zinc-500">No. KTA:</span>
-                                <span class="font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                                    {{ targetMember.no_kartu ? formatKta(targetMember.no_kartu) : '—' }}
-                                </span>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-zinc-500">Status Keanggotaan:</span>
-                                <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ targetMember.status_keanggotaan }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-zinc-500">Chapter:</span>
-                                <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ targetMember.chapter }}</span>
-                            </div>
-                        </div>
+        <!-- ── MODAL EDIT DATA PEMILIH OFFLINE ──────────────────────────────── -->
+        <Dialog :open="isEditOpen" @update:open="isEditOpen = $event">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Pencil class="h-5 w-5 text-red-600" />
+                        <span>Edit Log Pemilih Offline</span>
+                    </DialogTitle>
+                    <DialogDescription>
+                        Ubah data antrean atau status pemilihan untuk anggota <strong>{{ editingLog?.member?.nama_lengkap }}</strong> ({{ formatKta(editingLog?.member?.no_kartu) }}).
+                    </DialogDescription>
+                </DialogHeader>
 
-                        <!-- Consequence Warning Banner -->
-                        <div 
-                            v-if="modalAction === 'mark'"
-                            class="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300 flex items-start gap-2.5"
-                        >
-                            <AlertTriangle class="h-4.5 w-4.5 text-amber-600 shrink-0 mt-0.5" />
-                            <div class="space-y-1">
-                                <p class="font-bold">Konsekuensi Penandaan Offline:</p>
-                                <p class="leading-relaxed">
-                                    Setelah ditandai, anggota ini <strong>TIDAK AKAN BISA</strong> login untuk memilih secara online di portal Pra-Election.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div 
-                            v-else
-                            class="rounded-xl border border-blue-200 bg-blue-50 p-3.5 text-xs text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300 flex items-start gap-2.5"
-                        >
-                            <ShieldCheck class="h-4.5 w-4.5 text-blue-600 shrink-0 mt-0.5" />
-                            <div class="space-y-1">
-                                <p class="font-bold">Pembatalan Pemilih Offline:</p>
-                                <p class="leading-relaxed">
-                                    Status offline akan dicabut. Anggota ini dapat kembali login memilih online jika memenuhi persyaratan.
-                                </p>
-                            </div>
-                        </div>
+                <form @submit.prevent="submitEdit" class="space-y-4 py-2">
+                    <!-- Nomor Antrean -->
+                    <div>
+                        <Label for="edit_no_antrian" class="text-xs font-semibold">Nomor Antrean *</Label>
+                        <Input
+                            id="edit_no_antrian"
+                            type="number"
+                            min="1"
+                            v-model="editForm.no_antrian"
+                            class="mt-1"
+                            required
+                        />
+                        <p v-if="editForm.errors.no_antrian" class="text-xs text-red-500 mt-1">{{ editForm.errors.no_antrian }}</p>
                     </div>
 
-                    <DialogFooter class="flex flex-row gap-2 justify-end sm:justify-end">
+                    <!-- TPS -->
+                    <div>
+                        <Label for="edit_no_tps" class="text-xs font-semibold">Nomor / Lokasi TPS</Label>
+                        <Input
+                            id="edit_no_tps"
+                            type="text"
+                            placeholder="Cth: TPS 1"
+                            v-model="editForm.no_tps"
+                            class="mt-1"
+                        />
+                        <p v-if="editForm.errors.no_tps" class="text-xs text-red-500 mt-1">{{ editForm.errors.no_tps }}</p>
+                    </div>
+
+                    <!-- Petugas Verifikasi -->
+                    <div>
+                        <Label for="edit_nama_pengurus" class="text-xs font-semibold">Nama Petugas Verifikasi *</Label>
+                        <Input
+                            id="edit_nama_pengurus"
+                            type="text"
+                            v-model="editForm.nama_pengurus"
+                            class="mt-1"
+                            required
+                        />
+                        <p v-if="editForm.errors.nama_pengurus" class="text-xs text-red-500 mt-1">{{ editForm.errors.nama_pengurus }}</p>
+                    </div>
+
+                    <!-- Status Pemilihan -->
+                    <div>
+                        <Label for="edit_voting_status" class="text-xs font-semibold">Status Pemilihan *</Label>
+                        <select
+                            id="edit_voting_status"
+                            v-model="editForm.voting_status"
+                            class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                        >
+                            <option value="antrean">⏳ Dalam Antrean</option>
+                            <option value="sudah_memilih">✅ Sudah Memilih</option>
+                            <option value="tidak_memilih">⛔ Tidak Memilih</option>
+                            <option value="cancel_vote">❌ Batal Memilih</option>
+                        </select>
+                        <p v-if="editForm.errors.voting_status" class="text-xs text-red-500 mt-1">{{ editForm.errors.voting_status }}</p>
+                    </div>
+
+                    <DialogFooter class="pt-4 flex gap-2">
                         <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            @click="closeModal"
-                            :disabled="isProcessing"
+                            @click="isEditOpen = false"
+                            class="text-xs font-semibold"
                         >
                             Batal
                         </Button>
                         <Button
-                            type="button"
-                            size="sm"
-                            :disabled="isProcessing"
-                            :class="modalAction === 'mark' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'"
-                            @click="confirmAction"
+                            type="submit"
+                            :disabled="editForm.processing"
+                            class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
                         >
-                            <RefreshCw v-if="isProcessing" class="h-4 w-4 animate-spin mr-1.5" />
-                            <span>{{ modalAction === 'mark' ? 'Ya, Tandai Pemilih Offline' : 'Ya, Batalkan Status Offline' }}</span>
+                            {{ editForm.processing ? 'Menyimpan...' : 'Simpan Perubahan' }}
                         </Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                </form>
+            </DialogContent>
+        </Dialog>
 
-        </div>
+        <!-- ── MODAL KONFIRMASI HAPUS ──────────────────────────────────────── -->
+        <Dialog :open="isDeleteOpen" @update:open="isDeleteOpen = $event">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-red-600">
+                        <AlertTriangle class="h-5 w-5" />
+                        <span>Hapus Log Pemilih Offline?</span>
+                    </DialogTitle>
+                    <DialogDescription class="pt-2 text-zinc-600 leading-relaxed">
+                        Apakah Anda yakin ingin menghapus data antrean <strong>#{{ deletingLog?.no_antrian }}</strong> untuk anggota <strong>{{ deletingLog?.member?.nama_lengkap }}</strong>?
+                        <br />
+                        <span class="block mt-2 text-xs text-zinc-500">
+                            Jika dihapus, status pemilih offline pada anggota akan dikembalikan sehingga anggota dapat diverifikasi ulang atau login secara online kembali.
+                        </span>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter class="pt-4 flex gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="isDeleteOpen = false"
+                        :disabled="isDeleting"
+                        class="text-xs font-semibold"
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        type="button"
+                        @click="confirmDelete"
+                        :disabled="isDeleting"
+                        class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+                    >
+                        {{ isDeleting ? 'Menghapus...' : 'Ya, Hapus Data' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
     </AppLayout>
 </template>
