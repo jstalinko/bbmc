@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { Settings2, Save, Calendar, Check, Info, KeyRound, Plus, Trash2 } from 'lucide-vue-next';
+import { Settings2, Save, Calendar, Check, Info, KeyRound, Plus, Trash2, Award } from 'lucide-vue-next';
 import { TransitionRoot } from '@headlessui/vue';
 import { decryptPayload } from '@/lib/crypto';
 
@@ -14,6 +14,7 @@ const props = defineProps<{
     settings: {
         ajukan_diri: boolean;
         ajukan_anggota: boolean;
+        tampilkan_kandidat_polling?: boolean;
         tanggal_mulai: string | null;
         tanggal_selesai: string | null;
         max_active_users: number;
@@ -45,6 +46,7 @@ const decryptedKodeAkses = typeof props.settings.kode_akses_pengurus === 'string
 const form = useForm({
     ajukan_diri: !!props.settings.ajukan_diri,
     ajukan_anggota: !!props.settings.ajukan_anggota,
+    tampilkan_kandidat_polling: props.settings.tampilkan_kandidat_polling !== false,
     tanggal_mulai: props.settings.tanggal_mulai ? props.settings.tanggal_mulai.substring(0, 16) : '',
     tanggal_selesai: props.settings.tanggal_selesai ? props.settings.tanggal_selesai.substring(0, 16) : '',
     max_active_users: props.settings.max_active_users ?? 0,
@@ -117,6 +119,32 @@ const submitSettings = () => {
                                 <Switch
                                     id="ajukan_anggota"
                                     v-model="form.ajukan_anggota"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Tampilan Live Polling Pemilihan -->
+                    <div class="space-y-4">
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b pb-2 flex items-center gap-2">
+                            <Award class="h-4 w-4" />
+                            <span>Tampilan Live Polling (/election/polling)</span>
+                        </h2>
+                        
+                        <div class="grid gap-6 sm:grid-cols-1 mt-4">
+                            <!-- Toggle: Tampilkan Kandidat di Polling -->
+                            <div class="flex items-start justify-between p-4 rounded-lg border bg-muted/30">
+                                <div class="space-y-0.5 pr-4">
+                                    <Label class="text-base font-semibold cursor-pointer" for="tampilkan_kandidat_polling">
+                                        Tampilkan Kandidat El Presidente di Polling
+                                    </Label>
+                                    <p class="text-xs text-muted-foreground leading-relaxed">
+                                        Jika diaktifkan, kandidat El Presidente beserta perolehan suara masing-masing akan ditampilkan di halaman <span class="font-mono text-foreground font-semibold">/election/polling</span>. Jika dinonaktifkan, halaman polling hanya menampilkan rekapitulasi total suara masuk, total pemilih, dan partisipasi pemilih tanpa rincian calon.
+                                    </p>
+                                </div>
+                                <Switch
+                                    id="tampilkan_kandidat_polling"
+                                    v-model="form.tampilkan_kandidat_polling"
                                 />
                             </div>
                         </div>

@@ -38,7 +38,9 @@ class Polling extends Model
     public function totalVoteByMember($member_id)
     {
         $calonIds = Calon::where('member_id', $member_id)->pluck('id');
-        return Polling::whereIn('calon_id', $calonIds)->count();
+        $onlineVotes = Polling::whereIn('calon_id', $calonIds)->count();
+        $offlineVotes = (int) PollingOffline::whereIn('calon_id', $calonIds)->sum('jumlah_suara');
+        return $onlineVotes + $offlineVotes;
     }
 
     public function totalVote($calon_id)
@@ -47,7 +49,39 @@ class Polling extends Model
         if ($calon) {
             return $this->totalVoteByMember($calon->member_id);
         }
-        return Polling::where('calon_id', $calon_id)->count();
+        $onlineVotes = Polling::where('calon_id', $calon_id)->count();
+        $offlineVotes = (int) PollingOffline::where('calon_id', $calon_id)->sum('jumlah_suara');
+        return $onlineVotes + $offlineVotes;
+    }
+
+    public static function totalVotingOnline(): int
+    {
+        return Polling::count();
+    }
+
+    public static function totalOnlineVotes(): int
+    {
+        return Polling::count();
+    }
+
+    public static function totalVotingOffline(): int
+    {
+        return (int) PollingOffline::sum('jumlah_suara');
+    }
+
+    public static function totalOfflineVotes(): int
+    {
+        return (int) PollingOffline::sum('jumlah_suara');
+    }
+
+    public static function totalVoting(): int
+    {
+        return self::totalVotingOnline() + self::totalVotingOffline();
+    }
+
+    public static function totalVotes(): int
+    {
+        return self::totalVoting();
     }
 
     public function resultVotes()
@@ -74,6 +108,8 @@ class Polling extends Model
     {
         $realResults = $this->resultVotes();
         $realTotalVotes = array_sum(array_column($realResults, 'total_vote'));
+        $unassignedOffline = (int) PollingOffline::whereNull('calon_id')->sum('jumlah_suara');
+        $realTotalVotes += $unassignedOffline;
 
         // Pengaturan via .env (atau hardcoded defaults)
         $throttleEnabled = filter_var(env('POLLING_THROTTLE_ENABLED', true), FILTER_VALIDATE_BOOLEAN);

@@ -16,7 +16,7 @@ import { Head, router, usePage, useForm } from '@inertiajs/vue3';
 import {
     Search, RefreshCw, Vote, Users, AlertTriangle, ChevronLeft, ChevronRight,
     ArrowUpDown, UserX, Check, ExternalLink, Pencil, Trash2, ShieldCheck,
-    Clock, CheckCircle2, XCircle, AlertCircle
+    Clock, CheckCircle2, XCircle, AlertCircle, PlusCircle, FileText, Eye, Upload
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -47,6 +47,31 @@ interface OfflineLogItem {
     member?: Member;
 }
 
+interface CandidateOption {
+    id: number;
+    no_urut?: number | null;
+    nama: string;
+    chapter?: string;
+}
+
+interface RekapOfflineItem {
+    id: number;
+    calon_id?: number | null;
+    jumlah_suara: number;
+    penanggung_jawab: string;
+    foto_bukti?: string | null;
+    foto_bukti_url?: string | null;
+    keterangan?: string | null;
+    created_at: string;
+    calon?: {
+        id: number;
+        no_urut?: number | null;
+        member?: {
+            nama_lengkap: string;
+        };
+    } | null;
+}
+
 interface Stats {
     total_offline_voters: number;
     total_antrean: number;
@@ -54,6 +79,8 @@ interface Stats {
     total_tidak_memilih: number;
     total_batal: number;
     total_online_voted?: number;
+    total_rekap_offline?: number;
+    total_rekap_count?: number;
 }
 
 const props = defineProps<{
@@ -69,6 +96,8 @@ const props = defineProps<{
     };
     members?: any;
     stats: Stats;
+    rekap_offline?: RekapOfflineItem[];
+    candidates?: CandidateOption[];
     filters: {
         search?: string;
         voting_status?: string;
@@ -214,6 +243,96 @@ function confirmDelete() {
     });
 }
 
+// ── Rekapitulasi Suara Offline State & Form ──────────────────────────────────
+const isRekapModalOpen = ref(false);
+const previewUrl = ref<string | null>(null);
+
+const rekapForm = useForm<{
+    calon_id: string | number;
+    jumlah_suara: number | string;
+    penanggung_jawab: string;
+    keterangan: string;
+    foto_bukti: File | null;
+}>({
+    calon_id: '',
+    jumlah_suara: '',
+    penanggung_jawab: '',
+    keterangan: '',
+    foto_bukti: null,
+});
+
+function openRekapModal() {
+    rekapForm.reset();
+    rekapForm.clearErrors();
+    previewUrl.value = null;
+    isRekapModalOpen.value = true;
+}
+
+function handleFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        rekapForm.foto_bukti = file;
+        if (file.type.startsWith('image/')) {
+            previewUrl.value = URL.createObjectURL(file);
+        } else {
+            previewUrl.value = null;
+        }
+    } else {
+        rekapForm.foto_bukti = null;
+        previewUrl.value = null;
+    }
+}
+
+function submitRekap() {
+    rekapForm.post('/pemilihan-offline/rekap', {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            isRekapModalOpen.value = false;
+            rekapForm.reset();
+            previewUrl.value = null;
+        },
+    });
+}
+
+// ── Delete Rekap Modal State ─────────────────────────────────────────────────
+const isDeleteRekapOpen = ref(false);
+const deletingRekap = ref<RekapOfflineItem | null>(null);
+const isDeletingRekap = ref(false);
+
+function openDeleteRekapModal(item: RekapOfflineItem) {
+    deletingRekap.value = item;
+    isDeleteRekapOpen.value = true;
+}
+
+function confirmDeleteRekap() {
+    if (!deletingRekap.value) return;
+
+    isDeletingRekap.value = true;
+    router.delete(`/pemilihan-offline/rekap/${deletingRekap.value.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            isDeletingRekap.value = false;
+            isDeleteRekapOpen.value = false;
+            deletingRekap.value = null;
+        },
+    });
+}
+
+// ── Bukti Viewer Modal State ─────────────────────────────────────────────────
+const isBuktiViewerOpen = ref(false);
+const viewingBukti = ref<{ url: string; title: string } | null>(null);
+
+function openBuktiViewer(item: RekapOfflineItem) {
+    if (!item.foto_bukti_url) return;
+    viewingBukti.value = {
+        url: item.foto_bukti_url,
+        title: `Bukti Rekap: ${item.penanggung_jawab} (${item.jumlah_suara} Suara)`,
+    };
+    isBuktiViewerOpen.value = true;
+}
+
 // Helper status badge classes
 function statusBadgeClass(status: string) {
     if (status === 'antrean') return 'bg-amber-100 text-amber-800 border-amber-300';
@@ -283,12 +402,21 @@ function formatTime(iso: string) {
                     </p>
                 </div>
 
-                <!-- Info button: Adding voters is done via /offline/verify -->
-                <div class="flex items-center gap-2 shrink-0">
+                <!-- Action buttons -->
+                <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                    <Button
+                        type="button"
+                        @click="openRekapModal"
+                        class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wide shadow-sm transition-all active:scale-95"
+                    >
+                        <PlusCircle class="h-4 w-4" />
+                        <span>Rekap Suara Offline</span>
+                    </Button>
+
                     <a
                         href="/offline/verify"
                         target="_blank"
-                        class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wide shadow-sm transition-all active:scale-95"
+                        class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs tracking-wide shadow-sm transition-all active:scale-95 border border-zinc-700"
                     >
                         <ShieldCheck class="h-4 w-4" />
                         <span>Verifikasi Pemilih (/offline/verify)</span>
@@ -297,19 +425,19 @@ function formatTime(iso: string) {
                 </div>
             </div>
 
-            <!-- Notice Banner: Cannot Add Data Here -->
+            <!-- Notice Banner: Info Pemilihan Offline -->
             <div class="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-900 flex items-start gap-3">
                 <AlertCircle class="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                 <div class="space-y-0.5">
-                    <p class="font-bold">Informasi Alur Pendaftaran Pemilih Offline:</p>
+                    <p class="font-bold">Informasi Alur Pemilihan Offline & Rekapitulasi Suara:</p>
                     <p class="text-blue-800 leading-relaxed">
-                        Data pemilih offline hanya dapat didaftarkan secara resmi oleh pengurus bertugas melalui form verifikasi kartu di rute <strong>/offline/verify</strong>. Pada halaman ini pengelola dapat memantau log, mengedit nomor antrean/status pemilihan, atau menghapus entri log.
+                        Data kehadiran antrean pemilih offline didaftarkan resmi melalui <strong>/offline/verify</strong>. Untuk memasukkan total perolehan suara hasil perhitungan fisik surat suara TPS, klik tombol <strong>Rekap Suara Offline</strong> di atas.
                     </p>
                 </div>
             </div>
 
             <!-- Statistics Overview Cards -->
-            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <!-- Total Pemilih Offline -->
                 <div class="rounded-2xl border border-red-200/60 bg-red-50/50 p-4 shadow-sm">
                     <div class="flex items-center justify-between">
@@ -321,6 +449,20 @@ function formatTime(iso: string) {
                     <div class="mt-3">
                         <span class="text-2xl font-black text-red-950">{{ stats.total_offline_voters }}</span>
                         <span class="text-xs text-red-600 ml-1">orang</span>
+                    </div>
+                </div>
+
+                <!-- Total Suara Rekap Offline -->
+                <div class="rounded-2xl border border-rose-200/60 bg-gradient-to-br from-rose-50/80 to-white p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-rose-700">Rekap Suara</span>
+                        <div class="p-2 rounded-xl bg-rose-600 text-white shadow-sm">
+                            <PlusCircle class="h-4 w-4" />
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-black text-rose-950">{{ stats.total_rekap_offline || 0 }}</span>
+                        <span class="text-xs text-rose-600 ml-1">suara</span>
                     </div>
                 </div>
 
@@ -378,6 +520,111 @@ function formatTime(iso: string) {
                         <span class="text-2xl font-black text-purple-950">{{ stats.total_batal }}</span>
                         <span class="text-xs text-purple-600 ml-1">batal</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Rekapitulasi Suara Offline Section -->
+            <div class="rounded-2xl border border-red-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-red-100 dark:border-zinc-800 pb-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <Vote class="h-5 w-5 text-red-600" />
+                            <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                Rekapitulasi Suara Offline
+                            </h2>
+                            <Badge variant="outline" class="bg-red-50 text-red-700 border-red-200 font-mono text-xs font-bold">
+                                {{ stats.total_rekap_offline || 0 }} Suara
+                            </Badge>
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-1">
+                            Perolehan suara dari perhitungan fisik TPS offline yang terakumulasi langsung ke live polling El Presidente.
+                        </p>
+                    </div>
+
+                    <Button
+                        type="button"
+                        @click="openRekapModal"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wide shadow-sm shrink-0 self-start sm:self-auto"
+                    >
+                        <PlusCircle class="h-4 w-4" />
+                        <span>Rekap Suara Offline</span>
+                    </Button>
+                </div>
+
+                <!-- Rekap Table / Empty State -->
+                <div v-if="!rekap_offline || rekap_offline.length === 0" class="text-center py-8 px-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-800/30">
+                    <FileText class="h-8 w-8 text-zinc-400 mx-auto mb-2" />
+                    <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Belum Ada Rekapitulasi Suara Offline</p>
+                    <p class="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                        Klik tombol "Rekap Suara Offline" untuk menginputkan perolehan suara dari form plano TPS fisik.
+                    </p>
+                </div>
+
+                <div v-else class="overflow-x-auto rounded-xl border border-zinc-100 dark:border-zinc-800">
+                    <Table>
+                        <TableHeader>
+                            <TableRow class="bg-zinc-50/75 dark:bg-zinc-800/50">
+                                <TableHead class="font-bold text-xs uppercase tracking-wider">Tanggal & Waktu</TableHead>
+                                <TableHead class="font-bold text-xs uppercase tracking-wider">Kandidat Terkait</TableHead>
+                                <TableHead class="font-bold text-xs uppercase tracking-wider text-center">Jumlah Suara</TableHead>
+                                <TableHead class="font-bold text-xs uppercase tracking-wider">Penanggung Jawab</TableHead>
+                                <TableHead class="font-bold text-xs uppercase tracking-wider">Keterangan / TPS</TableHead>
+                                <TableHead class="font-bold text-xs uppercase tracking-wider text-center">Bukti / Foto</TableHead>
+                                <TableHead class="font-bold text-xs uppercase tracking-wider text-right">Aksi</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-for="item in rekap_offline" :key="item.id" class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50">
+                                <TableCell class="font-mono text-xs text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                                    {{ formatTime(item.created_at) }}
+                                </TableCell>
+                                <TableCell class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                                    <div v-if="item.calon" class="flex items-center gap-1.5">
+                                        <Badge v-if="item.calon.no_urut" class="bg-amber-500 text-white text-[10px] px-1.5 py-0 font-mono">
+                                            #{{ item.calon.no_urut }}
+                                        </Badge>
+                                        <span>{{ item.calon.member?.nama_lengkap || `Calon #${item.calon.id}` }}</span>
+                                    </div>
+                                    <span v-else class="text-zinc-400 italic">Umum / Semua Calon</span>
+                                </TableCell>
+                                <TableCell class="text-center">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black font-mono bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400">
+                                        +{{ item.jumlah_suara }} Suara
+                                    </span>
+                                </TableCell>
+                                <TableCell class="text-xs text-zinc-700 dark:text-zinc-300 font-medium">
+                                    {{ item.penanggung_jawab }}
+                                </TableCell>
+                                <TableCell class="text-xs text-zinc-500 max-w-xs truncate">
+                                    {{ item.keterangan || '—' }}
+                                </TableCell>
+                                <TableCell class="text-center">
+                                    <div v-if="item.foto_bukti_url" class="inline-flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            @click="openBuktiViewer(item)"
+                                            class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 hover:underline"
+                                        >
+                                            <Eye class="h-3.5 w-3.5" />
+                                            <span>Lihat Bukti</span>
+                                        </button>
+                                    </div>
+                                    <span v-else class="text-xs text-zinc-400 italic">—</span>
+                                </TableCell>
+                                <TableCell class="text-right">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        @click="openDeleteRekapModal(item)"
+                                        class="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
                 </div>
             </div>
 
@@ -749,6 +996,217 @@ function formatTime(iso: string) {
                         class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
                     >
                         {{ isDeleting ? 'Menghapus...' : 'Ya, Hapus Data' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ── MODAL REKAPITULASI SUARA OFFLINE ────────────────────────────── -->
+        <Dialog :open="isRekapModalOpen" @update:open="isRekapModalOpen = $event">
+            <DialogContent class="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 font-bold">
+                        <Vote class="h-5 w-5 text-red-600" />
+                        <span>Rekapitulasi Suara Offline</span>
+                    </DialogTitle>
+                    <DialogDescription class="text-xs text-zinc-500">
+                        Tambahkan perolehan suara dari perhitungan fisik TPS offline. Suara ini akan diakumulasikan ke total perolehan suara pada sistem polling.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form @submit.prevent="submitRekap" class="space-y-4 pt-2">
+                    <!-- Kandidat Terkait -->
+                    <div class="space-y-1.5">
+                        <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                            Pilih Kandidat (Opsional / Terkait)
+                        </Label>
+                        <select
+                            v-model="rekapForm.calon_id"
+                            class="w-full h-10 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-800 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                        >
+                            <option value="">Umum (Tanpa Kandidat Khusus)</option>
+                            <option
+                                v-for="c in candidates"
+                                :key="c.id"
+                                :value="c.id"
+                            >
+                                {{ c.no_urut ? `No. #${c.no_urut} - ` : '' }}{{ c.nama }}{{ c.chapter ? ` (${c.chapter})` : '' }}
+                            </option>
+                        </select>
+                        <p class="text-[11px] text-zinc-400">
+                            Jika dipilih, suara akan otomatis menambah perolehan suara kandidat tersebut pada grafik live count.
+                        </p>
+                    </div>
+
+                    <!-- Jumlah Suara -->
+                    <div class="space-y-1.5">
+                        <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                            Jumlah Suara <span class="text-red-500">*</span>
+                        </Label>
+                        <Input
+                            type="number"
+                            min="1"
+                            v-model="rekapForm.jumlah_suara"
+                            placeholder="Contoh: 50"
+                            required
+                            class="h-10 text-xs font-mono font-bold"
+                        />
+                        <p v-if="rekapForm.errors.jumlah_suara" class="text-xs text-red-600">
+                            {{ rekapForm.errors.jumlah_suara }}
+                        </p>
+                    </div>
+
+                    <!-- Penanggung Jawab -->
+                    <div class="space-y-1.5">
+                        <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                            Penanggung Jawab / Saksi TPS <span class="text-red-500">*</span>
+                        </Label>
+                        <Input
+                            type="text"
+                            v-model="rekapForm.penanggung_jawab"
+                            placeholder="Contoh: Kang Bambang (Ketua Panitia TPS 1)"
+                            required
+                            class="h-10 text-xs"
+                        />
+                        <p v-if="rekapForm.errors.penanggung_jawab" class="text-xs text-red-600">
+                            {{ rekapForm.errors.penanggung_jawab }}
+                        </p>
+                    </div>
+
+                    <!-- Keterangan / TPS -->
+                    <div class="space-y-1.5">
+                        <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                            Keterangan / Lokasi TPS (Opsional)
+                        </Label>
+                        <Input
+                            type="text"
+                            v-model="rekapForm.keterangan"
+                            placeholder="Contoh: Kotak Suara TPS Mother Chapter Bandung"
+                            class="h-10 text-xs"
+                        />
+                    </div>
+
+                    <!-- Foto / Bukti Dokumen -->
+                    <div class="space-y-1.5">
+                        <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                            Foto / Bukti Berita Acara / Plano C1 (Opsional)
+                        </Label>
+                        <Input
+                            type="file"
+                            accept="image/jpeg,image/png,image/jpg,image/webp,application/pdf"
+                            @change="handleFileChange"
+                            class="h-10 text-xs cursor-pointer file:text-xs file:font-semibold"
+                        />
+                        <p class="text-[11px] text-zinc-400">
+                            Format gambar (JPG, PNG, WEBP) atau PDF, maksimal 10 MB.
+                        </p>
+                        <!-- Preview Thumbnail -->
+                        <div v-if="previewUrl" class="mt-2 relative inline-block rounded-lg overflow-hidden border border-zinc-200">
+                            <img :src="previewUrl" alt="Preview Bukti" class="h-28 w-auto object-cover" />
+                        </div>
+                        <p v-if="rekapForm.errors.foto_bukti" class="text-xs text-red-600">
+                            {{ rekapForm.errors.foto_bukti }}
+                        </p>
+                    </div>
+
+                    <DialogFooter class="pt-3 flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            @click="isRekapModalOpen = false"
+                            class="text-xs font-semibold"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            type="submit"
+                            :disabled="rekapForm.processing"
+                            class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+                        >
+                            {{ rekapForm.processing ? 'Menyimpan...' : 'Simpan Rekapitulasi Suara' }}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ── MODAL VIEWER BUKTI REKAP ─────────────────────────────────────── -->
+        <Dialog :open="isBuktiViewerOpen" @update:open="isBuktiViewerOpen = $event">
+            <DialogContent class="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle class="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        {{ viewingBukti?.title || 'Bukti Rekapitulasi Suara' }}
+                    </DialogTitle>
+                </DialogHeader>
+                <div class="mt-2 flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-xl p-2 max-h-[70vh] overflow-auto">
+                    <img
+                        v-if="viewingBukti?.url && !viewingBukti.url.endsWith('.pdf')"
+                        :src="viewingBukti.url"
+                        alt="Bukti Rekapitulasi"
+                        class="max-h-[65vh] w-auto rounded-lg object-contain"
+                    />
+                    <div v-else class="p-6 text-center">
+                        <FileText class="h-12 w-12 text-zinc-400 mx-auto mb-2" />
+                        <p class="text-sm text-zinc-600 dark:text-zinc-300">Dokumen bukti berformat PDF.</p>
+                        <a
+                            :href="viewingBukti?.url"
+                            target="_blank"
+                            class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold"
+                        >
+                            <ExternalLink class="h-3.5 w-3.5" />
+                            <span>Buka PDF di Tab Baru</span>
+                        </a>
+                    </div>
+                </div>
+                <DialogFooter class="pt-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="isBuktiViewerOpen = false"
+                        class="text-xs font-semibold"
+                    >
+                        Tutup
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ── MODAL KONFIRMASI HAPUS REKAP ──────────────────────────────────── -->
+        <Dialog :open="isDeleteRekapOpen" @update:open="isDeleteRekapOpen = $event">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2 text-red-600 font-bold">
+                        <AlertTriangle class="h-5 w-5" />
+                        <span>Hapus Rekapitulasi Suara Offline?</span>
+                    </DialogTitle>
+                    <DialogDescription class="pt-2 text-zinc-600 dark:text-zinc-400 leading-relaxed text-xs">
+                        Apakah Anda yakin ingin menghapus data rekapitulasi sebanyak
+                        <strong>{{ deletingRekap?.jumlah_suara }} suara</strong>
+                        oleh penanggung jawab <strong>{{ deletingRekap?.penanggung_jawab }}</strong>?
+                        <br /><br />
+                        <span class="text-red-600 font-semibold">
+                            Perolehan suara offline ini akan dikurangi dari live count polling.
+                        </span>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter class="pt-4 flex gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="isDeleteRekapOpen = false"
+                        :disabled="isDeletingRekap"
+                        class="text-xs font-semibold"
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        type="button"
+                        @click="confirmDeleteRekap"
+                        :disabled="isDeletingRekap"
+                        class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+                    >
+                        {{ isDeletingRekap ? 'Menghapus...' : 'Ya, Hapus Rekap' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

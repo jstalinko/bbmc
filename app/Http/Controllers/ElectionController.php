@@ -7,6 +7,7 @@ use App\Models\Calon;
 use App\Models\Otp;
 use App\Models\Polling;
 use App\Models\ElectionQueue;
+use App\Models\OfflineLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -23,6 +24,7 @@ class ElectionController extends Controller
             return [
                 'ajukan_diri' => true,
                 'ajukan_anggota' => true,
+                'tampilkan_kandidat_polling' => true,
                 'tanggal_mulai' => null,
                 'tanggal_selesai' => null,
                 'piwapi' => [],
@@ -43,6 +45,7 @@ class ElectionController extends Controller
         return [
             'ajukan_diri' => $settings['ajukan_diri'] ?? true,
             'ajukan_anggota' => $settings['ajukan_anggota'] ?? true,
+            'tampilkan_kandidat_polling' => $settings['tampilkan_kandidat_polling'] ?? true,
             'tanggal_mulai' => $settings['tanggal_mulai'] ?? null,
             'tanggal_selesai' => $settings['tanggal_selesai'] ?? null,
             'max_active_users' => $settings['max_active_users'] ?? 0,
@@ -404,13 +407,44 @@ class ElectionController extends Controller
             return redirect()->route('election.portal')->with('error', $timeline['message']);
         }
 
+        $settings = $this->getSettings();
+        $tampilkanKandidat = (bool)($settings['tampilkan_kandidat_polling'] ?? true);
+
+        // Total suara offline dari rekap PollingOffline (atau fallback ke offline_logs)
+        $rekapSuaraOffline = (int) \App\Models\PollingOffline::sum('jumlah_suara');
+        $totalSuaraOffline = $rekapSuaraOffline > 0 ? $rekapSuaraOffline : OfflineLog::count();
+        $totalPemilihOffline = OfflineLog::count() > 0 ? OfflineLog::count() : $totalSuaraOffline;
+
+        // Total anggota no penalty
+        $totalCleanMembers = Member::where(function($pq) {
+            $pq->whereNull('penalty')
+               ->orWhere('penalty', '')
+               ->orWhere('penalty', 'clean');
+        })->count();
+
+        // Pemilih online = members no penalty - offline_logs
+        $totalPemilihOnline = max(0, $totalCleanMembers - $totalPemilihOffline);
+        $totalPemilih = max($totalCleanMembers, $totalPemilihOnline + $totalPemilihOffline);
+
         $throttled = (new Polling())->getThrottledResultVotes();
+        $totalSuaraOnline = (int) Polling::count();
+        $totalSuaraMasuk = $totalSuaraOnline + $totalSuaraOffline;
+
+        $partisipasiSuara = $totalPemilih > 0 ? round(($totalSuaraMasuk / $totalPemilih) * 100, 1) : 0;
 
         return Inertia::render('Election/polling', [
-            'results' => $throttled['results'],
-            'totalVotes' => $throttled['totalVotes'],
-            'totalVoters' => $throttled['totalVoters'] ?? 0,
-            'percentageVoted' => $throttled['percentageVoted'] ?? 0
+            'results' => $tampilkanKandidat ? $throttled['results'] : [],
+            'tampilkanKandidat' => $tampilkanKandidat,
+            'totalSuaraMasuk' => $totalSuaraMasuk,
+            'totalSuaraOffline' => $totalSuaraOffline,
+            'totalSuaraOnline' => $totalSuaraOnline,
+            'totalPemilih' => $totalPemilih,
+            'totalPemilihOffline' => $totalPemilihOffline,
+            'totalPemilihOnline' => $totalPemilihOnline,
+            'partisipasiSuara' => $partisipasiSuara,
+            'totalVotes' => $totalSuaraMasuk,
+            'totalVoters' => $totalPemilih,
+            'percentageVoted' => $partisipasiSuara,
         ]);
     }
 
@@ -899,19 +933,7 @@ class ElectionController extends Controller
 
     public function polling()
     {
-        $timeline = $this->checkPollingTimeline();
-        if (!$timeline['allowed']) {
-            return redirect()->route('election.portal')->with('error', $timeline['message']);
-        }
-
-        $throttled = (new Polling())->getThrottledResultVotes();
-
-        return Inertia::render('Election/polling', [
-            'results' => $throttled['results'],
-            'totalVotes' => $throttled['totalVotes'],
-            'totalVoters' => $throttled['totalVoters'] ?? 0,
-            'percentageVoted' => $throttled['percentageVoted'] ?? 0
-        ]);
+        return $this->livePolling();
     }
 
     /**
@@ -933,6 +955,7 @@ class ElectionController extends Controller
         $validated = $request->validate([
             'ajukan_diri' => 'required|boolean',
             'ajukan_anggota' => 'required|boolean',
+            'tampilkan_kandidat_polling' => 'nullable|boolean',
             'tanggal_mulai' => 'nullable|string',
             'tanggal_selesai' => 'nullable|string',
             'max_active_users' => 'nullable|numeric',
@@ -948,6 +971,9 @@ class ElectionController extends Controller
 
         $validated['ajukan_diri'] = (bool)$validated['ajukan_diri'];
         $validated['ajukan_anggota'] = (bool)$validated['ajukan_anggota'];
+        if ($request->has('tampilkan_kandidat_polling')) {
+            $validated['tampilkan_kandidat_polling'] = (bool)$request->input('tampilkan_kandidat_polling');
+        }
         $validated['max_active_users'] = (int)($validated['max_active_users'] ?? 0);
 
         if (isset($validated['kode_akses_pengurus']) && is_array($validated['kode_akses_pengurus'])) {

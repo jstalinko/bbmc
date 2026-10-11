@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Member;
 use App\Models\OfflineLog;
 use App\Models\Polling;
+use App\Models\PollingOffline;
+use App\Models\Calon;
 use App\Models\User;
 use App\Models\ElectionQueue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class OfflineElectionController extends Controller
@@ -66,7 +70,7 @@ class OfflineElectionController extends Controller
 
         $logs = $query->paginate(15)->withQueryString();
 
-        // Calculate statistics for offline logs
+        // Calculate statistics for offline logs & offline vote recap
         $stats = [
             'total_offline_voters' => OfflineLog::count(),
             'total_antrean'        => OfflineLog::where('voting_status', OfflineLog::STATUS_ANTREAN)->count(),
@@ -74,11 +78,32 @@ class OfflineElectionController extends Controller
             'total_tidak_memilih'  => OfflineLog::where('voting_status', OfflineLog::STATUS_TIDAK_MEMILIH)->count(),
             'total_batal'          => OfflineLog::where('voting_status', OfflineLog::STATUS_CANCEL_VOTE)->count(),
             'total_online_voted'   => Polling::distinct('member_id')->count('member_id'),
+            'total_rekap_offline'  => (int) PollingOffline::sum('jumlah_suara'),
+            'total_rekap_count'    => PollingOffline::count(),
         ];
+
+        $rekapOffline = PollingOffline::with(['calon.member', 'creator'])
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $candidates = Calon::with('member')
+            ->where('status', 'ditetapkan')
+            ->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC, id ASC')
+            ->get()
+            ->map(function ($c) {
+                return [
+                    'id' => $c->id,
+                    'no_urut' => $c->no_urut,
+                    'nama' => $c->member ? $c->member->nama_lengkap : 'Calon #' . $c->id,
+                    'chapter' => $c->chapter ?? ($c->member ? $c->member->chapter : ''),
+                ];
+            });
 
         return Inertia::render('Election/Offline', [
             'logs' => $logs,
             'stats' => $stats,
+            'rekap_offline' => $rekapOffline,
+            'candidates' => $candidates,
             'filters' => [
                 'search' => $request->input('search', ''),
                 'voting_status' => $request->input('voting_status', 'all'),
@@ -210,5 +235,62 @@ class OfflineElectionController extends Controller
             return $this->unmark($request, $member);
         }
         return $this->mark($request, $member);
+    }
+
+    /**
+     * Store a new offline vote recap entry.
+     */
+    public function storeRekap(Request $request)
+    {
+        $validated = $request->validate([
+            'jumlah_suara'     => 'required|integer|min:1',
+            'penanggung_jawab' => 'required|string|max:255',
+            'calon_id'         => 'nullable|exists:calons,id',
+            'keterangan'       => 'nullable|string|max:1000',
+            'foto_bukti'       => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+        ], [
+            'jumlah_suara.required'     => 'Jumlah suara wajib diisi.',
+            'jumlah_suara.integer'      => 'Jumlah suara harus berupa angka bulat.',
+            'jumlah_suara.min'          => 'Jumlah suara minimal 1 suara.',
+            'penanggung_jawab.required' => 'Nama penanggung jawab wajib diisi.',
+            'foto_bukti.file'           => 'File bukti harus berupa dokumen atau gambar.',
+            'foto_bukti.mimes'          => 'Format file bukti harus jpeg, png, jpg, webp, atau pdf.',
+            'foto_bukti.max'            => 'Ukuran file bukti maksimal 10 MB.',
+        ]);
+
+        $filePath = null;
+        if ($request->hasFile('foto_bukti')) {
+            $filePath = $request->file('foto_bukti')->store('polling_offline_proofs', 'public');
+        }
+
+        PollingOffline::create([
+            'calon_id'         => $validated['calon_id'] ?? null,
+            'jumlah_suara'     => (int) $validated['jumlah_suara'],
+            'penanggung_jawab' => $validated['penanggung_jawab'],
+            'keterangan'       => $validated['keterangan'] ?? null,
+            'foto_bukti'       => $filePath,
+            'created_by'       => auth()->id(),
+        ]);
+
+        Cache::forget('polling_throttled_state');
+
+        return back()->with('success', "Rekapitulasi suara offline sebanyak {$validated['jumlah_suara']} suara berhasil disimpan.");
+    }
+
+    /**
+     * Delete an offline vote recap entry.
+     */
+    public function destroyRekap(PollingOffline $pollingOffline)
+    {
+        $jumlah = $pollingOffline->jumlah_suara;
+        if ($pollingOffline->foto_bukti && Storage::disk('public')->exists($pollingOffline->foto_bukti)) {
+            Storage::disk('public')->delete($pollingOffline->foto_bukti);
+        }
+
+        $pollingOffline->delete();
+
+        Cache::forget('polling_throttled_state');
+
+        return back()->with('success', "Data rekapitulasi suara offline ({$jumlah} suara) berhasil dihapus.");
     }
 }

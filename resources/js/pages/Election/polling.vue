@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { 
     Users, 
@@ -7,7 +7,11 @@ import {
     Info, 
     ArrowLeft,
     RefreshCw,
-    CheckCircle2
+    CheckCircle2,
+    Vote,
+    Building2,
+    Globe,
+    Percent
 } from 'lucide-vue-next';
 
 interface CandidateResult {
@@ -21,7 +25,16 @@ interface CandidateResult {
 
 const props = defineProps<{
     results: Array<CandidateResult>;
-    totalVotes: number;
+    tampilkanKandidat?: boolean;
+    totalSuaraMasuk?: number;
+    totalSuaraOffline?: number;
+    totalSuaraOnline?: number;
+    totalPemilih?: number;
+    totalPemilihOffline?: number;
+    totalPemilihOnline?: number;
+    partisipasiSuara?: number;
+    // Fallback props
+    totalVotes?: number;
     totalVoters?: number;
     percentageVoted?: number;
 }>();
@@ -29,10 +42,45 @@ const props = defineProps<{
 const page = usePage();
 const flashMessage = ref<string | null>(page.props.flash?.message || null);
 
+const isCandidatesVisible = computed(() => props.tampilkanKandidat !== false);
+const suaraMasuk = computed(() => props.totalSuaraMasuk ?? props.totalVotes ?? 0);
+const suaraOffline = computed(() => props.totalSuaraOffline ?? 0);
+const suaraOnline = computed(() => props.totalSuaraOnline ?? 0);
+const pemilih = computed(() => props.totalPemilih ?? props.totalVoters ?? 0);
+const pemilihOffline = computed(() => props.totalPemilihOffline ?? 0);
+const pemilihOnline = computed(() => props.totalPemilihOnline ?? 0);
+const partisipasi = computed(() => props.partisipasiSuara ?? props.percentageVoted ?? 0);
+
+const refreshKeys = [
+    'results',
+    'tampilkanKandidat',
+    'totalSuaraMasuk',
+    'totalSuaraOffline',
+    'totalSuaraOnline',
+    'totalPemilih',
+    'totalPemilihOffline',
+    'totalPemilihOnline',
+    'partisipasiSuara',
+    'totalVotes',
+    'totalVoters',
+    'percentageVoted'
+];
+
 // Auto-refresh mechanism: reload page properties from server every 4 seconds
 const countdown = ref(4);
 const isRefreshing = ref(false);
 let timerId: any = null;
+
+const manualRefresh = () => {
+    countdown.value = 4;
+    isRefreshing.value = true;
+    router.reload({
+        only: refreshKeys,
+        onFinish: () => {
+            isRefreshing.value = false;
+        }
+    });
+};
 
 onMounted(() => {
     timerId = setInterval(() => {
@@ -42,7 +90,7 @@ onMounted(() => {
             countdown.value = 4;
             isRefreshing.value = true;
             router.reload({
-                only: ['results', 'totalVotes', 'totalVoters', 'percentageVoted'],
+                only: refreshKeys,
                 onFinish: () => {
                     isRefreshing.value = false;
                 }
@@ -121,45 +169,31 @@ const getCandidatePhoto = (foto: string | null) => {
                 </div>
             </div>
 
-            <!-- Dashboard Summary Card (Total votes, Total eligible voters & Participation) -->
-            <div class="rounded-2xl border border-red-100/60 bg-white p-6 sm:p-7 shadow-xl shadow-red-100/20 mb-8 relative overflow-hidden">
-                <div class="absolute -right-6 -bottom-6 opacity-[0.04] text-red-600 pointer-events-none">
-                    <Users class="h-44 w-44" />
+            <!-- Dashboard Summary Card (Total Suara Masuk, Total Pemilih & Partisipasi Suara) -->
+            <div class="rounded-3xl border border-red-100/80 bg-white p-6 sm:p-8 shadow-xl shadow-red-100/20 mb-8 relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 opacity-[0.03] text-red-600 pointer-events-none">
+                    <Users class="h-56 w-56" />
                 </div>
                 
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-                    <!-- Left: Main Stats -->
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-6 sm:gap-8 flex-1">
-                        <div>
-                            <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Suara Masuk</span>
-                            <div class="text-3xl sm:text-4xl font-black text-zinc-950 mt-1 font-mono tracking-tight">
-                                {{ totalVotes }} <span class="text-xs sm:text-sm font-bold text-zinc-400 uppercase font-sans">Suara</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Pemilih</span>
-                            <div class="text-3xl sm:text-4xl font-black text-red-600 mt-1 font-mono tracking-tight">
-                                {{ totalVoters || 0 }} <span class="text-xs sm:text-sm font-bold text-zinc-400 uppercase font-sans">Anggota</span>
-                            </div>
-                        </div>
-
-                        <div class="col-span-2 sm:col-span-1">
-                            <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Partisipasi Suara</span>
-                            <div class="text-3xl sm:text-4xl font-black text-emerald-600 mt-1 font-mono tracking-tight flex items-center gap-1.5">
-                                <span>{{ percentageVoted || 0 }}%</span>
-                            </div>
-                        </div>
+                <!-- Top Bar: Title & Sync / Refresh Controls -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-6 border-b border-zinc-100 gap-4 relative z-10">
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                            Live Polling Dashboard
+                        </span>
+                        <h2 class="font-oswald text-xl sm:text-2xl font-bold uppercase tracking-wide text-zinc-950 mt-1">
+                            Statistik &amp; Partisipasi Pemilihan
+                        </h2>
                     </div>
 
-                    <!-- Right: Sync Status & Refresh -->
-                    <div class="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-3 border-t lg:border-t-0 pt-4 lg:pt-0 border-zinc-100">
-                        <div class="flex items-center gap-2 text-xs text-zinc-500 font-mono">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1.5 text-xs text-zinc-500 font-mono">
                             <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin text-red-500': isRefreshing }" />
-                            <span>Sync server dalam {{ countdown }}s</span>
+                            <span>Sync server: {{ countdown }}s</span>
                         </div>
                         <button 
-                            @click="() => { countdown = 4; router.reload({ only: ['results', 'totalVotes', 'totalVoters', 'percentageVoted'] }); }" 
+                            @click="manualRefresh" 
                             class="rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white px-3.5 py-1.5 transition-all uppercase font-bold text-xs tracking-wider border border-red-200 shadow-sm"
                         >
                             Segarkan Data
@@ -167,24 +201,151 @@ const getCandidatePhoto = (foto: string | null) => {
                     </div>
                 </div>
 
+                <!-- Grid: 3 Main Cards covering all 7 metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
+                    
+                    <!-- Card 1: Suara Masuk -->
+                    <div class="rounded-2xl border border-red-100/80 bg-gradient-to-br from-white to-red-50/30 p-5 shadow-sm space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2.5 rounded-xl bg-red-500/10 text-red-600">
+                                    <Vote class="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <span class="block text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
+                                        Total Suara Masuk
+                                    </span>
+                                    <div class="text-3xl sm:text-4xl font-black text-zinc-950 font-mono tracking-tight leading-none mt-1">
+                                        {{ suaraMasuk }} <span class="text-xs sm:text-sm font-bold text-zinc-400 uppercase font-sans">Suara</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub-stats: Total Suara Offline & Total Suara Online -->
+                        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-red-100/60">
+                            <div class="rounded-xl bg-white p-3 border border-zinc-100 shadow-xs">
+                                <div class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                                    <Building2 class="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                    <span>Total Suara Offline</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-black text-zinc-900 font-mono mt-1">
+                                    {{ suaraOffline }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Suara</span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-xl bg-white p-3 border border-zinc-100 shadow-xs">
+                                <div class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                                    <Globe class="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                    <span>Total Suara Online</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-black text-zinc-900 font-mono mt-1">
+                                    {{ suaraOnline }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Suara</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Total Pemilih -->
+                    <div class="rounded-2xl border border-red-100/80 bg-gradient-to-br from-white to-red-50/30 p-5 shadow-sm space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2.5 rounded-xl bg-red-500/10 text-red-600">
+                                    <Users class="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <span class="block text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
+                                        Total Pemilih
+                                    </span>
+                                    <div class="text-3xl sm:text-4xl font-black text-red-600 font-mono tracking-tight leading-none mt-1">
+                                        {{ pemilih }} <span class="text-xs sm:text-sm font-bold text-zinc-400 uppercase font-sans">Anggota</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub-stats: Total Pemilih Offline & Total Pemilih Online -->
+                        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-red-100/60">
+                            <div class="rounded-xl bg-white p-3 border border-zinc-100 shadow-xs">
+                                <div class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                                    <Building2 class="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                    <span>Total Pemilih Offline</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-black text-zinc-900 font-mono mt-1">
+                                    {{ pemilihOffline }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Anggota</span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-xl bg-white p-3 border border-zinc-100 shadow-xs">
+                                <div class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                                    <Globe class="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                    <span>Total Pemilih Online</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-black text-zinc-900 font-mono mt-1">
+                                    {{ pemilihOnline }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Anggota</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Partisipasi Suara -->
+                    <div class="rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-white to-emerald-50/30 p-5 shadow-sm space-y-4 md:col-span-2 lg:col-span-1 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600">
+                                    <Percent class="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <span class="block text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
+                                        Partisipasi Suara (Persentase)
+                                    </span>
+                                    <div class="text-3xl sm:text-4xl font-black text-emerald-600 font-mono tracking-tight leading-none mt-1">
+                                        {{ partisipasi }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar & Ratio info -->
+                        <div class="space-y-2 pt-3 border-t border-emerald-100/60">
+                            <div class="flex items-center justify-between text-[11px] font-mono">
+                                <span class="text-zinc-500">Suara Terkumpul</span>
+                                <span class="font-bold text-zinc-800">{{ suaraMasuk }} / {{ pemilih }}</span>
+                            </div>
+                            <div class="relative w-full h-3 rounded-full bg-zinc-100 overflow-hidden border border-zinc-200/80">
+                                <div 
+                                    class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-700 ease-out"
+                                    :style="{ width: Math.min(100, Math.max(0, partisipasi)) + '%' }"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
                 <!-- Eligibility info footnote inside card -->
-                <div class="mt-5 pt-4 border-t border-zinc-100/80 flex items-center gap-2 text-[11px] text-zinc-500 font-medium relative z-10">
-                    <Info class="h-4 w-4 text-red-500 shrink-0" />
-                    <span>
-                        <strong>Persyaratan Hak Pilih:</strong> Seluruh Anggota BBMC Indonesia dengan status <strong>CLEAN / NO PENALTY</strong>.
-                    </span>
+                <div class="mt-6 pt-4 border-t border-zinc-100/80 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-500 font-medium relative z-10">
+                    <div class="flex items-center gap-2">
+                        <Info class="h-4 w-4 text-red-500 shrink-0" />
+                        <span>
+                            <strong>Persyaratan Hak Pilih:</strong> Seluruh Anggota BBMC Indonesia dengan status <strong>CLEAN / NO PENALTY</strong>.
+                        </span>
+                    </div>
+                    <div class="text-[10px] text-zinc-400 font-mono">
+                        Suara offline tercatat dari log TPS &bull; Suara online diverifikasi OTP
+                    </div>
                 </div>
             </div>
 
             <!-- Candidates Results Section -->
-            <div class="space-y-6">
+            <div v-if="isCandidatesVisible" class="space-y-6">
                 <!-- Title header -->
                 <div class="flex items-center justify-between border-b border-red-100 pb-3">
                     <h3 class="font-oswald text-base font-bold text-zinc-950 uppercase tracking-wider flex items-center gap-2">
                         <Award class="h-4.5 w-4.5 text-red-500" />
                         <span>Kandidat El Presidente</span>
                     </h3>
-                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Presentase Suara</span>
+                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Persentase Suara</span>
                 </div>
 
                 <!-- Empty State -->

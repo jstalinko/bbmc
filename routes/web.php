@@ -64,6 +64,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('election.offline.toggle');
     Route::post('/pemilihan-offline/{member}/mark', [\App\Http\Controllers\OfflineElectionController::class, 'mark'])->name('election.offline.mark');
     Route::post('/pemilihan-offline/{member}/unmark', [\App\Http\Controllers\OfflineElectionController::class, 'unmark'])->name('election.offline.unmark');
+    Route::post('/pemilihan-offline/rekap', [\App\Http\Controllers\OfflineElectionController::class, 'storeRekap'])->name('election.offline.rekap.store');
+    Route::delete('/pemilihan-offline/rekap/{pollingOffline}', [\App\Http\Controllers\OfflineElectionController::class, 'destroyRekap'])->name('election.offline.rekap.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -73,6 +75,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('offline.toggle');
     Route::post('/pemilihan-offline/{member}/mark', [\App\Http\Controllers\OfflineElectionController::class, 'mark'])->name('offline.mark');
     Route::post('/pemilihan-offline/{member}/unmark', [\App\Http\Controllers\OfflineElectionController::class, 'unmark'])->name('offline.unmark');
+    Route::post('/pemilihan-offline/rekap', [\App\Http\Controllers\OfflineElectionController::class, 'storeRekap'])->name('offline.rekap.store');
+    Route::delete('/pemilihan-offline/rekap/{pollingOffline}', [\App\Http\Controllers\OfflineElectionController::class, 'destroyRekap'])->name('offline.rekap.destroy');
 });
 
 require __DIR__ . '/settings.php';
