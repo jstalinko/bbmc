@@ -332,7 +332,7 @@ const getCandidatePhoto = (foto: string | null) => {
                         </span>
                     </div>
                     <div class="text-[10px] text-zinc-400 font-mono">
-                        Suara offline tercatat dari log TPS &bull; Suara online diverifikasi OTP
+                        Suara offline dicatat dari hasil TPS &bull; Suara online diverifikasi melalui OTP WhatsApp
                     </div>
                 </div>
             </div>

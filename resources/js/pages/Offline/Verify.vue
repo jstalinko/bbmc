@@ -62,7 +62,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  {{ loginForm.processing ? 'Memverifikasi...' : 'Masuk Sebagai Pengurus →' }}
+                  {{ loginForm.processing ? 'Memverifikasi...' : 'Masuk Sebagai Petugas TPS →' }}
                 </button>
               </form>
             </div>
@@ -70,7 +70,7 @@
 
           <div class="mt-4 text-center">
             <p class="text-xs text-gray-400">
-              Kode akses diatur oleh panitia di Dashboard > Setting Pemilihan.
+              Kode akses diberikan oleh panitia pemilihan kepada petugas TPS.
             </p>
           </div>
         </div>
@@ -111,7 +111,7 @@
                 class="px-3.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold transition-colors flex items-center gap-1.5"
               >
                 <span>🚪</span>
-                <span>Ganti Pengurus</span>
+                <span>Ganti Petugas</span>
               </button>
             </div>
           </div>
@@ -339,7 +339,7 @@
                     <th class="py-3 px-4 text-center">TPS</th>
                     <th class="py-3 px-4 text-center">Status Pemilihan</th>
                     <th class="py-3 px-4">Petugas Verifikasi</th>
-                    <th class="py-3 px-4 text-center w-48">Aksi Pengurus</th>
+                    <th class="py-3 px-4 text-center w-48">Aksi</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -495,7 +495,7 @@
             class="inline-flex items-center gap-2 text-red-600 hover:text-red-800 text-xs font-semibold transition-colors duration-200"
           >
             <span>←</span>
-            Kembali ke Validasi Kartu Publik (/member/validate)
+            Kembali ke Validasi Kartu Anggota
           </a>
         </div>
 

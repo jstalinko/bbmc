@@ -128,7 +128,7 @@ const submitSettings = () => {
                     <div class="space-y-4">
                         <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b pb-2 flex items-center gap-2">
                             <Award class="h-4 w-4" />
-                            <span>Tampilan Live Polling (/election/polling)</span>
+                            <span>Tampilan Hasil Pemilihan (Live Count)</span>
                         </h2>
                         
                         <div class="grid gap-6 sm:grid-cols-1 mt-4">
@@ -139,7 +139,7 @@ const submitSettings = () => {
                                         Tampilkan Kandidat El Presidente di Polling
                                     </Label>
                                     <p class="text-xs text-muted-foreground leading-relaxed">
-                                        Jika diaktifkan, kandidat El Presidente beserta perolehan suara masing-masing akan ditampilkan di halaman <span class="font-mono text-foreground font-semibold">/election/polling</span>. Jika dinonaktifkan, halaman polling hanya menampilkan rekapitulasi total suara masuk, total pemilih, dan partisipasi pemilih tanpa rincian calon.
+                                        Jika diaktifkan, daftar kandidat El Presidente beserta rincian perolehan suaranya akan ditampilkan kepada publik di halaman hasil pemilihan. Jika dinonaktifkan, hanya ringkasan total suara masuk dan persentase partisipasi yang ditampilkan.
                                     </p>
                                 </div>
                                 <Switch
@@ -205,19 +205,19 @@ const submitSettings = () => {
                             <div>
                                 <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                                     <KeyRound class="h-4 w-4" />
-                                    <span>Kode Akses Pengurus</span>
+                                    <span>Kode Akses Petugas TPS</span>
                                 </h2>
-                                <p class="text-xs text-muted-foreground mt-0.5">Kode akses dan nama pengurus yang bertugas melakukan verifikasi pemilih offline di /offline/verify.</p>
+                                <p class="text-xs text-muted-foreground mt-0.5">Kode akses dan nama petugas yang bertugas melayani verifikasi kehadiran pemilih di lokasi TPS.</p>
                             </div>
                             <Button type="button" variant="outline" size="sm" @click="form.kode_akses_pengurus.push({kode_akses: '', nama_pengurus: ''})" class="h-8 text-xs font-semibold gap-1">
                                 <Plus class="h-3.5 w-3.5" />
-                                Tambah Pengurus
+                                Tambah Petugas
                             </Button>
                         </div>
 
                         <div v-for="(item, index) in form.kode_akses_pengurus" :key="'pengurus_' + index" class="grid gap-6 sm:grid-cols-12 mt-4 items-start p-4 pt-8 rounded-lg border bg-muted/30 relative">
                             <!-- Delete Button -->
-                            <button type="button" v-if="form.kode_akses_pengurus.length > 1" @click="form.kode_akses_pengurus.splice(index, 1)" class="absolute top-2 right-2 text-destructive hover:bg-destructive/10 p-1.5 rounded-md transition-colors" title="Hapus Pengurus">
+                            <button type="button" v-if="form.kode_akses_pengurus.length > 1" @click="form.kode_akses_pengurus.splice(index, 1)" class="absolute top-2 right-2 text-destructive hover:bg-destructive/10 p-1.5 rounded-md transition-colors" title="Hapus Petugas">
                                 <Trash2 class="h-4 w-4" />
                             </button>
 
@@ -228,23 +228,23 @@ const submitSettings = () => {
                                     :id="'kode_akses_' + index"
                                     type="text"
                                     v-model="item.kode_akses"
-                                    placeholder="Masukkan kode akses (cth: PENGURUS-01)"
+                                    placeholder="Masukkan kode akses (cth: PETUGAS-01)"
                                     class="w-full font-mono uppercase"
                                 />
-                                <p class="text-[11px] text-muted-foreground">Kunci akses rahasia pengurus untuk login di /offline/verify.</p>
+                                <p class="text-[11px] text-muted-foreground">Kunci akses rahasia bagi petugas untuk masuk ke menu verifikasi pemilih TPS.</p>
                             </div>
 
                             <!-- Nama Pengurus -->
                             <div class="grid gap-2 sm:col-span-6">
-                                <Label :for="'nama_pengurus_' + index" class="font-medium text-sm">Nama Pengurus</Label>
+                                <Label :for="'nama_pengurus_' + index" class="font-medium text-sm">Nama Petugas</Label>
                                 <Input
                                     :id="'nama_pengurus_' + index"
                                     type="text"
                                     v-model="item.nama_pengurus"
-                                    placeholder="Masukkan nama pengurus"
+                                    placeholder="Masukkan nama petugas"
                                     class="w-full"
                                 />
-                                <p class="text-[11px] text-muted-foreground">Nama pengurus yang akan dicatat pada log verifikasi offline.</p>
+                                <p class="text-[11px] text-muted-foreground">Nama petugas yang akan dicatat saat verifikasi pemilih di TPS.</p>
                             </div>
                         </div>
                     </div>

@@ -395,10 +395,10 @@ function formatTime(iso: string) {
                 <div>
                     <h1 class="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
                         <Vote class="h-7 w-7 text-red-600" />
-                        <span>Pemilihan Offline (Offline Logs)</span>
+                        <span>Pemilihan Offline</span>
                     </h1>
                     <p class="text-xs sm:text-sm text-zinc-500 mt-1">
-                        Daftar anggota yang telah diverifikasi di log offline. Anda dapat mengedit status atau menghapus data pemilih offline.
+                        Daftar kehadiran anggota dan rekapitulasi perolehan suara pemilihan di lokasi TPS.
                     </p>
                 </div>
 
@@ -419,7 +419,7 @@ function formatTime(iso: string) {
                         class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs tracking-wide shadow-sm transition-all active:scale-95 border border-zinc-700"
                     >
                         <ShieldCheck class="h-4 w-4" />
-                        <span>Verifikasi Pemilih (/offline/verify)</span>
+                        <span>Verifikasi Pemilih</span>
                         <ExternalLink class="h-3.5 w-3.5 opacity-80" />
                     </a>
                 </div>
@@ -429,9 +429,9 @@ function formatTime(iso: string) {
             <div class="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-900 flex items-start gap-3">
                 <AlertCircle class="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                 <div class="space-y-0.5">
-                    <p class="font-bold">Informasi Alur Pemilihan Offline & Rekapitulasi Suara:</p>
+                    <p class="font-bold">Panduan Pemilihan Offline & Rekapitulasi Suara:</p>
                     <p class="text-blue-800 leading-relaxed">
-                        Data kehadiran antrean pemilih offline didaftarkan resmi melalui <strong>/offline/verify</strong>. Untuk memasukkan total perolehan suara hasil perhitungan fisik surat suara TPS, klik tombol <strong>Rekap Suara Offline</strong> di atas.
+                        Petugas di TPS melayani verifikasi kehadiran pemilih secara langsung di lokasi. Setelah pemungutan suara selesai, gunakan tombol <strong>Rekap Suara Offline</strong> untuk mencatat hasil penghitungan fisik surat suara.
                     </p>
                 </div>
             </div>
@@ -441,7 +441,7 @@ function formatTime(iso: string) {
                 <!-- Total Pemilih Offline -->
                 <div class="rounded-2xl border border-red-200/60 bg-red-50/50 p-4 shadow-sm">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-red-700">Total Log Offline</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-red-700">Kehadiran di TPS</span>
                         <div class="p-2 rounded-xl bg-red-600 text-white shadow-sm">
                             <Vote class="h-4 w-4" />
                         </div>
@@ -455,7 +455,7 @@ function formatTime(iso: string) {
                 <!-- Total Suara Rekap Offline -->
                 <div class="rounded-2xl border border-rose-200/60 bg-gradient-to-br from-rose-50/80 to-white p-4 shadow-sm">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-rose-700">Rekap Suara</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-rose-700">Total Suara Rekap</span>
                         <div class="p-2 rounded-xl bg-rose-600 text-white shadow-sm">
                             <PlusCircle class="h-4 w-4" />
                         </div>
@@ -537,7 +537,7 @@ function formatTime(iso: string) {
                             </Badge>
                         </div>
                         <p class="text-xs text-zinc-500 mt-1">
-                            Perolehan suara dari perhitungan fisik TPS offline yang terakumulasi langsung ke live polling El Presidente.
+                            Perolehan suara dari penghitungan surat suara fisik di TPS yang otomatis terhitung ke hasil suara pemilihan.
                         </p>
                     </div>
 
@@ -556,7 +556,7 @@ function formatTime(iso: string) {
                     <FileText class="h-8 w-8 text-zinc-400 mx-auto mb-2" />
                     <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Belum Ada Rekapitulasi Suara Offline</p>
                     <p class="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
-                        Klik tombol "Rekap Suara Offline" untuk menginputkan perolehan suara dari form plano TPS fisik.
+                        Klik tombol "Rekap Suara Offline" untuk mencatat hasil penghitungan suara dari TPS.
                     </p>
                 </div>
 
@@ -728,7 +728,7 @@ function formatTime(iso: string) {
                                         <UserX class="h-8 w-8 text-zinc-300" />
                                         <p class="font-medium text-sm">Belum ada data pemilih offline yang sesuai.</p>
                                         <p class="text-xs text-zinc-400">
-                                            Pemilih offline diverifikasi oleh pengurus melalui portal /offline/verify.
+                                            Data akan bertambah saat pemilih hadir dan diverifikasi oleh petugas di TPS.
                                         </p>
                                     </div>
                                 </TableCell>
@@ -822,7 +822,7 @@ function formatTime(iso: string) {
                                             size="sm"
                                             @click="openEditModal(log)"
                                             class="h-8 px-2.5 text-xs font-semibold text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border-zinc-200"
-                                            title="Edit Data Pemilih Offline"
+                                            title="Edit Data Pemilih TPS"
                                         >
                                             <Pencil class="h-3.5 w-3.5 mr-1 text-zinc-500" />
                                             Edit
@@ -835,7 +835,7 @@ function formatTime(iso: string) {
                                             size="sm"
                                             @click="openDeleteModal(log)"
                                             class="h-8 px-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
-                                            title="Hapus Data Log Offline"
+                                            title="Hapus Data Pemilih TPS"
                                         >
                                             <Trash2 class="h-3.5 w-3.5 mr-1" />
                                             Hapus
@@ -853,7 +853,7 @@ function formatTime(iso: string) {
                     class="p-4 border-t border-zinc-200/80 bg-zinc-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600"
                 >
                     <div>
-                        Menampilkan <strong>{{ paginationInfo.from || 0 }}</strong> - <strong>{{ paginationInfo.to || 0 }}</strong> dari <strong>{{ paginationInfo.total || 0 }}</strong> log
+                        Menampilkan <strong>{{ paginationInfo.from || 0 }}</strong> - <strong>{{ paginationInfo.to || 0 }}</strong> dari <strong>{{ paginationInfo.total || 0 }}</strong> pemilih
                     </div>
                     <div class="flex items-center gap-1">
                         <button
@@ -877,10 +877,10 @@ function formatTime(iso: string) {
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <Pencil class="h-5 w-5 text-red-600" />
-                        <span>Edit Log Pemilih Offline</span>
+                        <span>Edit Data Pemilih TPS</span>
                     </DialogTitle>
                     <DialogDescription>
-                        Ubah data antrean atau status pemilihan untuk anggota <strong>{{ editingLog?.member?.nama_lengkap }}</strong> ({{ formatKta(editingLog?.member?.no_kartu) }}).
+                        Ubah nomor antrean atau status kehadiran untuk anggota <strong>{{ editingLog?.member?.nama_lengkap }}</strong> ({{ formatKta(editingLog?.member?.no_kartu) }}).
                     </DialogDescription>
                 </DialogHeader>
 
@@ -914,7 +914,7 @@ function formatTime(iso: string) {
 
                     <!-- Petugas Verifikasi -->
                     <div>
-                        <Label for="edit_nama_pengurus" class="text-xs font-semibold">Nama Petugas Verifikasi *</Label>
+                        <Label for="edit_nama_pengurus" class="text-xs font-semibold">Nama Petugas TPS *</Label>
                         <Input
                             id="edit_nama_pengurus"
                             type="text"
@@ -968,13 +968,13 @@ function formatTime(iso: string) {
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2 text-red-600">
                         <AlertTriangle class="h-5 w-5" />
-                        <span>Hapus Log Pemilih Offline?</span>
+                        <span>Hapus Data Pemilih TPS?</span>
                     </DialogTitle>
                     <DialogDescription class="pt-2 text-zinc-600 leading-relaxed">
                         Apakah Anda yakin ingin menghapus data antrean <strong>#{{ deletingLog?.no_antrian }}</strong> untuk anggota <strong>{{ deletingLog?.member?.nama_lengkap }}</strong>?
                         <br />
                         <span class="block mt-2 text-xs text-zinc-500">
-                            Jika dihapus, status pemilih offline pada anggota akan dikembalikan sehingga anggota dapat diverifikasi ulang atau login secara online kembali.
+                            Jika dihapus, anggota dapat didaftarkan kembali di lokasi TPS atau dapat memilih secara online.
                         </span>
                     </DialogDescription>
                 </DialogHeader>
@@ -1010,7 +1010,7 @@ function formatTime(iso: string) {
                         <span>Rekapitulasi Suara Offline</span>
                     </DialogTitle>
                     <DialogDescription class="text-xs text-zinc-500">
-                        Tambahkan perolehan suara dari perhitungan fisik TPS offline. Suara ini akan diakumulasikan ke total perolehan suara pada sistem polling.
+                        Masukkan perolehan suara dari penghitungan surat suara fisik di TPS. Hasil ini otomatis ditambahkan ke total suara pemilihan.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -1018,13 +1018,13 @@ function formatTime(iso: string) {
                     <!-- Kandidat Terkait -->
                     <div class="space-y-1.5">
                         <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                            Pilih Kandidat (Opsional / Terkait)
+                            Pilih Calon (Opsional)
                         </Label>
                         <select
                             v-model="rekapForm.calon_id"
                             class="w-full h-10 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-800 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                         >
-                            <option value="">Umum (Tanpa Kandidat Khusus)</option>
+                            <option value="">Umum (Tanpa Calon Khusus)</option>
                             <option
                                 v-for="c in candidates"
                                 :key="c.id"
@@ -1034,7 +1034,7 @@ function formatTime(iso: string) {
                             </option>
                         </select>
                         <p class="text-[11px] text-zinc-400">
-                            Jika dipilih, suara akan otomatis menambah perolehan suara kandidat tersebut pada grafik live count.
+                            Jika calon dipilih, suara akan otomatis menambah perolehan suara calon tersebut pada hasil pemilihan.
                         </p>
                     </div>
 
@@ -1059,12 +1059,12 @@ function formatTime(iso: string) {
                     <!-- Penanggung Jawab -->
                     <div class="space-y-1.5">
                         <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                            Penanggung Jawab / Saksi TPS <span class="text-red-500">*</span>
+                            Nama Penanggung Jawab / Saksi TPS <span class="text-red-500">*</span>
                         </Label>
                         <Input
                             type="text"
                             v-model="rekapForm.penanggung_jawab"
-                            placeholder="Contoh: Kang Bambang (Ketua Panitia TPS 1)"
+                            placeholder="Contoh: Kang Bambang (Saksi TPS 1)"
                             required
                             class="h-10 text-xs"
                         />
@@ -1076,12 +1076,12 @@ function formatTime(iso: string) {
                     <!-- Keterangan / TPS -->
                     <div class="space-y-1.5">
                         <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                            Keterangan / Lokasi TPS (Opsional)
+                            Lokasi TPS / Catatan (Opsional)
                         </Label>
                         <Input
                             type="text"
                             v-model="rekapForm.keterangan"
-                            placeholder="Contoh: Kotak Suara TPS Mother Chapter Bandung"
+                            placeholder="Contoh: TPS 1 Lapangan Gasibu Bandung"
                             class="h-10 text-xs"
                         />
                     </div>
@@ -1089,7 +1089,7 @@ function formatTime(iso: string) {
                     <!-- Foto / Bukti Dokumen -->
                     <div class="space-y-1.5">
                         <Label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                            Foto / Bukti Berita Acara / Plano C1 (Opsional)
+                            Foto Bukti / Berita Acara (Opsional)
                         </Label>
                         <Input
                             type="file"
@@ -1098,7 +1098,7 @@ function formatTime(iso: string) {
                             class="h-10 text-xs cursor-pointer file:text-xs file:font-semibold"
                         />
                         <p class="text-[11px] text-zinc-400">
-                            Format gambar (JPG, PNG, WEBP) atau PDF, maksimal 10 MB.
+                            Format foto (JPG, PNG) atau dokumen PDF, maksimal 10 MB.
                         </p>
                         <!-- Preview Thumbnail -->
                         <div v-if="previewUrl" class="mt-2 relative inline-block rounded-lg overflow-hidden border border-zinc-200">
@@ -1185,7 +1185,7 @@ function formatTime(iso: string) {
                         oleh penanggung jawab <strong>{{ deletingRekap?.penanggung_jawab }}</strong>?
                         <br /><br />
                         <span class="text-red-600 font-semibold">
-                            Perolehan suara offline ini akan dikurangi dari live count polling.
+                            Perolehan suara offline ini akan dikurangi dari total suara pemilihan.
                         </span>
                     </DialogDescription>
                 </DialogHeader>

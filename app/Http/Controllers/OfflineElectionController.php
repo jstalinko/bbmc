@@ -173,7 +173,7 @@ class OfflineElectionController extends Controller
             }
         }
 
-        return back()->with('success', "Data antrean #{$noAntrian} ({$memberName}) berhasil dihapus dari log pemilih offline.");
+        return back()->with('success', "Data antrean #{$noAntrian} ({$memberName}) berhasil dihapus dari daftar pemilih TPS.");
     }
 
     /**
