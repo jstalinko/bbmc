@@ -93,7 +93,7 @@ class Polling extends Model
                 'calon_id' => $calon->id,
                 'no_urut' => $calon->no_urut,
                 'calon_name' => $calon->member ? $calon->member->nama_lengkap : 'Unknown',
-                'calon_foto' => $calon->foto_calon,
+                'calon_foto' => ($calon->member && !empty($calon->member->foto)) ? $calon->member->foto : $calon->foto_calon,
                 'total_vote' => $this->totalVoteByMember($calon->member_id),
             ];
         }

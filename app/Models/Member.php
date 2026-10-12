@@ -49,4 +49,20 @@ class Member extends Model
     {
         return $this->hasOne(OfflineLog::class, 'member_id')->latestOfMany();
     }
+
+    public function calons()
+    {
+        return $this->hasMany(Calon::class, 'member_id');
+    }
+
+    protected static function booted()
+    {
+        static::saved(function ($member) {
+            if ($member->wasChanged('foto')) {
+                Calon::where('member_id', $member->id)->update([
+                    'foto_calon' => $member->foto,
+                ]);
+            }
+        });
+    }
 }

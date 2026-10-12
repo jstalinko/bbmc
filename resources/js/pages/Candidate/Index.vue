@@ -248,8 +248,8 @@ function statusBadgeClass(s) {
 
 function getCandidatePhoto(c) {
     if (!c) return null;
-    if (c.foto_calon) return `/storage/${c.foto_calon}`;
     if (c.member?.foto) return `/storage/${c.member.foto}`;
+    if (c.foto_calon) return `/storage/${c.foto_calon}`;
     return null;
 }
 </script>

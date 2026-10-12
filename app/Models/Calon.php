@@ -23,4 +23,17 @@ class Calon extends Model
     {
         return $this->belongsTo(Member::class, 'member_id');
     }
+
+    public function getFotoCalonAttribute($value)
+    {
+        if ($this->relationLoaded('member') && !empty($this->member?->foto)) {
+            return $this->member->foto;
+        }
+
+        if (!empty($this->member?->foto)) {
+            return $this->member->foto;
+        }
+
+        return $value;
+    }
 }

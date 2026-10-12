@@ -55,8 +55,8 @@ const votedCandidate = computed(() => {
 
 const getCandidatePhoto = (c: any) => {
     if (!c) return null;
-    if (c.foto_calon) return `/storage/${c.foto_calon}`;
     if (c.member?.foto) return `/storage/${c.member.foto}`;
+    if (c.foto_calon) return `/storage/${c.foto_calon}`;
     return null;
 };
 

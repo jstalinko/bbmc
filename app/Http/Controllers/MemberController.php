@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Member;
+use App\Models\Calon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Endroid\QrCode\QrCode;
@@ -389,6 +390,12 @@ class MemberController extends Controller
         }
 
         $member->update($validated);
+
+        if (array_key_exists('foto', $validated)) {
+            Calon::where('member_id', $member->id)->update([
+                'foto_calon' => $validated['foto'],
+            ]);
+        }
 
         return back()->with('success', 'Data anggota berhasil diperbarui.');
     }
