@@ -57,6 +57,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::get('/otp-logs/export/csv', [\App\Http\Controllers\OtpLogController::class, 'exportCsv'])->name('otp_logs.export.csv');
     Route::get('/otp-logs', [\App\Http\Controllers\OtpLogController::class, 'index'])->name('otp_logs.index');
     Route::post('/otp-logs/{otp}/resend', [\App\Http\Controllers\OtpLogController::class, 'resend'])->name('otp_logs.resend');
+    Route::post('/otp-logs/reset-all', [\App\Http\Controllers\OtpLogController::class, 'resetAll'])->name('otp_logs.reset_all');
+    Route::post('/otp-logs/reset-by-user', [\App\Http\Controllers\OtpLogController::class, 'resetByUser'])->name('otp_logs.reset_by_user');
 
     Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('election.offline');
     Route::put('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'update'])->name('election.offline.update');

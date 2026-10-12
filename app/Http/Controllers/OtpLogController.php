@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Otp;
+use App\Models\Member;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -132,5 +133,50 @@ class OtpLogController extends Controller
         }
         
         return back()->with('success', 'Kode OTP berhasil dikirim ulang ke WhatsApp.');
+    }
+
+    public function resetAll(Request $request)
+    {
+        $deleted = Otp::whereDate('created_at', now()->toDateString())
+            ->where('is_verified', false)
+            ->delete();
+
+        $message = $deleted > 0
+            ? "Berhasil mereset limit OTP. Sebanyak {$deleted} kode OTP hari ini yang belum terverifikasi telah dihapus."
+            : "Tidak ada kode OTP hari ini yang belum terverifikasi untuk dihapus.";
+
+        return back()->with('success', $message);
+    }
+
+    public function resetByUser(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required',
+        ], [
+            'user_id.required' => 'User ID / Member ID wajib diisi.',
+        ]);
+
+        $userId = trim((string) $request->input('user_id'));
+
+        $member = Member::where('id', $userId)
+            ->orWhere('no_kartu', $userId)
+            ->first();
+
+        $memberId = $member ? $member->id : $userId;
+
+        $deleted = Otp::whereDate('created_at', now()->toDateString())
+            ->where(function ($q) use ($userId, $memberId) {
+                $q->where('user_id', $userId)
+                  ->orWhere('member_id', $userId)
+                  ->orWhere('member_id', $memberId);
+            })
+            ->delete();
+
+        $targetLabel = $member ? "{$member->nama_lengkap} (ID: {$member->id})" : "User ID {$userId}";
+        $message = $deleted > 0
+            ? "Berhasil mereset limit OTP untuk {$targetLabel}. Sebanyak {$deleted} kode OTP hari ini telah dihapus."
+            : "Tidak ditemukan data OTP hari ini untuk {$targetLabel}. Kuota OTP aman.";
+
+        return back()->with('success', $message);
     }
 }

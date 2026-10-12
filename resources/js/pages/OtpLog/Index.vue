@@ -9,8 +9,14 @@ import {
     TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
+    Dialog, DialogContent, DialogDescription,
+    DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-    Search, RefreshCw, X, ShieldAlert, ShieldCheck, Copy, Eye, EyeOff, FileText, Download, MessageCircle
+    Search, RefreshCw, X, ShieldAlert, ShieldCheck, Copy, Eye, EyeOff, FileText, Download, MessageCircle,
+    RotateCcw, UserX
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -22,6 +28,52 @@ const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'OTP Logs', href: '/dashboard/otp-logs' },
 ];
+
+const isResettingAll = ref(false);
+const isResetAllDialogOpen = ref(false);
+
+const isResetByUserDialogOpen = ref(false);
+const isResettingByUser = ref(false);
+const resetUserId = ref('');
+const resetUserName = ref('');
+
+function confirmResetAll() {
+    isResetAllDialogOpen.value = true;
+}
+
+function handleResetAll() {
+    isResettingAll.value = true;
+    router.post('/dashboard/otp-logs/reset-all', {}, {
+        onFinish: () => {
+            isResettingAll.value = false;
+            isResetAllDialogOpen.value = false;
+        }
+    });
+}
+
+function openResetByUserModal(userId: string | number = '', userName: string = '') {
+    resetUserId.value = userId ? String(userId) : '';
+    resetUserName.value = userName || '';
+    isResetByUserDialogOpen.value = true;
+}
+
+function handleResetByUser() {
+    if (!resetUserId.value.trim()) {
+        alert('Silakan masukkan User ID / Member ID.');
+        return;
+    }
+    isResettingByUser.value = true;
+    router.post('/dashboard/otp-logs/reset-by-user', {
+        user_id: resetUserId.value.trim()
+    }, {
+        onFinish: () => {
+            isResettingByUser.value = false;
+            isResetByUserDialogOpen.value = false;
+            resetUserId.value = '';
+            resetUserName.value = '';
+        }
+    });
+}
 
 const search = ref(props.filters?.search ?? '');
 const status = ref(props.filters?.status ?? 'all');
@@ -87,6 +139,10 @@ function getManualResendLink(otp: any) {
                 <span>✅</span>
                 <span>{{ flash.success }}</span>
             </div>
+            <div v-if="flash.error" class="flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 shadow-sm">
+                <span>❌</span>
+                <span>{{ flash.error }}</span>
+            </div>
             <div v-if="page.props.errors && Object.keys(page.props.errors).length > 0" class="flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 shadow-sm">
                 <span>❌</span>
                 <span>{{ Object.values(page.props.errors)[0] }}</span>
@@ -103,7 +159,29 @@ function getManualResendLink(otp: any) {
                         Memantau riwayat pengiriman OTP kepada anggota untuk login dan pencalonan.
                     </p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        class="h-9 gap-1.5 shadow-sm"
+                        @click="confirmResetAll"
+                        :disabled="isResettingAll"
+                    >
+                        <RotateCcw class="h-4 w-4" :class="isResettingAll ? 'animate-spin' : ''" />
+                        Reset otp all
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        class="h-9 gap-1.5 border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 shadow-sm"
+                        @click="openResetByUserModal()"
+                        :disabled="isResettingByUser"
+                    >
+                        <UserX class="h-4 w-4" />
+                        Reset otp by user
+                    </Button>
+
                     <a :href="`/dashboard/otp-logs/export/csv?search=${search}&status=${status}`" target="_blank">
                         <Button variant="outline" size="sm" class="h-9 gap-2">
                             <Download class="h-4 w-4" />
@@ -253,6 +331,17 @@ function getManualResendLink(otp: any) {
                                             Manual
                                         </Button>
                                     </a>
+
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        class="h-7 text-[11px] font-medium flex items-center justify-center gap-1 w-full max-w-[120px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                        @click="openResetByUserModal(otp.member_id || otp.user_id, otp.member?.nama_lengkap)"
+                                        title="Reset limit OTP pengguna ini"
+                                    >
+                                        <RotateCcw class="h-3 w-3" />
+                                        Reset Limit
+                                    </Button>
                                 </div>
                             </TableCell>
                         </TableRow>
@@ -289,6 +378,79 @@ function getManualResendLink(otp: any) {
                     </div>
                 </div>
             </div>
+
+            <!-- Dialog Reset OTP All -->
+            <Dialog :open="isResetAllDialogOpen" @update:open="isResetAllDialogOpen = $event">
+                <DialogContent class="max-w-md rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2 text-red-600">
+                            <RotateCcw class="h-5 w-5" />
+                            Reset OTP All
+                        </DialogTitle>
+                        <DialogDescription class="pt-2 text-sm text-muted-foreground leading-relaxed">
+                            Apakah Anda yakin ingin mereset limit OTP hari ini untuk <strong>semua anggota</strong>?
+                            <br /><br />
+                            Tindakan ini akan <strong>menghapus semua kode OTP hari ini yang belum terverifikasi</strong>, sehingga anggota yang telah mencapai batas limit dapat meminta kode OTP kembali. Kode OTP yang sudah terverifikasi tidak akan dihapus.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="flex gap-2 sm:justify-end pt-3">
+                        <Button variant="outline" @click="isResetAllDialogOpen = false" :disabled="isResettingAll">
+                            Batal
+                        </Button>
+                        <Button variant="destructive" @click="handleResetAll" :disabled="isResettingAll">
+                            <RotateCcw v-if="isResettingAll" class="h-4 w-4 mr-2 animate-spin" />
+                            {{ isResettingAll ? 'Mereset...' : 'Ya, Reset Semua' }}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Dialog Reset OTP by User -->
+            <Dialog :open="isResetByUserDialogOpen" @update:open="isResetByUserDialogOpen = $event">
+                <DialogContent class="max-w-md rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2 text-amber-600">
+                            <UserX class="h-5 w-5" />
+                            Reset OTP by User
+                        </DialogTitle>
+                        <DialogDescription class="pt-2 text-sm text-muted-foreground leading-relaxed">
+                            Hapus riwayat OTP hari ini untuk pengguna tertentu berdasarkan ID guna mengembalikan batas limit permintaan OTP harian.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form @submit.prevent="handleResetByUser" class="space-y-4 pt-2">
+                        <div v-if="resetUserName" class="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+                            Mereset limit untuk anggota: <span class="font-bold">{{ resetUserName }}</span>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <Label for="userIdInput" class="text-xs font-semibold">User ID / Member ID / No. Kartu</Label>
+                            <Input
+                                id="userIdInput"
+                                v-model="resetUserId"
+                                placeholder="Masukkan ID anggota atau no. kartu (contoh: 1 atau 1234)"
+                                class="text-sm focus-visible:ring-amber-500"
+                                required
+                                autofocus
+                            />
+                            <p class="text-[11px] text-muted-foreground">
+                                Semua data OTP hari ini untuk user / member ini akan dihapus.
+                            </p>
+                        </div>
+
+                        <DialogFooter class="flex gap-2 sm:justify-end pt-2">
+                            <Button type="button" variant="outline" @click="isResetByUserDialogOpen = false" :disabled="isResettingByUser">
+                                Batal
+                            </Button>
+                            <Button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white" :disabled="isResettingByUser">
+                                <RotateCcw v-if="isResettingByUser" class="h-4 w-4 mr-2 animate-spin" />
+                                {{ isResettingByUser ? 'Mereset...' : 'Reset OTP User' }}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
         </div>
     </AppLayout>
 </template>
