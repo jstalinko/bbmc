@@ -256,6 +256,41 @@ test('a member can be updated successfully via dashboard', function () {
     ]);
 
     $response->assertSessionHasNoErrors();
+    expect($member->fresh()->nama_lengkap)->toBe('Asep Sunandar Updated');
+});
+
+test('member no_wa can be updated with international number and strips spaces', function () {
+    $user = \App\Models\User::factory()->create();
+    $member = Member::create([
+        'nama_lengkap'      => 'John Doe',
+        'nama_panggilan'    => 'John',
+        'tempat_lahir'      => 'California',
+        'tanggal_lahir'     => '12/03/1990',
+        'jenis_kelamin'     => 'L',
+        'gol_darah'         => 'O',
+        'alamat'            => 'Los Angeles',
+        'no_wa'             => '6281234567890',
+        'no_kartu'          => '1235',
+        'status_keanggotaan'=> 'PROSPECT',
+        'chapter'           => 'USA',
+    ]);
+
+    $response = $this->actingAs($user)->put("/dashboard/member/{$member->id}", [
+        'nama_lengkap'      => 'John Doe',
+        'nama_panggilan'    => 'John',
+        'tempat_lahir'      => 'California',
+        'tanggal_lahir'     => '12/03/1990',
+        'jenis_kelamin'     => 'L',
+        'gol_darah'         => 'O',
+        'alamat'            => 'Los Angeles',
+        'no_wa'             => '1 415 555 2671', // contains spaces and country code 1 (+1)
+        'no_kartu'          => '1235',
+        'status_keanggotaan'=> 'PROSPECT',
+        'chapter'           => 'USA',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    expect($member->fresh()->no_wa)->toBe('14155552671');
 });
 
 test('it renders the member validation page', function () {

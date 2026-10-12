@@ -148,10 +148,9 @@ function handleEditFoto(e) {
     reader.readAsDataURL(file);
 }
 function handleEditNoWa(e) {
-    let d = e.target.value.replace(/\D/g, '');
-    if (d.startsWith('0')) d = '62' + d.slice(1);
-    if (d.length > 0 && !d.startsWith('62')) d = '62' + d;
-    editForm.value.no_wa = d; e.target.value = d;
+    let d = e.target.value.replace(/\s+/g, '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
+    editForm.value.no_wa = d;
+    e.target.value = d;
 }
 function handleEditTanggal(e) {
     let raw = e.target.value.replace(/\D/g, '').slice(0, 8), m = '';
@@ -167,6 +166,7 @@ function submitEdit() {
     data.append('_method', 'PUT');
     Object.entries(editForm.value).forEach(([k, v]) => {
         if (k === 'foto') return;
+        if (k === 'no_wa' && typeof v === 'string') v = v.replace(/\s+/g, '');
         if (v !== null && v !== undefined) data.append(k, String(v));
     });
     if (editFotoFile.value) data.append('foto', editFotoFile.value);
@@ -304,7 +304,10 @@ function formatPenaltyLabel(p) {
     if (!p) return 'Clean';
     return p.charAt(0).toUpperCase() + p.slice(1);
 }
-function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,'62')}`; }
+function waLink(no) {
+    const cleaned = (no || '').replace(/\D/g, '').replace(/^0/, '62');
+    return cleaned ? `https://wa.me/${cleaned}` : '#';
+}
 </script>
 
 <template>
@@ -841,7 +844,7 @@ function waLink(no) { return `https://wa.me/${no.replace(/\D/g,'').replace(/^0/,
                     <!-- No WA -->
                     <div>
                         <label class="el">No. WhatsApp *</label>
-                        <input :value="editForm.no_wa" @input="handleEditNoWa" inputmode="numeric" class="ei font-mono" :class="editErrors.no_wa?'border-red-400':''"/>
+                        <input :value="editForm.no_wa" @input="handleEditNoWa" type="tel" inputmode="tel" placeholder="Contoh: 628xxx atau 1xxx" class="ei font-mono" :class="editErrors.no_wa?'border-red-400':''"/>
                         <p v-if="editErrors.no_wa" class="ee">{{ editErrors.no_wa }}</p>
                     </div>
                     <!-- Email -->

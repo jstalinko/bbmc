@@ -26,6 +26,12 @@ class MemberController extends Controller
 
     public function registerPost(Request $request)
     {
+        if ($request->has('no_wa')) {
+            $request->merge([
+                'no_wa' => preg_replace('/\s+/', '', (string) $request->input('no_wa'))
+            ]);
+        }
+
         $validated = $request->validate([
             'nama_lengkap'      => 'required|string|max:255',
             'nama_panggilan'    => 'required|string|max:255',
@@ -334,6 +340,12 @@ class MemberController extends Controller
 
     public function update(Request $request, Member $member)
     {
+        if ($request->has('no_wa')) {
+            $request->merge([
+                'no_wa' => preg_replace('/\s+/', '', (string) $request->input('no_wa'))
+            ]);
+        }
+
         $validated = $request->validate([
             'nama_lengkap'       => 'required|string|max:255',
             'nama_panggilan'     => 'required|string|max:255',

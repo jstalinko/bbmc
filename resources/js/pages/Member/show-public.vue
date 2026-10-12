@@ -130,7 +130,7 @@
                 <div class="text-sm font-mono font-semibold text-gray-800">{{ member.no_wa }}</div>
               </div>
               <a
-                :href="`https://wa.me/${member.no_wa}`"
+                :href="`https://wa.me/${(member.no_wa || '').replace(/\D/g, '').replace(/^0/, '62')}`"
                 target="_blank"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-bold transition-all duration-200 active:scale-95 shadow-sm"
               >
