@@ -330,16 +330,217 @@ class ElectionController extends Controller
     }
 
     /**
+     * Check if a member belongs to USA Chapter.
+     */
+    private function isUsaChapterMember(Member $member): bool
+    {
+        $chapter = strtoupper(trim($member->chapter ?? ''));
+        return $chapter === 'USA CHAPTER' || $chapter === 'USA' || str_contains($chapter, 'USA');
+    }
+
+    /**
+     * Render the USA Chapter election login page (always open, not bound by setting-pemilihan timeline).
+     */
+    public function usaLogin(Request $request)
+    {
+        if ($request->session()->has('election_member_id')) {
+            $currentMember = Member::find($request->session()->get('election_member_id'));
+            if ($currentMember && $currentMember->offline_voter) {
+                $request->session()->forget('election_member_id');
+                $request->session()->forget('election_usa_session');
+                return redirect()->route('election.usa.login')->withErrors([
+                    'no_kartu' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.'
+                ]);
+            }
+            return redirect()->route('election.dashboard');
+        }
+        return Inertia::render('Election/login', [
+            'isUsa' => true,
+        ]);
+    }
+
+    /**
+     * Send OTP for USA Chapter member login verification (not bound by election timeline).
+     */
+    public function sendUsaLoginOtp(Request $request)
+    {
+        $request->validate([
+            'no_kartu' => 'required|string',
+        ]);
+
+        $nocard = str_pad($request->no_kartu, 4, '0', STR_PAD_LEFT);
+        $member = Member::where('no_kartu', $nocard)->first();
+
+        if (!$member) {
+            return response()->json([
+                'success' => false,
+                'message' => "Anggota dengan No. Kartu $nocard tidak ditemukan di database."
+            ], 404);
+        }
+
+        if (!$this->isUsaChapterMember($member)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Halaman login ini khusus untuk anggota USA Chapter.'
+            ], 403);
+        }
+
+        if ($member->offline_voter) {
+            return response()->json([
+                'success' => false,
+                'offline_voter' => true,
+                'message' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.'
+            ], 403);
+        }
+
+        if ($member->penalty && $member->penalty !== 'clean') {
+            $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
+            return response()->json([
+                'success' => false,
+                'penalty' => true,
+                'penalty_status' => strtoupper($member->penalty),
+                'penalty_reason' => $member->penalty_reason,
+                'message' => "Anda tidak dapat masuk karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"
+            ], 403);
+        }
+
+        $status = strtoupper($member->status_keanggotaan);
+        if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat masuk.'
+            ], 403);
+        }
+
+        if (Polling::where('member_id', $member->id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah menyalurkan hak suara Anda dan tidak dapat masuk kembali.'
+            ], 403);
+        }
+
+        if (!$member->no_wa) {
+            return response()->json([
+                'success' => false,
+                'message' => "Nomor WhatsApp anggota tidak ditemukan di database."
+            ], 400);
+        }
+
+        $todayOtpCount = Otp::where('member_id', $member->id)
+            ->whereDate('created_at', now()->toDateString())
+            ->count();
+        if ($todayOtpCount >= 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda telah mencapai batas maksimal 3 kali permintaan OTP untuk hari ini.'
+            ], 429);
+        }
+
+        $recentOtp = Otp::where('member_id', $member->id)
+            ->where('is_verified', false)
+            ->where('created_at', '>', now()->subMinutes(5))
+            ->first();
+
+        if ($recentOtp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda baru saja meminta kode OTP. Mohon tunggu 5 menit sebelum meminta kembali.'
+            ], 429);
+        }
+
+        $otpCode = (string) rand(100000, 999999);
+
+        Otp::create([
+            'member_id' => $member->id,
+            'otp' => $otpCode,
+            'phone' => $member->no_wa,
+            'expires_at' => now()->addMinutes(5),
+            'is_verified' => false,
+        ]);
+
+        $message = \App\Helper::getRandomOtpMessage($otpCode, 'login');
+
+        \App\Helper::sendWhatsapp($member->no_wa, $message);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP telah dikirim ke nomor WhatsApp Anda.'
+        ]);
+    }
+
+    /**
+     * Handle USA Chapter member login with OTP (not bound by election settings/timeline).
+     */
+    public function usaLoginPost(Request $request)
+    {
+        $request->validate([
+            'no_kartu' => 'required|string',
+            'otp' => 'required|string',
+        ]);
+
+        $nocard = str_pad($request->no_kartu, 4, '0', STR_PAD_LEFT);
+        $member = Member::where('no_kartu', $nocard)->first();
+
+        if (!$member) {
+            return back()->withErrors(['no_kartu' => "Nomor kartu $nocard tidak valid atau tidak terdaftar."]);
+        }
+
+        if (!$this->isUsaChapterMember($member)) {
+            return back()->withErrors(['no_kartu' => 'Halaman login ini khusus untuk anggota USA Chapter.']);
+        }
+
+        if ($member->offline_voter) {
+            return back()->withErrors(['no_kartu' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.']);
+        }
+
+        if ($member->penalty && $member->penalty !== 'clean') {
+            $reasonMsg = $member->penalty_reason ? " Alasan: {$member->penalty_reason}" : "";
+            return back()->withErrors(['no_kartu' => "Anda tidak dapat masuk karena status keanggotaan sedang dalam masa penalty (" . strtoupper($member->penalty) . "). Harus berstatus CLEAN / NO PENALTY.{$reasonMsg}"]);
+        }
+
+        $status = strtoupper($member->status_keanggotaan);
+        if ($status !== 'LIFE MEMBER' && $status !== 'SS DIPONEGORO') {
+            return back()->withErrors(['no_kartu' => 'Hanya anggota dengan status LIFE MEMBER atau SS DIPONEGORO yang dapat masuk.']);
+        }
+
+        if (Polling::where('member_id', $member->id)->exists()) {
+            return back()->withErrors(['no_kartu' => 'Anda sudah menyalurkan hak suara Anda dan tidak dapat masuk kembali.']);
+        }
+
+        $otpRecord = Otp::where('member_id', $member->id)
+            ->where('otp', $request->otp)
+            ->where('is_verified', false)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if (!$otpRecord) {
+            return back()->withErrors(['otp' => 'Kode OTP tidak valid atau sudah kedaluwarsa.']);
+        }
+
+        $otpRecord->update(['is_verified' => true]);
+
+        $request->session()->put('election_member_id', $member->id);
+        $request->session()->put('election_usa_session', true);
+
+        return redirect()->route('election.dashboard')->with([
+            'success' => true,
+            'message' => "Selamat datang kembali, {$member->nama_lengkap}!"
+        ]);
+    }
+
+    /**
      * Handle logout.
      */
     public function logout(Request $request)
     {
+        $wasUsaSession = (bool) $request->session()->pull('election_usa_session', false);
         $memberId = $request->session()->get('election_member_id');
         if ($memberId) {
             ElectionQueue::where('member_id', $memberId)->delete();
         }
         $request->session()->forget('election_member_id');
-        return redirect()->route('election.login')->with([
+        return redirect()->route($wasUsaSession ? 'election.usa.login' : 'election.login')->with([
             'success' => true,
             'message' => "Anda telah keluar dari portal."
         ]);
@@ -367,6 +568,7 @@ class ElectionController extends Controller
             'calon_id' => 'required|exists:calons,id',
         ]);
 
+        $wasUsaSession = (bool) $request->session()->get('election_usa_session', false);
         $memberId = $request->session()->get('election_member_id');
         $member = Member::find($memberId);
         if (!$member || $member->offline_voter) {
@@ -374,7 +576,8 @@ class ElectionController extends Controller
                 ElectionQueue::where('member_id', $memberId)->delete();
             }
             $request->session()->forget('election_member_id');
-            return redirect()->route('election.login')->withErrors(['no_kartu' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.']);
+            $request->session()->forget('election_usa_session');
+            return redirect()->route($wasUsaSession ? 'election.usa.login' : 'election.login')->withErrors(['no_kartu' => 'Anda telah terdaftar sebagai pemilih offline dan tidak dapat melakukan pemilihan secara online.']);
         }
 
         $alreadyVoted = Polling::where('member_id', $memberId)->exists();
@@ -392,6 +595,14 @@ class ElectionController extends Controller
             ElectionQueue::where('member_id', $memberId)->delete();
         }
         $request->session()->forget('election_member_id');
+        $request->session()->forget('election_usa_session');
+
+        if ($wasUsaSession && !$this->checkPollingTimeline()['allowed']) {
+            return redirect()->route('election.usa.login')->with([
+                'success' => true,
+                'message' => 'Pemberian suara Anda berhasil disimpan! Terima kasih atas partisipasi Anda.'
+            ]);
+        }
 
         // Redirect to live polling with a flash message!
         return redirect()->route('election.polling')->with([

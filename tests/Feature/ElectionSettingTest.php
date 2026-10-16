@@ -296,3 +296,95 @@ test('polling page hides candidate details when tampilkan_kandidat_polling is di
     );
 });
 
+test('/election/usa/login remains open before start date and after end date', function () {
+    $futureDate = now()->addDays(2)->format('Y-m-d\TH:i');
+    file_put_contents($this->settingPath, json_encode([
+        'ajukan_diri' => false,
+        'ajukan_anggota' => false,
+        'tanggal_mulai' => $futureDate,
+        'tanggal_selesai' => null,
+    ]));
+
+    $response = $this->get('/election/usa/login');
+    $response->assertStatus(200);
+    $response->assertInertia(fn ($page) =>
+        $page->component('Election/login', false)
+             ->where('isUsa', true)
+    );
+
+    $pastDate = now()->subDays(2)->format('Y-m-d\TH:i');
+    file_put_contents($this->settingPath, json_encode([
+        'ajukan_diri' => false,
+        'ajukan_anggota' => false,
+        'tanggal_mulai' => null,
+        'tanggal_selesai' => $pastDate,
+    ]));
+
+    $responseAfter = $this->get('/election/usa/login');
+    $responseAfter->assertStatus(200);
+});
+
+test('only USA Chapter members can request OTP and log in at /election/usa/login regardless of timeline', function () {
+    \Illuminate\Support\Facades\Http::fake();
+
+    $futureDate = now()->addDays(2)->format('Y-m-d\TH:i');
+    file_put_contents($this->settingPath, json_encode([
+        'ajukan_diri' => false,
+        'ajukan_anggota' => false,
+        'tanggal_mulai' => $futureDate,
+        'tanggal_selesai' => null,
+    ]));
+
+    $nonUsaMember = createElectionSettingMember([
+        'nama_lengkap' => 'Non USA Member',
+        'no_kartu' => '0101',
+        'chapter' => 'Mother Chapter',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'no_wa' => '628111111111',
+    ]);
+
+    $usaMember = createElectionSettingMember([
+        'nama_lengkap' => 'USA Chapter Member',
+        'no_kartu' => '0202',
+        'chapter' => 'USA Chapter',
+        'status_keanggotaan' => 'LIFE MEMBER',
+        'no_wa' => '12125551234',
+    ]);
+
+    // Non-USA member rejected on OTP request
+    $otpNonUsa = $this->postJson('/api/send-usa-login-otp', ['no_kartu' => '0101']);
+    $otpNonUsa->assertStatus(403)
+              ->assertJsonPath('success', false)
+              ->assertJsonPath('message', 'Halaman login ini khusus untuk anggota USA Chapter.');
+
+    // USA member succeeds on OTP request even before tanggal_mulai
+    $otpUsa = $this->postJson('/api/send-usa-login-otp', ['no_kartu' => '0202']);
+    $otpUsa->assertStatus(200)
+           ->assertJsonPath('success', true);
+
+    $otpRecord = \App\Models\Otp::where('member_id', $usaMember->id)->latest()->first();
+    expect($otpRecord)->not->toBeNull();
+
+    // Non-USA member rejected on login POST
+    \App\Models\Otp::create([
+        'member_id' => $nonUsaMember->id,
+        'otp' => '654321',
+        'phone' => $nonUsaMember->no_wa,
+        'expires_at' => now()->addMinutes(5),
+        'is_verified' => false,
+    ]);
+    $loginNonUsa = $this->post('/election/usa/login', [
+        'no_kartu' => '0101',
+        'otp' => '654321',
+    ]);
+    $loginNonUsa->assertSessionHasErrors(['no_kartu']);
+
+    // USA member succeeds on login POST even before tanggal_mulai
+    $loginUsa = $this->post('/election/usa/login', [
+        'no_kartu' => '0202',
+        'otp' => $otpRecord->otp,
+    ]);
+    $loginUsa->assertRedirect('/election/dashboard');
+    expect(session('election_member_id'))->toBe($usaMember->id);
+});
+

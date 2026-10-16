@@ -13,6 +13,7 @@ import {
 } from 'lucide-vue-next';
 
 const props = defineProps<{
+    isUsa?: boolean;
     errors?: Record<string, string>;
     flash?: {
         success?: boolean;
@@ -54,8 +55,10 @@ const handleSendOtp = async () => {
     penaltyAlert.value = null;
     offlineAlert.value = null;
     
+    const otpEndpoint = props.isUsa ? '/api/send-usa-login-otp' : '/api/send-login-otp';
+
     try {
-        const response = await fetch('/api/send-login-otp', {
+        const response = await fetch(otpEndpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -89,7 +92,8 @@ const handleSendOtp = async () => {
 
 const handleLogin = () => {
     form.otp = otpCode.value;
-    form.post(route('election.login_post'), {
+    const loginUrl = props.isUsa ? '/election/usa/login' : route('election.login_post');
+    form.post(loginUrl, {
         onError: (err) => {
             // Errors will be set automatically on form.errors
         }
@@ -105,7 +109,7 @@ const goBackToNocard = () => {
 </script>
 
 <template>
-    <Head title="Login - El Presidente Pra-Election Portal" />
+    <Head :title="props.isUsa ? 'Login USA Chapter - El Presidente Pra-Election Portal' : 'Login - El Presidente Pra-Election Portal'" />
 
     <div 
         class="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden text-zinc-800 font-sans selection:bg-red-600 selection:text-white"
@@ -142,13 +146,13 @@ const goBackToNocard = () => {
                 <div class="text-center mb-8">
                     <div class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-red-100 bg-red-50/50 px-3 py-1 text-xs uppercase tracking-wider text-red-600 shadow-sm font-semibold">
                         <ShieldCheck class="h-4 w-4" />
-                        <span>Voter Verification</span>
+                        <span>{{ props.isUsa ? 'USA Chapter Verification' : 'Voter Verification' }}</span>
                     </div>
                     <h2 class="font-bebas text-3xl tracking-wide text-zinc-950 uppercase">
-                        Login Pra-Election
+                        {{ props.isUsa ? 'Login USA Chapter' : 'Login Pra-Election' }}
                     </h2>
                     <p class="text-xs text-zinc-500 mt-1">
-                        Akses khusus untuk Life Member & SS Diponegoro BBMC Indonesia
+                        {{ props.isUsa ? 'Akses khusus untuk Anggota USA Chapter (Life Member & SS Diponegoro)' : 'Akses khusus untuk Life Member & SS Diponegoro BBMC Indonesia' }}
                     </p>
                     <div class="mt-4 h-[2px] w-16 mx-auto bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
                 </div>
