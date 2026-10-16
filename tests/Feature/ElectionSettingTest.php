@@ -87,7 +87,7 @@ test('cannot nominate member when ajukan_anggota is disabled', function () {
     $response->assertSessionHasErrors(['otp']);
 });
 
-test('cannot access login or polling before start date', function () {
+test('cannot access login before start date while polling remains open', function () {
     $futureDate = now()->addDays(2)->format('Y-m-d\TH:i');
     file_put_contents($this->settingPath, json_encode([
         'ajukan_diri' => true,
@@ -101,10 +101,9 @@ test('cannot access login or polling before start date', function () {
     $response->assertRedirect('/election/portal');
     $response->assertSessionHas('error');
 
-    // Try accessing polling GET
+    // Polling GET remains open regardless of tanggal_mulai
     $response = $this->get('/election/polling');
-    $response->assertRedirect('/election/portal');
-    $response->assertSessionHas('error');
+    $response->assertStatus(200);
 });
 
 test('cannot access login after end date', function () {

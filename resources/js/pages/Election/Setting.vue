@@ -167,7 +167,7 @@ const submitSettings = () => {
                                     v-model="form.tanggal_mulai"
                                     class="w-full"
                                 />
-                                <p class="text-[11px] text-muted-foreground">Portal login dan halaman live polling akan diblokir sebelum waktu ini.</p>
+                                <p class="text-[11px] text-muted-foreground">Portal login pemilihan (/election/login) akan diblokir sebelum waktu ini.</p>
                             </div>
 
                             <!-- Tanggal Selesai -->

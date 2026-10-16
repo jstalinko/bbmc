@@ -597,13 +597,6 @@ class ElectionController extends Controller
         $request->session()->forget('election_member_id');
         $request->session()->forget('election_usa_session');
 
-        if ($wasUsaSession && !$this->checkPollingTimeline()['allowed']) {
-            return redirect()->route('election.usa.login')->with([
-                'success' => true,
-                'message' => 'Pemberian suara Anda berhasil disimpan! Terima kasih atas partisipasi Anda.'
-            ]);
-        }
-
         // Redirect to live polling with a flash message!
         return redirect()->route('election.polling')->with([
             'success' => true,
@@ -613,11 +606,6 @@ class ElectionController extends Controller
 
     public function livePolling()
     {
-        $timeline = $this->checkPollingTimeline();
-        if (!$timeline['allowed']) {
-            return redirect()->route('election.portal')->with('error', $timeline['message']);
-        }
-
         $settings = $this->getSettings();
         $tampilkanKandidat = (bool)($settings['tampilkan_kandidat_polling'] ?? true);
 
