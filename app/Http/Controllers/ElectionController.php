@@ -660,6 +660,69 @@ class ElectionController extends Controller
     }
 
     /**
+     * Render the Admin Dashboard Live Count page (always shows all stats and real-time candidate votes).
+     */
+    public function adminLiveCount()
+    {
+        $rekapSuaraOffline = (int) \App\Models\PollingOffline::sum('jumlah_suara');
+        $totalSuaraOffline = $rekapSuaraOffline > 0 ? $rekapSuaraOffline : OfflineLog::count();
+        $totalPemilihOffline = OfflineLog::count() > 0 ? OfflineLog::count() : $totalSuaraOffline;
+
+        $totalCleanMembers = Member::where(function ($pq) {
+            $pq->whereNull('penalty')
+               ->orWhere('penalty', '')
+               ->orWhere('penalty', 'clean');
+        })->count();
+
+        $totalPemilihOnline = max(0, $totalCleanMembers - $totalPemilihOffline);
+        $totalPemilih = max($totalCleanMembers, $totalPemilihOnline + $totalPemilihOffline);
+
+        $totalSuaraOnline = (int) Polling::count();
+        $totalSuaraMasuk = $totalSuaraOnline + $totalSuaraOffline;
+        $partisipasiSuara = $totalPemilih > 0 ? round(($totalSuaraMasuk / $totalPemilih) * 100, 1) : 0;
+
+        $calons = Calon::with('member')
+            ->where('status', 'ditetapkan')
+            ->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC, id ASC')
+            ->get()
+            ->unique('member_id')
+            ->values();
+
+        $results = [];
+        foreach ($calons as $calon) {
+            $calonIds = Calon::where('member_id', $calon->member_id)->pluck('id');
+            $onlineVote = (int) Polling::whereIn('calon_id', $calonIds)->count();
+            $offlineVote = (int) \App\Models\PollingOffline::whereIn('calon_id', $calonIds)->sum('jumlah_suara');
+            $totalVote = $onlineVote + $offlineVote;
+
+            $results[] = [
+                'calon_id' => $calon->id,
+                'no_urut' => $calon->no_urut,
+                'no_kartu' => $calon->no_kartu,
+                'chapter' => $calon->chapter ?? ($calon->member ? $calon->member->chapter : ''),
+                'calon_name' => $calon->member ? $calon->member->nama_lengkap : 'Unknown',
+                'calon_panggilan' => $calon->member ? $calon->member->nama_panggilan : null,
+                'calon_foto' => ($calon->member && !empty($calon->member->foto)) ? $calon->member->foto : $calon->foto_calon,
+                'online_vote' => $onlineVote,
+                'offline_vote' => $offlineVote,
+                'total_vote' => $totalVote,
+                'percentage' => $totalSuaraMasuk > 0 ? round(($totalVote / $totalSuaraMasuk) * 100, 1) : 0,
+            ];
+        }
+
+        return Inertia::render('Election/LiveCount', [
+            'results' => $results,
+            'totalSuaraMasuk' => $totalSuaraMasuk,
+            'totalSuaraOffline' => $totalSuaraOffline,
+            'totalSuaraOnline' => $totalSuaraOnline,
+            'totalPemilih' => $totalPemilih,
+            'totalPemilihOffline' => $totalPemilihOffline,
+            'totalPemilihOnline' => $totalPemilihOnline,
+            'partisipasiSuara' => $partisipasiSuara,
+        ]);
+    }
+
+    /**
      * Check if a member has already submitted any nomination (either self-nomination or peer-nomination).
      * Every member is only allowed 1 choice/submission in total.
      */

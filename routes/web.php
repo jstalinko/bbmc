@@ -48,6 +48,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 
     Route::get('/setting-pemilihan', [ElectionController::class, 'setting'])->name('election.setting');
     Route::post('/setting-pemilihan', [ElectionController::class, 'settingPost'])->name('election.setting_post');
+    Route::get('/live-count', [ElectionController::class, 'adminLiveCount'])->name('election.live_count');
 
     Route::get('/whatsapp', [\App\Http\Controllers\WhatsappController::class, 'index'])->name('whatsapp.index');
     Route::post('/whatsapp/send', [\App\Http\Controllers\WhatsappController::class, 'send'])->name('whatsapp.send');
@@ -71,6 +72,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/live-count', [ElectionController::class, 'adminLiveCount'])->name('live_count.index');
     Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('offline.index');
     Route::put('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'update'])->name('offline.update');
     Route::delete('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'destroy'])->name('offline.destroy');

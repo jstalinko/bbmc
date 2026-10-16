@@ -388,3 +388,56 @@ test('only USA Chapter members can request OTP and log in at /election/usa/login
     expect(session('election_member_id'))->toBe($usaMember->id);
 });
 
+test('admin can view /dashboard/live-count with all stats and candidate votes regardless of public settings', function () {
+    $admin = User::factory()->create();
+
+    $futureDate = now()->addDays(2)->format('Y-m-d\TH:i');
+    file_put_contents($this->settingPath, json_encode([
+        'ajukan_diri' => false,
+        'ajukan_anggota' => false,
+        'tampilkan_kandidat_polling' => false,
+        'tanggal_mulai' => $futureDate,
+        'tanggal_selesai' => null,
+    ]));
+
+    $candMember = createElectionSettingMember([
+        'nama_lengkap' => 'Calon Presidente Live',
+        'no_kartu' => '0010',
+        'penalty' => 'clean',
+    ]);
+    $voterMember = createElectionSettingMember([
+        'nama_lengkap' => 'Voter Clean',
+        'no_kartu' => '0011',
+        'penalty' => 'clean',
+    ]);
+
+    $calon = Calon::create([
+        'member_id' => $candMember->id,
+        'no_kartu' => '0010',
+        'chapter' => 'Mother Chapter',
+        'status' => 'ditetapkan',
+        'no_urut' => 1,
+    ]);
+
+    Polling::create([
+        'member_id' => $voterMember->id,
+        'calon_id' => $calon->id,
+    ]);
+
+    $response = $this->actingAs($admin)->get('/dashboard/live-count');
+    $response->assertStatus(200);
+    $response->assertInertia(fn ($page) =>
+        $page->component('Election/LiveCount', false)
+             ->where('totalSuaraMasuk', 1)
+             ->where('totalSuaraOffline', 0)
+             ->where('totalSuaraOnline', 1)
+             ->where('totalPemilih', 2)
+             ->where('totalPemilihOffline', 0)
+             ->where('totalPemilihOnline', 2)
+             ->where('partisipasiSuara', 50)
+             ->has('results', 1)
+             ->where('results.0.calon_name', 'Calon Presidente Live')
+             ->where('results.0.total_vote', 1)
+    );
+});
+
