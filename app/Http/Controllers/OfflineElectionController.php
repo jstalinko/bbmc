@@ -90,6 +90,8 @@ class OfflineElectionController extends Controller
             ->where('status', 'ditetapkan')
             ->orderByRaw('CASE WHEN no_urut IS NULL OR no_urut = 0 THEN 1 ELSE 0 END, no_urut ASC, id ASC')
             ->get()
+            ->unique('member_id')
+            ->values()
             ->map(function ($c) {
                 return [
                     'id' => $c->id,

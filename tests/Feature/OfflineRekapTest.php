@@ -55,15 +55,34 @@ function createRekapMember(array $attributes = []) {
     ], $attributes));
 }
 
-test('admin can view /pemilihan-offline with rekap data', function () {
+test('admin can view /pemilihan-offline with rekap data and deduplicated candidates', function () {
     $admin = User::factory()->create();
+    $member = createRekapMember(['nama_lengkap' => 'Calon Banyak Pengajuan']);
+
+    // Multiple nominations for the same member that were all set to ditetapkan
+    Calon::create([
+        'member_id' => $member->id,
+        'no_kartu' => $member->no_kartu,
+        'chapter' => 'Mother Chapter',
+        'status' => 'ditetapkan',
+        'no_urut' => 1,
+        'diajukan_oleh' => 'self',
+    ]);
+    Calon::create([
+        'member_id' => $member->id,
+        'no_kartu' => $member->no_kartu,
+        'chapter' => 'Mother Chapter',
+        'status' => 'ditetapkan',
+        'no_urut' => 1,
+        'diajukan_oleh' => 'Member Lain',
+    ]);
 
     $response = $this->actingAs($admin)->get('/pemilihan-offline');
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => 
         $page->component('Election/Offline', false)
              ->has('rekap_offline')
-             ->has('candidates')
+             ->has('candidates', 1)
              ->has('stats.total_rekap_offline')
     );
 });
