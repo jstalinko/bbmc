@@ -193,14 +193,14 @@ class ElectionController extends Controller
             ], 400);
         }
 
-        // Cek maksimal 3x request per hari
+        // Cek maksimal 8x request per hari
         $todayOtpCount = Otp::where('member_id', $member->id)
             ->whereDate('created_at', now()->toDateString())
             ->count();
-        if ($todayOtpCount >= 3) {
+        if ($todayOtpCount >= 8) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda telah mencapai batas maksimal 3 kali permintaan OTP untuk hari ini.'
+                'message' => 'Anda telah mencapai batas maksimal 8 kali permintaan OTP untuk hari ini.'
             ], 429);
         }
 
@@ -217,7 +217,7 @@ class ElectionController extends Controller
             ], 429);
         }
 
-        $otpCode = (string) rand(100000, 999999);
+        $otpCode = app()->isLocal() ? '123456' : (string) rand(100000, 999999);
         
         Otp::create([
             'member_id' => $member->id,
@@ -429,10 +429,10 @@ class ElectionController extends Controller
         $todayOtpCount = Otp::where('member_id', $member->id)
             ->whereDate('created_at', now()->toDateString())
             ->count();
-        if ($todayOtpCount >= 3) {
+        if ($todayOtpCount >= 8) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda telah mencapai batas maksimal 3 kali permintaan OTP untuk hari ini.'
+                'message' => 'Anda telah mencapai batas maksimal 8 kali permintaan OTP untuk hari ini.'
             ], 429);
         }
 
@@ -448,7 +448,7 @@ class ElectionController extends Controller
             ], 429);
         }
 
-        $otpCode = (string) rand(100000, 999999);
+        $otpCode = app()->isLocal() ? '123456' : (string) rand(100000, 999999);
 
         Otp::create([
             'member_id' => $member->id,
@@ -607,11 +607,58 @@ class ElectionController extends Controller
     public function livePolling()
     {
         $settings = $this->getSettings();
-        $tampilkanKandidat = (bool)($settings['tampilkan_kandidat_polling'] ?? true);
+        $tampilkanKandidat = (bool)($settings['tampilkanKandidat_polling'] ?? $settings['tampilkan_kandidat_polling'] ?? true);
 
         // Total suara offline dari rekap PollingOffline (atau fallback ke offline_logs)
         $rekapSuaraOffline = (int) \App\Models\PollingOffline::sum('jumlah_suara');
         $totalSuaraOffline = $rekapSuaraOffline > 0 ? $rekapSuaraOffline : OfflineLog::count();
+        $totalPemilihOffline = OfflineLog::count() > 0 ? OfflineLog::count() : $totalSuaraOffline;
+
+        // Total anggota no penalty
+        $totalCleanMembers = Member::where(function($pq) {
+            $pq->whereNull('penalty')
+               ->orWhere('penalty', '')
+               ->orWhere('penalty', 'clean');
+        })->count();
+
+        // Pemilih online = members no penalty - offline_logs
+        $totalPemilihOnline = max(0, $totalCleanMembers - $totalPemilihOffline);
+        $totalPemilih = max($totalCleanMembers, $totalPemilihOnline + $totalPemilihOffline);
+
+        $throttled = (new Polling())->getThrottledResultVotes();
+        $totalSuaraOnline = (int) Polling::count();
+        $totalSuaraMasuk = $totalSuaraOnline + $totalSuaraOffline;
+
+        $partisipasiSuara = $totalPemilih > 0 ? round(($totalSuaraMasuk / $totalPemilih) * 100, 1) : 0;
+
+        return Inertia::render('Election/polling', [
+            'results' => $tampilkanKandidat ? $throttled['results'] : [],
+            'tampilkanKandidat' => $tampilkanKandidat,
+            'totalSuaraMasuk' => $totalSuaraMasuk,
+            'totalSuaraOffline' => $totalSuaraOffline,
+            'totalSuaraOnline' => $totalSuaraOnline,
+            'totalPemilih' => $totalPemilih,
+            'totalPemilihOffline' => $totalPemilihOffline,
+            'totalPemilihOnline' => $totalPemilihOnline,
+            'partisipasiSuara' => $partisipasiSuara,
+            'totalVotes' => $totalSuaraMasuk,
+            'totalVoters' => $totalPemilih,
+            'percentageVoted' => $partisipasiSuara,
+        ]);
+    }
+
+    /**
+     * Render the special Live Polling page (/election/polling-khusus) where Total Suara Offline only counts 'sudah_memilih'.
+     */
+    public function livePollingKhusus()
+    {
+        $settings = $this->getSettings();
+        $tampilkanKandidat = (bool)($settings['tampilkan_kandidat_polling'] ?? true);
+
+        // Total suara offline dari rekap PollingOffline (atau fallback ke offline_logs yang sudah memilih)
+        $rekapSuaraOffline = (int) \App\Models\PollingOffline::sum('jumlah_suara');
+        $sudahMemilihOffline = OfflineLog::where('voting_status', OfflineLog::STATUS_SUDAH_MEMILIH)->count();
+        $totalSuaraOffline = $rekapSuaraOffline > 0 ? $rekapSuaraOffline : $sudahMemilihOffline;
         $totalPemilihOffline = OfflineLog::count() > 0 ? OfflineLog::count() : $totalSuaraOffline;
 
         // Total anggota no penalty
@@ -653,7 +700,8 @@ class ElectionController extends Controller
     public function adminLiveCount()
     {
         $rekapSuaraOffline = (int) \App\Models\PollingOffline::sum('jumlah_suara');
-        $totalSuaraOffline = $rekapSuaraOffline > 0 ? $rekapSuaraOffline : OfflineLog::count();
+        $sudahMemilihOffline = OfflineLog::where('voting_status', OfflineLog::STATUS_SUDAH_MEMILIH)->count();
+        $totalSuaraOffline = $rekapSuaraOffline > 0 ? $rekapSuaraOffline : $sudahMemilihOffline;
         $totalPemilihOffline = OfflineLog::count() > 0 ? OfflineLog::count() : $totalSuaraOffline;
 
         $totalCleanMembers = Member::where(function ($pq) {

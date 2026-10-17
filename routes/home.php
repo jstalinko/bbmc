@@ -18,6 +18,7 @@ Route::group(['prefix' => '/election'] , function(){
     Route::get('/', fn() => redirect('/election/portal'));
     Route::get('/portal' , [ElectionController::class,'portal'])->name('election.portal'); 
     Route::get('/polling', [ElectionController::class, 'livePolling'])->name('election.polling');
+    Route::get('/polling-khusus', [ElectionController::class, 'livePollingKhusus'])->name('election.polling_khusus');
     Route::get('/search-members', [ElectionController::class, 'searchMembers'])->name('election.search_members');
     Route::get('/member-info/{nocard}', [ElectionController::class, 'getMemberInfo'])->name('election.member_info');
     Route::post('/nominate-self', [ElectionController::class, 'nominateSelf'])->name('election.nominate_self');

@@ -258,6 +258,21 @@ test('polling page displays correct statistics for offline and online votes and 
              ->where('partisipasiSuara', 60)
              ->has('results', 1)
     );
+
+    $responseKhusus = $this->get('/election/polling-khusus');
+    $responseKhusus->assertStatus(200);
+    $responseKhusus->assertInertia(fn ($page) => 
+        $page->component('Election/polling', false)
+             ->where('tampilkanKandidat', true)
+             ->where('totalPemilih', 5)
+             ->where('totalPemilihOffline', 2)
+             ->where('totalPemilihOnline', 3)
+             ->where('totalSuaraOffline', 1)
+             ->where('totalSuaraOnline', 1)
+             ->where('totalSuaraMasuk', 2)
+             ->where('partisipasiSuara', 40)
+             ->has('results', 1)
+    );
 });
 
 test('polling page hides candidate details when tampilkan_kandidat_polling is disabled', function () {
