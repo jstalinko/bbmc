@@ -40,7 +40,7 @@
                   class="w-full h-full object-cover"
                 />
                 <span v-else class="text-2xl font-black text-white" style="font-family: Georgia, serif;">
-                  {{ member.nama_lengkap.charAt(0).toUpperCase() }}
+                  {{ (member.nama_lengkap || '').charAt(0).toUpperCase() }}
                 </span>
               </div>
 
@@ -206,10 +206,16 @@ import { computed } from 'vue'
 import { decryptPayload } from '@/lib/crypto'
 
 const props = defineProps<{
-  payload: string
+  payload?: string
+  member?: Record<string, any>
 }>()
 
-const member = decryptPayload(props.payload) || {}
+const member = computed(() => {
+  if (props.payload) {
+    return decryptPayload(props.payload) || {}
+  }
+  return props.member || {}
+})
 
 const statusClass = computed(() => {
   const map: Record<string, string> = {
@@ -219,6 +225,6 @@ const statusClass = computed(() => {
     'VIRGIN':        'bg-green-50  text-green-700  border-green-200',
     'PROSPECT':      'bg-red-50    text-red-700    border-red-200',
   }
-  return map[props.member.status_keanggotaan] ?? 'bg-red-50 text-red-700 border-red-200'
+  return map[member.value?.status_keanggotaan] ?? 'bg-red-50 text-red-700 border-red-200'
 })
 </script>
