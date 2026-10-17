@@ -72,14 +72,17 @@ class OfflineElectionController extends Controller
 
         // Calculate statistics for offline logs & offline vote recap
         $stats = [
-            'total_offline_voters' => OfflineLog::count(),
-            'total_antrean'        => OfflineLog::where('voting_status', OfflineLog::STATUS_ANTREAN)->count(),
-            'total_sudah_memilih'  => OfflineLog::where('voting_status', OfflineLog::STATUS_SUDAH_MEMILIH)->count(),
-            'total_tidak_memilih'  => OfflineLog::where('voting_status', OfflineLog::STATUS_TIDAK_MEMILIH)->count(),
-            'total_batal'          => OfflineLog::where('voting_status', OfflineLog::STATUS_CANCEL_VOTE)->count(),
-            'total_online_voted'   => Polling::distinct('member_id')->count('member_id'),
-            'total_rekap_offline'  => (int) PollingOffline::sum('jumlah_suara'),
-            'total_rekap_count'    => PollingOffline::count(),
+            'total_offline_voters'  => OfflineLog::count(),
+            'total_antrean'         => OfflineLog::where('voting_status', OfflineLog::STATUS_ANTREAN)->count(),
+            'total_sudah_memilih'   => OfflineLog::where('voting_status', OfflineLog::STATUS_SUDAH_MEMILIH)->count(),
+            'total_tidak_memilih'   => OfflineLog::where('voting_status', OfflineLog::STATUS_TIDAK_MEMILIH)->count(),
+            'total_batal'           => OfflineLog::where('voting_status', OfflineLog::STATUS_CANCEL_VOTE)->count(),
+            'total_online_voted'    => Polling::distinct('member_id')->count('member_id'),
+            'total_online_conflict' => OfflineLog::whereIn('member_id', Polling::select('member_id'))
+                ->where('voting_status', '!=', OfflineLog::STATUS_CANCEL_VOTE)
+                ->count(),
+            'total_rekap_offline'   => (int) PollingOffline::sum('jumlah_suara'),
+            'total_rekap_count'     => PollingOffline::count(),
         ];
 
         $rekapOffline = PollingOffline::with(['calon.member', 'creator'])
@@ -115,6 +118,39 @@ class OfflineElectionController extends Controller
             ],
             'status_labels' => OfflineLog::STATUS_LABELS,
         ]);
+    }
+
+    /**
+     * Cancel offline voting status for offline voters who have already voted online (in pollings).
+     */
+    public function cancelOnlineVoters(Request $request)
+    {
+        $onlineVotedMemberIds = Polling::distinct()->pluck('member_id');
+
+        $cancelledLogsCount = OfflineLog::whereIn('member_id', $onlineVotedMemberIds)
+            ->where('voting_status', '!=', OfflineLog::STATUS_CANCEL_VOTE)
+            ->update(['voting_status' => OfflineLog::STATUS_CANCEL_VOTE]);
+
+        $affectedMembers = Member::whereIn('id', $onlineVotedMemberIds)
+            ->where('offline_voter', true)
+            ->get();
+
+        $revertedMembersCount = 0;
+        foreach ($affectedMembers as $member) {
+            $member->update(['offline_voter' => false]);
+            if (!empty($member->email)) {
+                User::where('email', $member->email)->update(['offline_voter' => false]);
+            }
+            $revertedMembersCount++;
+        }
+
+        $totalAffected = max($cancelledLogsCount, $revertedMembersCount);
+
+        if ($totalAffected === 0) {
+            return back()->with('success', 'Tidak ada pemilih offline aktif yang sudah menyalurkan suara secara online.');
+        }
+
+        return back()->with('success', "Berhasil membatalkan {$totalAffected} pemilih offline karena sudah menggunakan hak suara secara online.");
     }
 
     /**

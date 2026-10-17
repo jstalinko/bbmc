@@ -62,6 +62,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::post('/otp-logs/reset-by-user', [\App\Http\Controllers\OtpLogController::class, 'resetByUser'])->name('otp_logs.reset_by_user');
 
     Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('election.offline');
+    Route::post('/pemilihan-offline/cancel-online', [\App\Http\Controllers\OfflineElectionController::class, 'cancelOnlineVoters'])->name('election.offline.cancel_online');
     Route::put('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'update'])->name('election.offline.update');
     Route::delete('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'destroy'])->name('election.offline.destroy');
     Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('election.offline.toggle');
@@ -74,6 +75,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/live-count', [ElectionController::class, 'adminLiveCount'])->name('live_count.index');
     Route::get('/pemilihan-offline', [\App\Http\Controllers\OfflineElectionController::class, 'index'])->name('offline.index');
+    Route::post('/pemilihan-offline/cancel-online', [\App\Http\Controllers\OfflineElectionController::class, 'cancelOnlineVoters'])->name('offline.cancel_online');
     Route::put('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'update'])->name('offline.update');
     Route::delete('/pemilihan-offline/{offlineLog}', [\App\Http\Controllers\OfflineElectionController::class, 'destroy'])->name('offline.destroy');
     Route::post('/pemilihan-offline/{member}/toggle', [\App\Http\Controllers\OfflineElectionController::class, 'toggle'])->name('offline.toggle');

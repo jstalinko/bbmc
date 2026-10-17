@@ -79,6 +79,7 @@ interface Stats {
     total_tidak_memilih: number;
     total_batal: number;
     total_online_voted?: number;
+    total_online_conflict?: number;
     total_rekap_offline?: number;
     total_rekap_count?: number;
 }
@@ -333,6 +334,19 @@ function openBuktiViewer(item: RekapOfflineItem) {
     isBuktiViewerOpen.value = true;
 }
 
+// ── Batalkan Pemilih Online State & Action ───────────────────────────────────
+const isCancellingOnline = ref(false);
+
+function cancelOnlineVoters() {
+    isCancellingOnline.value = true;
+    router.post('/pemilihan-offline/cancel-online', {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            isCancellingOnline.value = false;
+        },
+    });
+}
+
 // Helper status badge classes
 function statusBadgeClass(status: string) {
     if (status === 'antrean') return 'bg-amber-100 text-amber-800 border-amber-300';
@@ -404,6 +418,22 @@ function formatTime(iso: string) {
 
                 <!-- Action buttons -->
                 <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                    <Button
+                        type="button"
+                        @click="cancelOnlineVoters"
+                        :disabled="isCancellingOnline"
+                        class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs tracking-wide shadow-sm transition-all active:scale-95"
+                    >
+                        <UserX class="h-4 w-4" />
+                        <span>{{ isCancellingOnline ? 'Memproses...' : 'Batalkan Pemilih Online' }}</span>
+                        <span
+                            v-if="stats.total_online_conflict && stats.total_online_conflict > 0"
+                            class="ml-1 px-1.5 py-0.5 rounded-full bg-white text-purple-700 text-[10px] font-black font-mono"
+                        >
+                            {{ stats.total_online_conflict }}
+                        </span>
+                    </Button>
+
                     <Button
                         type="button"
                         @click="openRekapModal"
@@ -793,13 +823,21 @@ function formatTime(iso: string) {
 
                                 <!-- Status Pemilihan -->
                                 <TableCell class="text-center">
-                                    <span
-                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border shadow-xs"
-                                        :class="statusBadgeClass(log.voting_status)"
-                                    >
-                                        <span>{{ statusIcon(log.voting_status) }}</span>
-                                        <span>{{ statusLabel(log.voting_status) }}</span>
-                                    </span>
+                                    <div class="flex flex-col items-center gap-1">
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border shadow-xs"
+                                            :class="statusBadgeClass(log.voting_status)"
+                                        >
+                                            <span>{{ statusIcon(log.voting_status) }}</span>
+                                            <span>{{ statusLabel(log.voting_status) }}</span>
+                                        </span>
+                                        <span
+                                            v-if="log.member?.pollings_exists"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 border border-purple-200"
+                                        >
+                                            Sudah Memilih Online
+                                        </span>
+                                    </div>
                                 </TableCell>
 
                                 <!-- Petugas Verifikasi -->

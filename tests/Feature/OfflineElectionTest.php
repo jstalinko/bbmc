@@ -221,3 +221,53 @@ test('member who has voted online cannot be marked as offline voter', function (
     $member->refresh();
     expect($member->offline_voter)->toBeFalse();
 });
+
+test('admin can cancel offline voters who have already voted online', function () {
+    $admin = User::factory()->create();
+    $onlineVotedOfflineMember = createOfflineTestMember(['no_kartu' => '0040', 'offline_voter' => true]);
+    $pureOfflineMember = createOfflineTestMember(['no_kartu' => '0041', 'offline_voter' => true]);
+
+    $log1 = \App\Models\OfflineLog::create([
+        'nama_pengurus' => 'Petugas 1',
+        'kode_akses' => 'TPS1',
+        'member_id' => $onlineVotedOfflineMember->id,
+        'no_antrian' => 1,
+        'voting_status' => \App\Models\OfflineLog::STATUS_ANTREAN,
+    ]);
+
+    $log2 = \App\Models\OfflineLog::create([
+        'nama_pengurus' => 'Petugas 1',
+        'kode_akses' => 'TPS1',
+        'member_id' => $pureOfflineMember->id,
+        'no_antrian' => 2,
+        'voting_status' => \App\Models\OfflineLog::STATUS_ANTREAN,
+    ]);
+
+    $candidateMember = createOfflineTestMember(['no_kartu' => '0042']);
+    $calon = Calon::create([
+        'member_id' => $candidateMember->id,
+        'no_kartu' => '0042',
+        'chapter' => 'Mother Chapter',
+        'status' => 'ditetapkan',
+        'diajukan_oleh' => 'self',
+    ]);
+
+    Polling::create([
+        'member_id' => $onlineVotedOfflineMember->id,
+        'calon_id' => $calon->id,
+    ]);
+
+    $response = $this->actingAs($admin)->post('/pemilihan-offline/cancel-online');
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    $log1->refresh();
+    $log2->refresh();
+    $onlineVotedOfflineMember->refresh();
+    $pureOfflineMember->refresh();
+
+    expect($log1->voting_status)->toBe(\App\Models\OfflineLog::STATUS_CANCEL_VOTE);
+    expect($onlineVotedOfflineMember->offline_voter)->toBeFalse();
+    expect($log2->voting_status)->toBe(\App\Models\OfflineLog::STATUS_ANTREAN);
+    expect($pureOfflineMember->offline_voter)->toBeTrue();
+});

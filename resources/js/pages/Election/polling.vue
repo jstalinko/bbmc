@@ -24,6 +24,8 @@ interface CandidateResult {
 }
 
 const props = defineProps<{
+    isPollingKhusus?: boolean;
+    pemilihOfflineTerdaftar?: number;
     results: Array<CandidateResult>;
     tampilkanKandidat?: boolean;
     totalSuaraMasuk?: number;
@@ -48,10 +50,13 @@ const suaraOffline = computed(() => props.totalSuaraOffline ?? 0);
 const suaraOnline = computed(() => props.totalSuaraOnline ?? 0);
 const pemilih = computed(() => props.totalPemilih ?? props.totalVoters ?? 0);
 const pemilihOffline = computed(() => props.totalPemilihOffline ?? 0);
+const pemilihOfflineTerdaftarCount = computed(() => props.pemilihOfflineTerdaftar ?? props.totalPemilihOffline ?? 0);
 const pemilihOnline = computed(() => props.totalPemilihOnline ?? 0);
 const partisipasi = computed(() => props.partisipasiSuara ?? props.percentageVoted ?? 0);
 
 const refreshKeys = [
+    'isPollingKhusus',
+    'pemilihOfflineTerdaftar',
     'results',
     'tampilkanKandidat',
     'totalSuaraMasuk',
@@ -223,7 +228,7 @@ const getCandidatePhoto = (foto: string | null) => {
                         </div>
 
                         <!-- Sub-stats: Total Suara Offline & Total Suara Online -->
-                        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-red-100/60">
+                        <div class="grid gap-3 pt-3 border-t border-red-100/60" :class="props.isPollingKhusus ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'">
                             <div class="rounded-xl bg-white p-3 border border-zinc-100 shadow-xs">
                                 <div class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
                                     <Building2 class="h-3.5 w-3.5 text-amber-600 shrink-0" />
@@ -231,6 +236,16 @@ const getCandidatePhoto = (foto: string | null) => {
                                 </div>
                                 <div class="text-xl sm:text-2xl font-black text-zinc-900 font-mono mt-1">
                                     {{ suaraOffline }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Suara</span>
+                                </div>
+                            </div>
+
+                            <div v-if="props.isPollingKhusus" class="rounded-xl bg-white p-3 border border-zinc-100 shadow-xs">
+                                <div class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                                    <Users class="h-3.5 w-3.5 text-red-600 shrink-0" />
+                                    <span>Pemilih Offline Terdaftar</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-black text-zinc-900 font-mono mt-1">
+                                    {{ pemilihOfflineTerdaftarCount }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Anggota</span>
                                 </div>
                             </div>
 
@@ -269,10 +284,10 @@ const getCandidatePhoto = (foto: string | null) => {
                             <div class="rounded-xl bg-white p-3 border border-zinc-100 shadow-xs">
                                 <div class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
                                     <Building2 class="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                                    <span>Total Pemilih Offline</span>
+                                    <span>{{ props.isPollingKhusus ? 'Pemilih Offline Terdaftar' : 'Total Pemilih Offline' }}</span>
                                 </div>
                                 <div class="text-xl sm:text-2xl font-black text-zinc-900 font-mono mt-1">
-                                    {{ pemilihOffline }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Anggota</span>
+                                    {{ props.isPollingKhusus ? pemilihOfflineTerdaftarCount : pemilihOffline }} <span class="text-[10px] font-semibold text-zinc-400 font-sans">Anggota</span>
                                 </div>
                             </div>
 

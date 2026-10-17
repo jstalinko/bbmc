@@ -217,7 +217,7 @@ class ElectionController extends Controller
             ], 429);
         }
 
-        $otpCode = app()->isLocal() ? '123456' : (string) rand(100000, 999999);
+        $otpCode = (string) rand(100000, 999999);
         
         Otp::create([
             'member_id' => $member->id,
@@ -448,7 +448,7 @@ class ElectionController extends Controller
             ], 429);
         }
 
-        $otpCode = app()->isLocal() ? '123456' : (string) rand(100000, 999999);
+        $otpCode = (string) rand(100000, 999999);
 
         Otp::create([
             'member_id' => $member->id,
@@ -607,7 +607,7 @@ class ElectionController extends Controller
     public function livePolling()
     {
         $settings = $this->getSettings();
-        $tampilkanKandidat = (bool)($settings['tampilkanKandidat_polling'] ?? $settings['tampilkan_kandidat_polling'] ?? true);
+        $tampilkanKandidat = (bool)($settings['tampilkan_kandidat_polling'] ?? true);
 
         // Total suara offline dari rekap PollingOffline (atau fallback ke offline_logs)
         $rekapSuaraOffline = (int) \App\Models\PollingOffline::sum('jumlah_suara');
@@ -648,7 +648,8 @@ class ElectionController extends Controller
     }
 
     /**
-     * Render the special Live Polling page (/election/polling-khusus) where Total Suara Offline only counts 'sudah_memilih'.
+     * Render the special Live Polling page (/election/polling-khusus) where Total Suara Offline only counts 'sudah_memilih',
+     * and Pemilih Offline Terdaftar shows total offline voters (whether voted or not).
      */
     public function livePollingKhusus()
     {
@@ -659,7 +660,8 @@ class ElectionController extends Controller
         $rekapSuaraOffline = (int) \App\Models\PollingOffline::sum('jumlah_suara');
         $sudahMemilihOffline = OfflineLog::where('voting_status', OfflineLog::STATUS_SUDAH_MEMILIH)->count();
         $totalSuaraOffline = $rekapSuaraOffline > 0 ? $rekapSuaraOffline : $sudahMemilihOffline;
-        $totalPemilihOffline = OfflineLog::count() > 0 ? OfflineLog::count() : $totalSuaraOffline;
+        $pemilihOfflineTerdaftar = OfflineLog::count();
+        $totalPemilihOffline = $pemilihOfflineTerdaftar > 0 ? $pemilihOfflineTerdaftar : $totalSuaraOffline;
 
         // Total anggota no penalty
         $totalCleanMembers = Member::where(function($pq) {
@@ -679,6 +681,8 @@ class ElectionController extends Controller
         $partisipasiSuara = $totalPemilih > 0 ? round(($totalSuaraMasuk / $totalPemilih) * 100, 1) : 0;
 
         return Inertia::render('Election/polling', [
+            'isPollingKhusus' => true,
+            'pemilihOfflineTerdaftar' => $pemilihOfflineTerdaftar,
             'results' => $tampilkanKandidat ? $throttled['results'] : [],
             'tampilkanKandidat' => $tampilkanKandidat,
             'totalSuaraMasuk' => $totalSuaraMasuk,

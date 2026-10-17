@@ -263,6 +263,8 @@ test('polling page displays correct statistics for offline and online votes and 
     $responseKhusus->assertStatus(200);
     $responseKhusus->assertInertia(fn ($page) => 
         $page->component('Election/polling', false)
+             ->where('isPollingKhusus', true)
+             ->where('pemilihOfflineTerdaftar', 2)
              ->where('tampilkanKandidat', true)
              ->where('totalPemilih', 5)
              ->where('totalPemilihOffline', 2)
