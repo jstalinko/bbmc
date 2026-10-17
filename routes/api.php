@@ -12,7 +12,7 @@ Route::get('/user', function (Request $request) {
 
 Route::get('/validate-nocard/{nocard}' , function (Request $request){
     $nocard = $request->nocard;
-    if ((int)$nocard > 1500) {
+    if ((int)$nocard > 1600) {
         return response()->json(['available' => false]);
     }
     $member = Member::where('no_kartu', $nocard)->first();

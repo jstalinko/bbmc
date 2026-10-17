@@ -541,9 +541,9 @@ function handleNoKartuInput(e: Event) {
     return
   }
 
-  // Validasi maksimal 1500
-  if (Number(form.no_kartu) > 1500) {
-    form.errors.no_kartu = 'No. Kartu maksimal 1500.'
+  // Validasi maksimal 1600
+  if (Number(form.no_kartu) > 1600) {
+    form.errors.no_kartu = 'No. Kartu maksimal 1600.'
     noKartuStatus.value = 'taken'
     if (noKartuDebounceTimer) clearTimeout(noKartuDebounceTimer)
     return
@@ -557,7 +557,7 @@ function handleNoKartuInput(e: Event) {
 
 async function checkNoKartu(nocard: string) {
   if (nocard.length !== 4) return
-  if (Number(nocard) > 1500) {
+  if (Number(nocard) > 1600) {
     noKartuStatus.value = 'taken'
     return
   }
@@ -682,8 +682,8 @@ async function submitForm() {
   } else if (form.no_kartu.length !== 4) {
     form.errors.no_kartu = 'No. Kartu harus tepat 4 digit angka.'
     return
-  } else if (Number(form.no_kartu) > 1500) {
-    form.errors.no_kartu = 'No. Kartu maksimal 1500.'
+  } else if (Number(form.no_kartu) > 1600) {
+    form.errors.no_kartu = 'No. Kartu maksimal 1600.'
     return
   } else {
     delete form.errors.no_kartu
